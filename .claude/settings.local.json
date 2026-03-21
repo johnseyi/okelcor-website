@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell -Command \"Rename-Item 'C:\\\\Users\\\\user\\\\Desktop\\\\Projects\\\\okelcor-tesla-clone' 'okelcor-website'\")"
+    ]
+  }
+}
