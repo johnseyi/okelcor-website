@@ -41,7 +41,36 @@ Development environment: Windows 11, VS Code, Node.js / npm
 
 ---
 
-## Completed in This Session — Design System Audit & Fixes
+## Completed in Latest Session — Responsiveness, UI Fixes & GitHub
+
+### Step 1 — Mobile & tablet responsiveness pass
+**Files:** `components/page-hero.tsx`, `components/cta-section.tsx`, `components/rex-certified.tsx`, `components/footer.tsx`, `components/brands.tsx`, `components/logistics.tsx`, `components/why-okelcor.tsx`, `components/hero.tsx`, `components/categories.tsx`, `components/shop/product-card.tsx`, `components/shop/product-grid.tsx`, `app/globals.css`
+
+- `page-hero.tsx`: H1 scaled `text-3xl → sm:text-4xl → md:text-5xl → lg:text-7xl`; subtitle size reduced on mobile
+- `cta-section.tsx`: CTA button content-width (`inline-flex`) — no longer stretches full width on mobile
+- `rex-certified.tsx`: "Verify Certification" button height `38px → 44px` (touch target); changed to `inline-flex`
+- `footer.tsx`: legal links row (`Privacy Policy / T&Cs / Imprint`) gained `flex-wrap` to prevent overflow on narrow screens
+- `brands.tsx`: heading added intermediate `sm:text-4xl md:text-5xl` breakpoint; "View Catalogue" button changed to `inline-flex`; "Explore Supply" / "Learn More" in right panel gained `inline-flex items-center justify-center` (text was not centred)
+- `logistics.tsx`: main heading scaled `text-3xl → sm:text-4xl → md:text-5xl → lg:text-6xl`; all button groups changed from `flex-col sm:flex-row` → `flex flex-wrap gap-3` with `inline-flex` buttons
+- `why-okelcor.tsx`: card buttons changed from `flex w-full` to `inline-flex` (content-width only)
+- `hero.tsx`: button wrapper changed from `flex-col max-w-[340px] md:flex-row` → `flex flex-wrap justify-center gap-3`
+- `categories.tsx`: card buttons changed from `w-full sm:w-auto flex-col` → `inline-flex flex-wrap`
+- `product-card.tsx`: button height raised `40px → 44px`; "Quote" button gained `min-w-[80px]`
+- `product-grid.tsx`: product count `<p>` hidden on mobile (`hidden md:block`) — was duplicating the count already shown in the mobile filter bar
+- `globals.css`:
+  - `.tesla-hero-btn-*`: removed forced `width: 100%` and `min-width: 260px`; changed to `min-width: 160px` and `height: 46px`
+  - Mobile media query (`max-width: 768px`): hero buttons no longer forced to full width — only `height: 50px` applied; `.tesla-btn-primary/secondary` keep full-width behaviour as before
+
+### Step 2 — GitHub repository setup
+- Configured local git user: `John Oluwaseyi <leojohnseyi@gmail.com>`
+- Created initial commit (108 files, 16,269 insertions)
+- Repo pushed to `https://github.com/johnseyi/okelcor-website`
+- Branch: `main`
+- Local folder rename from `okelcor-tesla-clone` → `okelcor-website` pending (must be done manually while no terminal session is open in the folder)
+
+---
+
+## Completed in Previous Session — Design System Audit & Fixes
 
 ### Step 1 — Color token fixes
 **Files:** `page-hero.tsx`, `tbr-feature-section.tsx`, `used-tyres-section.tsx`, `rex-certified.tsx`
@@ -124,56 +153,51 @@ Development environment: Windows 11, VS Code, Node.js / npm
 
 | Section | Status |
 |---|---|
-| Navbar | Complete — active state shows orange, mobile drawer works |
-| Hero slider | Complete — Framer Motion parallax, autoplay, arrows, dots |
-| Categories carousel | Complete — pill buttons; **"Learn More" text color unresolved (see below)** |
-| Why Okelcor | Complete — orange CTAs, tyre imagery |
-| Trusted Brands | Complete — real logos, production copy |
-| Logistics | Complete — pill buttons |
+| Navbar | Complete — logo + "Growing Together" tagline, active state orange, mobile drawer, `/quote` link |
+| Hero slider | Complete — Framer Motion parallax, autoplay, arrows, dots; buttons responsive (`flex-wrap`) |
+| Categories carousel | Complete — inline-flex buttons, `style={{ color: '#171a20' }}` fix for "Learn More" |
+| Why Okelcor | Complete — orange CTAs, tyre imagery, inline-flex buttons |
+| Trusted Brands | Complete — real logos, animations, inline-flex buttons, centred text in right panel |
+| Logistics | Complete — heading scaled for mobile, inline-flex button groups |
 | Used Tyres feature | Complete — distinct image, pill buttons |
 | TBR feature | Complete — title case, solid background |
-| REX Certified | Complete — design tokens, pill button |
-| CTA Section | Complete — pill button |
-| Floating bar | Complete — orange CTA, brand-correct styling |
-| Footer | Complete |
-| Shop page | Complete — tyre hero image, working CTAs |
-| About page | Complete |
-| Contact page | Complete — form validation, success state |
-| News page | Placeholder only — no articles |
+| REX Certified | Complete — 44px touch target button |
+| CTA Section | Complete — inline-flex button |
+| Floating bar | Complete — homepage only, orange CTA |
+| Footer | Complete — 4-column B2B layout, flex-wrap legal links |
+| Shop page | Complete — filter sidebar, product grid, 12 unique tyre products, no duplicate count on mobile |
+| Product cards | Complete — 44px buttons, min-w on Quote button |
+| About page | Complete — company story, services, logistics partners, CTA |
+| Contact page | Complete — form validation, map embed, success state |
+| News page | Complete — featured article + grid layout |
+| Auth page | Complete — sign in / sign up tabs, no backend |
+| Quote page | Complete — multi-field form, trust panel |
 
 ---
 
-## Known Issue — Categories "Learn More" button text color
+## Known Issues — None outstanding
 
-**Problem:** The "Learn More" button in the categories carousel cards shows white text on a white/light background, making it unreadable.
-
-**Root cause:** Tailwind v4's preflight sets `a { color: inherit }` inside `@layer base`. The parent card container has `text-white` applied, and the inherited white color is winning over the Tailwind utility text colour class applied to the `<Link>` element.
-
-**Attempts made:**
-1. Changed `text-[var(--foreground)]` → `text-black` — did not fix
-2. Removed `color: inherit` from custom `a {}` rule in globals.css — did not fix
-3. Applied inline `style={{ color: '#171a20' }}` directly on the `<Link>` — latest attempt, should be definitive as inline styles bypass all CSS cascade
-
-**If inline style still does not work**, the issue is likely a browser/dev server cache. Try: hard refresh (`Ctrl+Shift+R`), or stop and restart `npm run dev`.
+All previously noted issues have been resolved:
+- Categories "Learn More" button text color: fixed via `style={{ color: '#171a20' }}` inline style
+- FloatingBar appearing on inner pages: removed from all pages except homepage
+- Hamburger menu showing on desktop: fixed by wrapping in `<div className="lg:hidden">`
+- Product images: all 12 products use unique confirmed tyre images — no duplicates
 
 ---
 
 ## Remaining Priorities
 
 ### High
-1. **Confirm categories "Learn More" button fix** — verify inline style resolved the text visibility issue
-2. **Contact form email wiring** — `handleSubmit` in `app/contact/page.tsx` uses a fake `setTimeout`; needs a real email service (e.g. Resend, EmailJS, or a `/api/contact` route)
-3. **Hero slide 1 and slide 3 images** — still hotlinking from third-party domains (`dannymaharajtyres.com`, `wixstatic.com`); fragile and may break; should be replaced with owned or Unsplash URLs
+1. **Contact / Quote form email wiring** — both forms use a fake `setTimeout`; need a real email service (e.g. Resend, EmailJS, or a Next.js `/api/contact` route) when backend is ready
+2. **Auth backend** — `/auth` page is UI-only; needs real authentication (e.g. NextAuth, Supabase, or custom JWT) when backend is ready
 
 ### Medium
-4. **Shop page content** — currently 4 static placeholder cards; needs real product category structure per `page-guidelines.md` (filter panel + product grid)
-5. **News page content** — currently a static placeholder; needs article cards per `page-guidelines.md`
-6. **Logo** — `public/logo/okelcor-logo.png` exists but is not used anywhere; evaluate whether to place in navbar instead of the current "O" lettermark
+3. **Local folder rename** — rename `okelcor-tesla-clone` → `okelcor-website` manually (requires closing all terminal sessions in that folder first)
+4. **Hero slide images** — still hotlinking from `wixstatic.com`; fragile; should be replaced with self-hosted or Unsplash URLs
+5. **Unused assets cleanup** — `public/brands/michelin.svg` and other placeholder SVGs superseded by real logos in `public/brands/brand logo/`; safe to delete
 
 ### Low
-7. **About page content** — only Mission and Approach panels; `page-guidelines.md` specifies three service blocks (Consultation, Logistics Handling, After Sales Support) and a fuller company description
-8. **Unused SVG placeholders** — `public/brands/michelin.svg` etc. are superseded by real logos; can be deleted
-9. **`architecture.md`** — exists at project root; CLAUDE.md expects it at `docs/architecture.md`; should be moved or the path updated
+6. **Backend integration** — cart context (`context/cart-context.tsx`) and checkout flow (`components/checkout/`) are UI-complete but need API wiring for real orders
 
 ---
 
