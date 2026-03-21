@@ -41,7 +41,27 @@ Development environment: Windows 11, VS Code, Node.js / npm
 
 ---
 
-## Completed in Latest Session — Responsiveness, UI Fixes & GitHub
+## Completed in Latest Session — Repo Restructure & README
+
+### Step 1 — Git repo moved to project root
+**Problem:** The `.git` folder lived at the `Projects/` parent directory, meaning all project files were tracked under an `okelcor-tesla-clone/` subfolder. Cloning the GitHub repo would produce a nested `okelcor-website/okelcor-website/` structure.
+
+**Fix:**
+- Moved `.git` from `Projects/` into `Projects/okelcor-website/`
+- Git detected all file moves as renames (`R`) — no history rewritten
+- Staged and committed: `refactor: move project files to repo root`
+- Pushed to `https://github.com/johnseyi/okelcor-website`
+- Project files now sit at repo root — `app/`, `components/`, etc. are top-level on GitHub
+
+### Step 2 — README rewritten
+**File:** `README.md`
+
+- Replaced the default Next.js bootstrap README
+- New README includes: project overview, tech stack table, all routes/pages table, setup instructions (install, dev, build), project structure overview, design system summary, status note, and company contact info
+
+---
+
+## Completed in Previous Session — Responsiveness, UI Fixes & GitHub
 
 ### Step 1 — Mobile & tablet responsiveness pass
 **Files:** `components/page-hero.tsx`, `components/cta-section.tsx`, `components/rex-certified.tsx`, `components/footer.tsx`, `components/brands.tsx`, `components/logistics.tsx`, `components/why-okelcor.tsx`, `components/hero.tsx`, `components/categories.tsx`, `components/shop/product-card.tsx`, `components/shop/product-grid.tsx`, `app/globals.css`
@@ -66,7 +86,6 @@ Development environment: Windows 11, VS Code, Node.js / npm
 - Created initial commit (108 files, 16,269 insertions)
 - Repo pushed to `https://github.com/johnseyi/okelcor-website`
 - Branch: `main`
-- Local folder rename from `okelcor-tesla-clone` → `okelcor-website` pending (must be done manually while no terminal session is open in the folder)
 
 ---
 
@@ -172,6 +191,7 @@ Development environment: Windows 11, VS Code, Node.js / npm
 | News page | Complete — featured article + grid layout |
 | Auth page | Complete — sign in / sign up tabs, no backend |
 | Quote page | Complete — multi-field form, trust panel |
+| README | Complete — full project README with stack, pages, setup, design system summary |
 
 ---
 
@@ -182,6 +202,7 @@ All previously noted issues have been resolved:
 - FloatingBar appearing on inner pages: removed from all pages except homepage
 - Hamburger menu showing on desktop: fixed by wrapping in `<div className="lg:hidden">`
 - Product images: all 12 products use unique confirmed tyre images — no duplicates
+- Local folder rename: complete — `.git` moved to `okelcor-website/`, project files now at repo root
 
 ---
 
@@ -192,12 +213,11 @@ All previously noted issues have been resolved:
 2. **Auth backend** — `/auth` page is UI-only; needs real authentication (e.g. NextAuth, Supabase, or custom JWT) when backend is ready
 
 ### Medium
-3. **Local folder rename** — rename `okelcor-tesla-clone` → `okelcor-website` manually (requires closing all terminal sessions in that folder first)
-4. **Hero slide images** — still hotlinking from `wixstatic.com`; fragile; should be replaced with self-hosted or Unsplash URLs
-5. **Unused assets cleanup** — `public/brands/michelin.svg` and other placeholder SVGs superseded by real logos in `public/brands/brand logo/`; safe to delete
+3. **Hero slide images** — still hotlinking from `wixstatic.com`; fragile; should be replaced with self-hosted or Unsplash URLs
+4. **Unused assets cleanup** — `public/brands/michelin.svg` and other placeholder SVGs superseded by real logos in `public/brands/brand logo/`; safe to delete
 
 ### Low
-6. **Backend integration** — cart context (`context/cart-context.tsx`) and checkout flow (`components/checkout/`) are UI-complete but need API wiring for real orders
+5. **Backend integration** — cart context (`context/cart-context.tsx`) and checkout flow (`components/checkout/`) are UI-complete but need API wiring for real orders
 
 ---
 
