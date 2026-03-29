@@ -23,7 +23,8 @@ No backend currently exists. This is a **frontend-only implementation** with rea
 * React 19 / TypeScript 5
 * Tailwind CSS v4
 * GSAP 3.14 + @gsap/react 2.1 (sole animation library — Framer Motion fully removed)
-* Resend (email API — contact + quote routes)
+* NextAuth.js v4.24 — Credentials provider, JWT sessions, middleware route protection
+* Resend (email API — contact, quote, and checkout order notification routes)
 
 Development environment: Windows 11, VS Code, Node.js / npm
 
@@ -452,10 +453,10 @@ NEXT_PUBLIC_BASE_URL=https://okelcor.de
 | Contact page | Complete — form wired to `/api/contact` (Resend), responsive map, sm: padding |
 | News page | Complete — i18n, featured + stagger grid |
 | Article detail page | Complete — ArticleUI wrapper |
-| Auth page | Complete — fully i18n'd (all strings via t.auth.*), UI only (no backend) |
+| Auth page | Complete — NextAuth Credentials provider, JWT sessions, callbackUrl redirect, i18n |
 | Quote page | Complete — form wired to `/api/quote` (Resend), reference number shown on success |
-| Cart drawer | Complete — fully i18n'd (all strings via t.cart.*), UI only (no backend) |
-| Checkout page | Complete — fully i18n'd (all strings via t.checkout.*), UI only (no backend) |
+| Cart drawer | Complete — fully i18n'd (all strings via t.cart.*) |
+| Checkout page | Complete — wired to `/api/checkout`; orderRef + live/manual mode; payment provider feature flags |
 | 404 page | Complete — on-brand, Navbar + Footer |
 | Error page | Complete — Try Again + Back to Home |
 | Loading state | Complete — orange spinner |
@@ -481,7 +482,51 @@ NEXT_PUBLIC_BASE_URL=https://okelcor.de
 
 ---
 
-## Completed in Latest Session — Analytics + Search
+## Completed in Latest Session — Auth, Payment Config & Checkout API
+
+### Authentication (NextAuth.js)
+
+| File | Notes |
+|---|---|
+| `lib/auth.ts` | NextAuth config: Credentials provider, JWT strategy (30-day sessions), pages.signIn: "/auth". `authorize()` accepts valid-format email + password ≥8 chars — marked TODO for real DB |
+| `app/api/auth/[...nextauth]/route.ts` | NextAuth catch-all GET/POST handler |
+| `components/auth/session-provider.tsx` | `"use client"` wrapper around NextAuth `SessionProvider` so the server root layout can import it |
+| `middleware.ts` | `withAuth` from next-auth/middleware. Protects `/checkout` and `/account` only. All public routes never matched. |
+| `app/auth/page.tsx` | `useSearchParams` reads `callbackUrl`; `signIn("credentials", { redirect: false })` used; redirects via `result.url` (same-origin validated by NextAuth, prevents open redirect). Error state shown on invalid credentials. |
+| `app/checkout/page.tsx` | Added `getServerSession(authOptions)` + `redirect()` as defence-in-depth behind the middleware |
+| `app/layout.tsx` | `<AuthSessionProvider>` wraps the tree above all other providers |
+| `components/navbar.tsx` | Session-aware: when authenticated shows Account icon + Logout; when signed out shows Sign In icon. `justify-self-start` on logo link for equal left/right edge inset. |
+
+### Payment Configuration
+
+| File | Notes |
+|---|---|
+| `lib/payment-config.ts` | Feature flags driven by `NEXT_PUBLIC_` env vars. Exports `PAYMENT_PROVIDERS` record (enabled, label, description per method), `anyProviderEnabled`, `STRIPE_PUBLISHABLE_KEY`, `PAYPAL_CLIENT_ID`. |
+| `components/checkout/payment-selector.tsx` | Per-method `disabled` + "Soon" badge when provider not configured. Amber info panel shown when no provider is live. |
+| `components/checkout/express-checkout.tsx` | Returns `null` (hides entire section) when no express provider is configured. Individual buttons disabled + `opacity-40` when provider not enabled. |
+| `app/api/checkout/route.ts` | Full order handler: validates body, generates `OKL-XXXXX` order ref, sends Resend notification email to team, returns `{ success, orderRef, mode: "live" \| "manual" }`. Integration stubs for Stripe, PayPal, and Klarna (via Stripe) with install/env/docs comments. |
+| `components/checkout/checkout-flow.tsx` | `handleSubmit` now `async` — real `fetch("/api/checkout")` with delivery + paymentMethod + items. Reads `data.orderRef` and `data.mode`. `orderMode` state passed to `SuccessState`. `submitError` state shows red error banner on API/network failure. |
+| `.env.example` | Documents all required env vars: app URL, GA4, Resend, NextAuth, Stripe, PayPal, Klarna. |
+| `.gitignore` | Added `!.env.example` exception; added `.claude/` to ignore local IDE settings. |
+
+### Manual Order Pattern (when no payment credentials set)
+- API returns `mode: "manual"`
+- Success screen shows amber "What happens next" panel explaining team will contact for payment
+- Resend notification email always sent regardless of payment mode — no order ever silently lost
+- Once credentials are added and SDK stubs implemented, `mode: "live"` flows through with no frontend changes
+
+### GSAP Route Transition Hardening
+- `lib/gsap.ts` — `beforeunload` handler kills all ScrollTriggers and clears the global timeline on full-page navigation
+- `app/template.tsx` — `ScrollTrigger.refresh()` via `requestAnimationFrame` after each route mount, ensuring scroll positions recalculate after auth redirects
+- `hooks/useReveal.ts`, `hooks/useStagger.ts`, `hooks/useParallax.ts` — `clearProps` in `useGSAP` cleanup prevents `opacity: 0` flash when navigating away
+
+### Brands Section
+- Grid changed to `grid-cols-2` (was `[1.25fr_1fr]`) for visual balance
+- Pirelli logo: `style={{ width: "auto", height: "auto", maxWidth: "110px", maxHeight: "48px" }}` — resolves Next.js Image aspect-ratio warning
+
+---
+
+## Completed in Previous Session — Analytics + Search
 
 ### Analytics (GA4, GDPR-aware)
 | File | Notes |
@@ -516,23 +561,32 @@ NEXT_PUBLIC_BASE_URL=https://okelcor.de
    - Managing Director full name
    - VAT ID (format: `DE123456789`)
 
-2. **Resend + analytics env vars** — Add to production environment:
+2. **All env vars** — Add to production environment (copy `.env.example` → Vercel Environment Variables):
    ```
    RESEND_API_KEY=re_xxxx
    FROM_EMAIL=Okelcor Website <noreply@okelcor.de>
    CONTACT_EMAIL=info@okelcor.de
+   QUOTE_EMAIL=quotes@okelcor.de
    NEXT_PUBLIC_BASE_URL=https://okelcor.de
    NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
+   NEXTAUTH_SECRET=<openssl rand -base64 32>
+   NEXTAUTH_URL=https://okelcor.de
    ```
-   Without `RESEND_API_KEY`, contact and quote forms return a 503 with a fallback message.
-   Without `NEXT_PUBLIC_GA_ID`, the analytics component renders nothing and all `track*` calls no-op silently.
+   Without `RESEND_API_KEY`, contact/quote/checkout routes return errors.
+   Without `NEXT_PUBLIC_GA_ID`, analytics is a no-op silently.
+   Without `NEXTAUTH_SECRET` + `NEXTAUTH_URL`, auth sessions will fail.
+
+3. **Auth backend** — `lib/auth.ts` `authorize()` currently accepts any valid-format email + password ≥8 chars. Replace with real DB lookup before launch.
 
 ### Remaining — Medium Priority
-3. **Unused public assets cleanup** — Old placeholder SVGs in `public/brands/` superseded by real logos in `public/brands/brand logo/`; safe to delete
+4. **Unused public assets cleanup** — Old placeholder SVGs in `public/brands/` superseded by real logos in `public/brands/brand logo/`; safe to delete
+
+5. **Payment provider credentials** — When ready, add to production env vars and implement the SDK call in `app/api/checkout/route.ts` at the clearly marked integration stubs:
+   - **Stripe (card/Apple Pay/Google Pay):** `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` + `STRIPE_SECRET_KEY`
+   - **PayPal:** `NEXT_PUBLIC_PAYPAL_CLIENT_ID` + `PAYPAL_CLIENT_SECRET`
+   - **Klarna (via Stripe):** `NEXT_PUBLIC_KLARNA_ENABLED=true` (also needs Stripe keys)
 
 ### Remaining — Low Priority
-4. **Auth backend** — `/auth` page is UI-only; needs real authentication (NextAuth, Supabase, or custom JWT)
-5. **Cart / Checkout backend** — `context/cart-context.tsx` and `components/checkout/` are UI-complete; need API wiring for real orders
 6. **Newsletter backend** — `components/newsletter-strip.tsx` validates and shows success state but does not actually send/store emails; needs an endpoint
 
 ---
