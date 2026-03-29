@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, ChevronRight } from "lucide-react";
 import { useCart } from "@/context/cart-context";
+import { useLanguage } from "@/context/language-context";
 import ExpressCheckout from "./express-checkout";
 import PaymentSelector, {
   type PaymentMethod,
@@ -48,21 +49,23 @@ const inputErrCls =
 
 function Field({
   label,
+  htmlFor,
   error,
   children,
 }: {
   label: string;
+  htmlFor?: string;
   error?: string;
   children: React.ReactNode;
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-[0.82rem] font-semibold text-[var(--foreground)]">
+      <label htmlFor={htmlFor} className="mb-1.5 block text-[0.82rem] font-semibold text-[var(--foreground)]">
         {label}
       </label>
       {children}
       {error && (
-        <p className="mt-0.5 text-[0.75rem] text-red-500">{error}</p>
+        <p id={htmlFor ? `${htmlFor}-error` : undefined} role="alert" className="mt-0.5 text-[0.75rem] text-red-500">{error}</p>
       )}
     </div>
   );
@@ -87,7 +90,9 @@ function SectionCard({
 
 // ─── Success state ────────────────────────────────────────────────────────────
 
-function SuccessState({ orderRef }: { orderRef: string }) {
+function SuccessState({ orderRef, mode }: { orderRef: string; mode: "live" | "manual" }) {
+  const { t } = useLanguage();
+  const c = t.checkout;
   return (
     <div className="flex min-h-[60vh] items-center justify-center px-4 py-16">
       <div className="mx-auto max-w-[480px] rounded-[22px] bg-[#efefef] p-10 text-center">
@@ -99,14 +104,23 @@ function SuccessState({ orderRef }: { orderRef: string }) {
           />
         </div>
         <h2 className="mt-5 text-2xl font-extrabold tracking-tight text-[var(--foreground)]">
-          Order Request Submitted
+          {c.successTitle}
         </h2>
         <p className="mt-2 text-[0.95rem] leading-7 text-[var(--muted)]">
-          Our team will contact you within 24 hours to confirm pricing,
-          availability, and arrange delivery.
+          {mode === "manual"
+            ? "Your order has been received. Our team will review it and contact you to arrange payment before dispatch."
+            : c.successBody}
         </p>
+        {mode === "manual" && (
+          <div className="mt-4 rounded-[12px] border border-amber-200 bg-amber-50 px-4 py-3 text-left">
+            <p className="text-[0.78rem] leading-5 text-amber-700">
+              <strong className="text-amber-800">What happens next:</strong>{" "}
+              You will receive a confirmation email. A member of our team will reach out within 1 business day to confirm your order and arrange payment.
+            </p>
+          </div>
+        )}
         <div className="mt-5 rounded-[14px] bg-white py-3 px-5">
-          <p className="text-[0.8rem] text-[var(--muted)]">Order reference</p>
+          <p className="text-[0.8rem] text-[var(--muted)]">{c.orderRef}</p>
           <p className="mt-0.5 text-[1.15rem] font-extrabold tracking-wider text-[var(--foreground)]">
             {orderRef}
           </p>
@@ -116,13 +130,13 @@ function SuccessState({ orderRef }: { orderRef: string }) {
             href="/shop"
             className="flex h-[46px] flex-1 items-center justify-center rounded-full bg-[var(--primary)] text-[0.9rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
           >
-            Continue Shopping
+            {c.continueShopping}
           </Link>
           <Link
             href="/"
             className="flex h-[46px] flex-1 items-center justify-center rounded-full border border-black/10 bg-white text-[0.9rem] font-semibold text-[var(--foreground)] transition hover:bg-[#f5f5f5]"
           >
-            Back to Home
+            {c.backToHome}
           </Link>
         </div>
       </div>
@@ -133,20 +147,22 @@ function SuccessState({ orderRef }: { orderRef: string }) {
 // ─── Empty cart state ─────────────────────────────────────────────────────────
 
 function EmptyCartState() {
+  const { t } = useLanguage();
+  const c = t.checkout;
   return (
     <div className="flex min-h-[50vh] items-center justify-center px-4 py-16 text-center">
       <div>
         <p className="text-2xl font-extrabold text-[var(--foreground)]">
-          Your cart is empty
+          {c.emptyTitle}
         </p>
         <p className="mt-2 text-[0.95rem] text-[var(--muted)]">
-          Add some tyres before proceeding to checkout.
+          {c.emptyBody}
         </p>
         <Link
           href="/shop"
           className="mt-5 inline-flex h-[46px] items-center gap-2 rounded-full bg-[var(--primary)] px-6 text-[0.9rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
         >
-          Browse Catalogue <ChevronRight size={16} />
+          {c.browseCatalogue} <ChevronRight size={16} />
         </Link>
       </div>
     </div>
@@ -157,6 +173,8 @@ function EmptyCartState() {
 
 export default function CheckoutFlow() {
   const { items, clearCart } = useCart();
+  const { t } = useLanguage();
+  const c = t.checkout;
   const deliveryRef = useRef<HTMLDivElement>(null);
 
   const [delivery, setDelivery] = useState<DeliveryData>({
@@ -174,23 +192,25 @@ export default function CheckoutFlow() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [orderRef, setOrderRef] = useState("");
+  const [orderMode, setOrderMode] = useState<"live" | "manual">("manual");
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   if (items.length === 0 && !submitted) return <EmptyCartState />;
-  if (submitted) return <SuccessState orderRef={orderRef} />;
+  if (submitted) return <SuccessState orderRef={orderRef} mode={orderMode} />;
 
   // ── Validation ──────────────────────────────────────────────────────────────
 
   const validateDelivery = (): boolean => {
     const errs: DeliveryErrors = {};
-    if (!delivery.name.trim()) errs.name = "Name is required";
-    if (!delivery.email.trim()) errs.email = "Email is required";
+    if (!delivery.name.trim()) errs.name = c.errName;
+    if (!delivery.email.trim()) errs.email = c.errEmail;
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(delivery.email))
-      errs.email = "Enter a valid email address";
-    if (!delivery.address.trim()) errs.address = "Address is required";
-    if (!delivery.city.trim()) errs.city = "City is required";
-    if (!delivery.postalCode.trim()) errs.postalCode = "Postal code is required";
-    if (!delivery.country) errs.country = "Select a country";
-    if (!delivery.phone.trim()) errs.phone = "Phone number is required";
+      errs.email = c.errEmailInvalid;
+    if (!delivery.address.trim()) errs.address = c.errAddress;
+    if (!delivery.city.trim()) errs.city = c.errCity;
+    if (!delivery.postalCode.trim()) errs.postalCode = c.errPostalCode;
+    if (!delivery.country) errs.country = c.errCountry;
+    if (!delivery.phone.trim()) errs.phone = c.errPhone;
     setDeliveryErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -199,17 +219,17 @@ export default function CheckoutFlow() {
     if (paymentMethod !== "card") return true;
     const errs: CardErrors = {};
     const rawNumber = cardData.number.replace(/\s/g, "");
-    if (rawNumber.length < 13) errs.number = "Enter a valid card number";
-    if (!cardData.expiry || cardData.expiry.length < 5) errs.expiry = "Enter MM/YY";
-    if (!cardData.cvv || cardData.cvv.length < 3) errs.cvv = "Enter CVV";
-    if (!cardData.holder.trim()) errs.holder = "Cardholder name is required";
+    if (rawNumber.length < 13) errs.number = c.errCardNumber;
+    if (!cardData.expiry || cardData.expiry.length < 5) errs.expiry = c.errCardExpiry;
+    if (!cardData.cvv || cardData.cvv.length < 3) errs.cvv = c.errCardCvv;
+    if (!cardData.holder.trim()) errs.holder = c.errCardHolder;
     setCardErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
   // ── Submit ──────────────────────────────────────────────────────────────────
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const deliveryOk = validateDelivery();
     const cardOk = validateCard();
     if (!deliveryOk || !cardOk) {
@@ -218,13 +238,45 @@ export default function CheckoutFlow() {
     }
 
     setSubmitting(true);
-    setTimeout(() => {
-      const ref = `OKL-${Date.now().toString().slice(-6)}`;
+    setSubmitError(null);
+
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          delivery,
+          paymentMethod,
+          items: items.map((item) => ({
+            product: {
+              id:    item.product.id,
+              brand: item.product.brand,
+              name:  item.product.name,
+              size:  item.product.size,
+              price: item.product.price,
+            },
+            quantity: item.quantity,
+          })),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setSubmitError(data.message ?? "Something went wrong. Please try again.");
+        setSubmitting(false);
+        return;
+      }
+
       clearCart();
-      setOrderRef(ref);
+      setOrderRef(data.orderRef ?? "");
+      setOrderMode(data.mode ?? "manual");
       setSubmitted(true);
+    } catch {
+      setSubmitError("Network error. Please check your connection and try again.");
+    } finally {
       setSubmitting(false);
-    }, 1600);
+    }
   };
 
   // ── Express checkout shortcuts ──────────────────────────────────────────────
@@ -250,11 +302,11 @@ export default function CheckoutFlow() {
     <div className="tesla-shell py-8 md:py-12">
       {/* Breadcrumb */}
       <nav className="mb-6 flex items-center gap-1.5 text-[0.82rem] text-[var(--muted)]">
-        <Link href="/" className="transition hover:text-[var(--foreground)]">Home</Link>
+        <Link href="/" className="transition hover:text-[var(--foreground)]">{c.breadcrumbHome}</Link>
         <ChevronRight size={13} className="opacity-50" />
-        <Link href="/shop" className="transition hover:text-[var(--foreground)]">Shop</Link>
+        <Link href="/shop" className="transition hover:text-[var(--foreground)]">{c.breadcrumbShop}</Link>
         <ChevronRight size={13} className="opacity-50" />
-        <span className="font-medium text-[var(--foreground)]">Checkout</span>
+        <span className="font-medium text-[var(--foreground)]">{c.breadcrumbCheckout}</span>
       </nav>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_400px] lg:items-start xl:grid-cols-[1fr_440px]">
@@ -268,85 +320,106 @@ export default function CheckoutFlow() {
           {/* Divider */}
           <div className="flex items-center gap-4">
             <div className="h-px flex-1 bg-black/[0.08]" />
-            <span className="text-[0.8rem] text-[var(--muted)]">or continue with</span>
+            <span className="text-[0.8rem] text-[var(--muted)]">{c.orContinueWith}</span>
             <div className="h-px flex-1 bg-black/[0.08]" />
           </div>
 
           {/* Delivery details */}
           <div ref={deliveryRef}>
-            <SectionCard title="Delivery Details">
+            <SectionCard title={c.sectionDelivery}>
               <div className="flex flex-col gap-4">
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Full Name" error={deliveryErrors.name}>
+                  <Field label={c.labelName} htmlFor="checkout-name" error={deliveryErrors.name}>
                     <input
+                      id="checkout-name"
                       type="text"
-                      placeholder="John Smith"
+                      placeholder={c.placeholderName}
                       value={delivery.name}
                       onChange={set("name")}
+                      aria-describedby={deliveryErrors.name ? "checkout-name-error" : undefined}
+                      aria-invalid={!!deliveryErrors.name}
                       className={ic("name")}
                     />
                   </Field>
-                  <Field label="Email Address" error={deliveryErrors.email}>
+                  <Field label={c.labelEmail} htmlFor="checkout-email" error={deliveryErrors.email}>
                     <input
+                      id="checkout-email"
                       type="email"
-                      placeholder="john@company.com"
+                      placeholder={c.placeholderEmail}
                       value={delivery.email}
                       onChange={set("email")}
+                      aria-describedby={deliveryErrors.email ? "checkout-email-error" : undefined}
+                      aria-invalid={!!deliveryErrors.email}
                       className={ic("email")}
                     />
                   </Field>
                 </div>
 
-                <Field label="Street Address" error={deliveryErrors.address}>
+                <Field label={c.labelAddress} htmlFor="checkout-address" error={deliveryErrors.address}>
                   <input
+                    id="checkout-address"
                     type="text"
-                    placeholder="123 Warehouse Road"
+                    placeholder={c.placeholderAddress}
                     value={delivery.address}
                     onChange={set("address")}
+                    aria-describedby={deliveryErrors.address ? "checkout-address-error" : undefined}
+                    aria-invalid={!!deliveryErrors.address}
                     className={ic("address")}
                   />
                 </Field>
 
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="City" error={deliveryErrors.city}>
+                  <Field label={c.labelCity} htmlFor="checkout-city" error={deliveryErrors.city}>
                     <input
+                      id="checkout-city"
                       type="text"
-                      placeholder="Munich"
+                      placeholder={c.placeholderCity}
                       value={delivery.city}
                       onChange={set("city")}
+                      aria-describedby={deliveryErrors.city ? "checkout-city-error" : undefined}
+                      aria-invalid={!!deliveryErrors.city}
                       className={ic("city")}
                     />
                   </Field>
-                  <Field label="Postal Code" error={deliveryErrors.postalCode}>
+                  <Field label={c.labelPostalCode} htmlFor="checkout-postalCode" error={deliveryErrors.postalCode}>
                     <input
+                      id="checkout-postalCode"
                       type="text"
-                      placeholder="80331"
+                      placeholder={c.placeholderPostalCode}
                       value={delivery.postalCode}
                       onChange={set("postalCode")}
+                      aria-describedby={deliveryErrors.postalCode ? "checkout-postalCode-error" : undefined}
+                      aria-invalid={!!deliveryErrors.postalCode}
                       className={ic("postalCode")}
                     />
                   </Field>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Country" error={deliveryErrors.country}>
+                  <Field label={c.labelCountry} htmlFor="checkout-country" error={deliveryErrors.country}>
                     <select
+                      id="checkout-country"
                       value={delivery.country}
                       onChange={set("country")}
+                      aria-describedby={deliveryErrors.country ? "checkout-country-error" : undefined}
+                      aria-invalid={!!deliveryErrors.country}
                       className={ic("country")}
                     >
-                      <option value="">Select country</option>
+                      <option value="">{c.placeholderCountry}</option>
                       {COUNTRIES.map((c) => (
                         <option key={c} value={c}>{c}</option>
                       ))}
                     </select>
                   </Field>
-                  <Field label="Phone Number" error={deliveryErrors.phone}>
+                  <Field label={c.labelPhone} htmlFor="checkout-phone" error={deliveryErrors.phone}>
                     <input
+                      id="checkout-phone"
                       type="tel"
-                      placeholder="+49 89 545583 60"
+                      placeholder={c.placeholderPhone}
                       value={delivery.phone}
                       onChange={set("phone")}
+                      aria-describedby={deliveryErrors.phone ? "checkout-phone-error" : undefined}
+                      aria-invalid={!!deliveryErrors.phone}
                       className={ic("phone")}
                     />
                   </Field>
@@ -356,18 +429,18 @@ export default function CheckoutFlow() {
           </div>
 
           {/* Delivery method */}
-          <SectionCard title="Delivery Method">
+          <SectionCard title={c.sectionDeliveryMethod}>
             <div className="flex items-center justify-between rounded-[14px] border-2 border-[var(--primary)] bg-white p-4">
               <div>
                 <p className="text-[0.9rem] font-semibold text-[var(--foreground)]">
-                  Standard International Shipping
+                  {c.shippingName}
                 </p>
                 <p className="mt-0.5 text-[0.82rem] text-[var(--muted)]">
-                  5–10 business days · Tracked delivery
+                  {c.shippingDetail}
                 </p>
               </div>
               <p className="text-[0.95rem] font-extrabold text-[var(--primary)]">
-                Free
+                {c.shippingFree}
               </p>
             </div>
           </SectionCard>
@@ -384,6 +457,13 @@ export default function CheckoutFlow() {
             cardErrors={cardErrors}
           />
 
+          {/* Submit error */}
+          {submitError && (
+            <div className="rounded-[12px] border border-red-200 bg-red-50 px-4 py-3">
+              <p className="text-[0.83rem] font-semibold text-red-700">{submitError}</p>
+            </div>
+          )}
+
           {/* Place order */}
           <button
             type="button"
@@ -397,21 +477,21 @@ export default function CheckoutFlow() {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                 </svg>
-                Processing…
+                {c.processing}
               </span>
             ) : (
-              "Place Order"
+              c.placeOrder
             )}
           </button>
 
           <p className="text-center text-[0.78rem] text-[var(--muted)]">
-            By placing your order you agree to our{" "}
-            <Link href="/contact" className="underline hover:text-[var(--foreground)]">
-              Terms & Conditions
+            {c.placeOrderNote}{" "}
+            <Link href="/terms" className="underline hover:text-[var(--foreground)]">
+              {c.termsLabel}
             </Link>{" "}
-            and{" "}
+            {c.placeOrderNoteAnd}{" "}
             <Link href="/contact" className="underline hover:text-[var(--foreground)]">
-              Return Policy
+              {c.returnPolicyLabel}
             </Link>
             .
           </p>

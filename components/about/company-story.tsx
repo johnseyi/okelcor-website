@@ -1,13 +1,16 @@
+"use client";
+
 import Link from "next/link";
 import Reveal from "@/components/motion/reveal";
-
-const STATS = [
-  { value: "500k+", label: "Tyres available daily" },
-  { value: "30+", label: "Countries served" },
-  { value: "15+", label: "Premium brands" },
-];
+import { useLanguage } from "@/context/language-context";
 
 export default function CompanyStory() {
+  const { t } = useLanguage();
+  const STATS = [
+    { value: "500k+", label: t.about.story.statDaily },
+    { value: "30+", label: t.about.story.statCountries },
+    { value: "15+", label: t.about.story.statBrands },
+  ];
   return (
     <section className="w-full bg-[#f5f5f5] py-8">
       <div className="tesla-shell">
@@ -19,7 +22,7 @@ export default function CompanyStory() {
               className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-[1.03]"
               style={{
                 backgroundImage:
-                  "url('https://i.pinimg.com/736x/a9/5c/f5/a95cf556fff293333003f90d06fb5460.jpg')",
+                  "url('/images/tyre-truck.jpg')",
               }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/15 to-transparent" />
@@ -41,41 +44,28 @@ export default function CompanyStory() {
           </div>
 
           {/* Content panel */}
-          <div className="flex flex-col justify-center rounded-[22px] bg-[#efefef] p-8 md:p-10 lg:p-12">
+          <div className="flex flex-col justify-center rounded-[22px] bg-[#efefef] p-6 sm:p-8 md:p-10 lg:p-12">
             <p className="text-[13px] font-bold uppercase tracking-[0.28em] text-[var(--primary)]">
-              Our Story
+              {t.about.story.eyebrow}
             </p>
 
             <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-[var(--foreground)] md:text-4xl lg:text-[2.6rem]">
-              Munich-based.
-              <br className="hidden md:block" /> Globally distributed.
+              {t.about.story.title1}
+              <br className="hidden md:block" /> {t.about.story.title2}
             </h2>
 
             <div className="mt-6 space-y-4 text-[1rem] leading-8 text-[var(--muted)]">
-              <p>
-                Okelcor is headquartered in Munich and supplies customers
-                worldwide with premium new and used tyres — including PCR, LT,
-                TBR, and bus tyres — from the world&apos;s most trusted brands.
-              </p>
-              <p>
-                The company maintains an expanding catalogue of high-quality
-                products, balancing advanced technology with cost-effective
-                options to serve wholesale buyers and international distributors.
-              </p>
-              <p>
-                With over 500,000 tyres available daily, Okelcor ensures
-                transparent pricing, efficient ordering, and dependable
-                logistics — providing a full-service supply solution across
-                Germany, Europe, and beyond.
-              </p>
+              <p>{t.about.story.p1}</p>
+              <p>{t.about.story.p2}</p>
+              <p>{t.about.story.p3}</p>
             </div>
 
             <div className="mt-8">
               <Link
                 href="/quote"
-                className="inline-flex h-[46px] items-center rounded-full bg-[var(--primary)] px-7 text-[0.9rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
+                className="inline-flex h-[48px] items-center rounded-full bg-[var(--primary)] px-7 text-[0.9rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
               >
-                Work With Us
+                {t.about.story.workWithUs}
               </Link>
             </div>
           </div>

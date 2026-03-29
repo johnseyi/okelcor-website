@@ -1,7 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import Reveal from "@/components/motion/reveal";
+import { useLanguage } from "@/context/language-context";
 
 export default function Logistics() {
+  const { t } = useLanguage();
+
   return (
     <section className="w-full bg-[#f5f5f5] py-6">
       <div className="tesla-shell">
@@ -12,38 +17,37 @@ export default function Logistics() {
               className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-105"
               style={{
                 backgroundImage:
-                  "url('https://images.unsplash.com/photo-1494412519320-aa613dfb7738?auto=format&fit=crop&w=1800&q=80')",
+                  "url('/images/logistics.jpg')",
               }}
             />
             <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/12 to-black/55" />
 
             <div className="absolute bottom-0 left-0 right-0 z-10 p-8 md:p-10">
               <p className="text-lg font-medium text-white/90">
-                Reliable Global Supply
+                {t.logistics.eyebrow}
               </p>
 
               <h2 className="mt-2 max-w-4xl text-3xl font-extrabold tracking-tight text-white sm:text-4xl md:text-5xl lg:text-6xl">
-                International sourcing and logistics support.
+                {t.logistics.title}
               </h2>
 
               <p className="mt-4 max-w-2xl text-[1.02rem] leading-8 text-white/80">
-                Okelcor supports wholesalers and distributors with dependable
-                sourcing, shipping coordination, and long-term supply continuity.
+                {t.logistics.body}
               </p>
 
               <div className="mt-6 flex flex-wrap gap-3">
                 <Link
                   href="/quote"
-                  className="inline-flex items-center justify-center rounded-full bg-[var(--primary)] px-6 py-3 text-[14px] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
+                  className="inline-flex h-[48px] items-center justify-center rounded-full bg-[var(--primary)] px-6 text-[14px] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
                 >
-                  Get Quote
+                  {t.logistics.getQuote}
                 </Link>
 
                 <Link
                   href="/about"
-                  className="inline-flex items-center justify-center rounded-full bg-white px-6 py-3 text-[14px] font-semibold text-black transition hover:bg-gray-100"
+                  className="inline-flex h-[48px] items-center justify-center rounded-full bg-white px-6 text-[14px] font-semibold text-black transition hover:bg-gray-100"
                 >
-                  Learn More
+                  {t.logistics.learnMore}
                 </Link>
               </div>
             </div>
@@ -51,38 +55,32 @@ export default function Logistics() {
 
           {/* Side support card */}
           <Reveal delay={0.15} className="grid gap-6">
-            <div
-              className="relative overflow-hidden rounded-[22px] min-h-[300px]"
-            >
+            <div className="relative overflow-hidden rounded-[22px] min-h-[300px]">
               <div
                 className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-105"
-                style={{
-                  backgroundImage:
-                    "url('https://i.pinimg.com/1200x/e0/80/51/e080516eb3ebf60c295a1eb97a66c3a2.jpg')",
-                }}
+                style={{ backgroundImage: "url('/sections/used-tyres.jpg')" }}
               />
               <div className="absolute inset-0 bg-gradient-to-b from-black/8 to-black/45" />
 
               <div className="absolute bottom-0 left-0 right-0 z-10 p-8">
-                <p className="text-base text-white/85">Flexible sourcing</p>
+                <p className="text-base text-white/85">{t.logistics.flexibleSourcing}</p>
                 <h3 className="mt-2 text-3xl font-extrabold tracking-tight text-white md:text-4xl">
-                  Used Tyres
+                  {t.logistics.usedTyres}
                 </h3>
               </div>
             </div>
 
-            <div className="rounded-[22px] bg-[#efefef] p-8 md:p-10">
+            <div className="rounded-[22px] bg-[#efefef] p-6 sm:p-8 md:p-10">
               <p className="text-[13px] font-bold uppercase tracking-[0.28em] text-[var(--primary)]">
-                Distribution Support
+                {t.logistics.distEyebrow}
               </p>
 
               <h3 className="mt-4 text-3xl font-extrabold tracking-tight text-[var(--foreground)] md:text-4xl">
-                Supply planning that helps partners scale.
+                {t.logistics.distTitle}
               </h3>
 
               <p className="mt-4 text-[1rem] leading-8 text-[var(--muted)]">
-                From product selection to delivery coordination, Okelcor
-                supports efficient tyre sourcing for growing businesses.
+                {t.logistics.distBody}
               </p>
 
               <div className="mt-6">
@@ -90,7 +88,7 @@ export default function Logistics() {
                   href="/contact"
                   className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white px-6 py-3 text-[14px] font-semibold text-black transition hover:bg-[#f8f8f8]"
                 >
-                  Talk to Sales
+                  {t.logistics.talkToSales}
                 </Link>
               </div>
             </div>

@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
 import type { Product } from "./data";
+import { useLanguage } from "@/context/language-context";
+import { gsap, ease } from "@/lib/gsap";
+import { COMPANY_EMAIL } from "@/lib/constants";
 
 type AccordionItem = {
+  key: string;
   title: string;
   content: React.ReactNode;
 };
@@ -46,43 +49,51 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 export default function ProductAccordion({ product }: { product: Product }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState<string | null>("size");
+
+  const panelRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
+  const chevronRefs = useRef<Map<string, HTMLSpanElement | null>>(new Map());
 
   const parsed = parseTyreSize(product.size);
   const specParsed = parseSpec(product.spec);
 
+  const a = t.shop.accordion;
+
   const items: AccordionItem[] = [
     {
-      title: "Size and Pattern",
+      key: "size",
+      title: a.sizePattern,
       content: (
         <div>
           {parsed ? (
             <>
-              <Row label="Tyre Size" value={product.size} />
-              <Row label="Width" value={`${parsed.width} mm`} />
-              <Row label="Aspect Ratio" value={`${parsed.ratio}%`} />
-              <Row label="Rim Diameter" value={`${parsed.rim}"`} />
-              <Row label="Construction" value="Radial (R)" />
+              <Row label={a.tyreSize} value={product.size} />
+              <Row label={a.width} value={`${parsed.width} mm`} />
+              <Row label={a.aspectRatio} value={`${parsed.ratio}%`} />
+              <Row label={a.rimDiameter} value={`${parsed.rim}"`} />
+              <Row label={a.construction} value={a.constructionVal} />
             </>
           ) : (
-            <Row label="Tyre Size" value={product.size} />
+            <Row label={a.tyreSize} value={product.size} />
           )}
-          <Row label="Season" value={product.season} />
-          <Row label="Tyre Type" value={product.type} />
-          <Row label="Brand" value={product.brand} />
+          <Row label={a.season} value={product.season} />
+          <Row label={a.tyreType} value={product.type} />
+          <Row label={a.brand} value={product.brand} />
         </div>
       ),
     },
     {
-      title: "Load / Speed Index",
+      key: "loadspeed",
+      title: a.loadSpeed,
       content: (
         <div>
           {specParsed ? (
             <>
-              <Row label="Specification" value={product.spec} />
-              <Row label="Load Index" value={specParsed.loadIndex} />
+              <Row label={a.specification} value={product.spec} />
+              <Row label={a.loadIndex} value={specParsed.loadIndex} />
               <Row
-                label="Speed Index"
+                label={a.speedIndex}
                 value={`${specParsed.speedIndex}${
                   SPEED_DESC[specParsed.speedIndex]
                     ? ` — ${SPEED_DESC[specParsed.speedIndex]}`
@@ -91,111 +102,126 @@ export default function ProductAccordion({ product }: { product: Product }) {
               />
             </>
           ) : (
-            <Row label="Specification" value={product.spec} />
+            <Row label={a.specification} value={product.spec} />
           )}
           <p className="mt-3 text-[0.83rem] leading-6 text-[var(--muted)]">
-            The load index indicates the maximum weight each tyre can support.
-            The speed index indicates the maximum sustained speed the tyre is rated
-            for under full load conditions. Always observe the vehicle
-            manufacturer&apos;s minimum requirements.
+            {a.loadNote}
           </p>
         </div>
       ),
     },
     {
-      title: "Return Policy",
+      key: "return",
+      title: a.returnPolicy,
       content: (
         <div className="space-y-3 text-[0.88rem] leading-7 text-[var(--muted)]">
           <p>
-            Okelcor accepts returns on unused, undamaged tyres in their original
-            packaging within <strong className="text-[var(--foreground)]">14 days</strong> of
-            delivery, subject to prior written authorisation.
+            {a.returnPre}
+            <strong className="text-[var(--foreground)]">{a.returnBold}</strong>
+            {a.returnPost}
           </p>
+          <p>{a.returnP2}</p>
           <p>
-            Tyres that have been mounted, used, or show signs of installation are
-            not eligible for return. Custom orders and special sourcing
-            arrangements are non-returnable.
-          </p>
-          <p>
-            To initiate a return, contact our team at{" "}
+            {a.returnP3pre}
             <a
-              href="mailto:info@okelcor.de"
+              href={`mailto:${COMPANY_EMAIL}`}
               className="font-medium text-[var(--primary)] hover:underline"
             >
-              info@okelcor.de
-            </a>{" "}
-            with your order reference and reason for return.
+              {COMPANY_EMAIL}
+            </a>
+            {a.returnP3post}
           </p>
         </div>
       ),
     },
     {
-      title: "Disclaimer",
+      key: "disclaimer",
+      title: a.disclaimer,
       content: (
         <div className="space-y-3 text-[0.88rem] leading-7 text-[var(--muted)]">
-          <p>
-            Product specifications, pricing, and availability are subject to
-            change without notice. Images shown are for illustrative purposes
-            only and may not represent the exact item supplied.
-          </p>
-          <p>
-            It is the buyer&apos;s responsibility to ensure that tyres are suitable
-            for their intended application, vehicle, and legal requirements in the
-            destination country. Okelcor accepts no liability for improper
-            installation or use outside of rated specifications.
-          </p>
-          <p>
-            Prices are quoted excluding applicable taxes and duties unless
-            otherwise stated. Shipping terms are agreed upon at the time of order
-            confirmation.
-          </p>
+          <p>{a.disclaimerP1}</p>
+          <p>{a.disclaimerP2}</p>
+          <p>{a.disclaimerP3}</p>
         </div>
       ),
     },
   ];
 
+  // Set initial GSAP state on mount — closed panels hidden, open chevron rotated
+  useEffect(() => {
+    items.forEach((item) => {
+      const panel = panelRefs.current.get(item.key);
+      const chevron = chevronRefs.current.get(item.key);
+      const isOpen = item.key === "size";
+      if (panel && !isOpen) gsap.set(panel, { height: 0, opacity: 0 });
+      if (chevron && isOpen) gsap.set(chevron, { rotation: 180 });
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Animate panels + chevrons whenever open state changes
+  useEffect(() => {
+    items.forEach((item) => {
+      const panel = panelRefs.current.get(item.key);
+      const chevron = chevronRefs.current.get(item.key);
+      const isOpen = open === item.key;
+
+      if (panel) {
+        if (isOpen) {
+          gsap.fromTo(
+            panel,
+            { height: 0, opacity: 0 },
+            { height: "auto", opacity: 1, duration: 0.32, ease: ease.sharp, overwrite: true }
+          );
+        } else {
+          gsap.to(panel, { height: 0, opacity: 0, duration: 0.26, ease: ease.sharp, overwrite: true });
+        }
+      }
+
+      if (chevron) {
+        gsap.to(chevron, { rotation: isOpen ? 180 : 0, duration: 0.25, ease: ease.sharp, overwrite: true });
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   return (
-    <div className="divide-y divide-black/[0.07] rounded-[22px] bg-[#efefef]">
-      {items.map((item) => {
-        const isOpen = open === item.title;
-        return (
-          <div key={item.title}>
-            <button
-              type="button"
-              onClick={() => setOpen(isOpen ? null : item.title)}
-              className="flex w-full items-center justify-between px-6 py-5 text-left"
-            >
-              <span className="text-[1rem] font-semibold text-[var(--foreground)]">
-                {item.title}
-              </span>
-              <motion.span
-                animate={{ rotate: isOpen ? 180 : 0 }}
-                transition={{ duration: 0.25, ease: "easeOut" }}
-                style={{ display: "flex" }}
+    <>
+      <div className="mb-5">
+        <h2 className="text-xl font-extrabold tracking-tight text-[var(--foreground)]">
+          {t.shop.productDetails}
+        </h2>
+      </div>
+      <div className="divide-y divide-black/[0.07] rounded-[22px] bg-[#efefef]">
+        {items.map((item) => {
+          const isOpen = open === item.key;
+          return (
+            <div key={item.key}>
+              <button
+                type="button"
+                onClick={() => setOpen(isOpen ? null : item.key)}
+                className="flex w-full items-center justify-between px-6 py-5 text-left"
               >
-                <ChevronDown size={18} className="shrink-0 text-[var(--muted)]" />
-              </motion.span>
-            </button>
-            <AnimatePresence initial={false}>
-              {isOpen && (
-                <motion.div
-                  key="content"
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{
-                    height: { duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] },
-                    opacity: { duration: 0.2 },
-                  }}
-                  style={{ overflow: "hidden" }}
+                <span className="text-[1rem] font-semibold text-[var(--foreground)]">
+                  {item.title}
+                </span>
+                <span
+                  ref={(el) => { chevronRefs.current.set(item.key, el); }}
+                  style={{ display: "flex" }}
                 >
-                  <div className="px-6 pb-6">{item.content}</div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        );
-      })}
-    </div>
+                  <ChevronDown size={18} className="shrink-0 text-[var(--muted)]" />
+                </span>
+              </button>
+              <div
+                ref={(el) => { panelRefs.current.set(item.key, el); }}
+                style={{ overflow: "hidden" }}
+              >
+                <div className="px-6 pb-6">{item.content}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </>
   );
 }

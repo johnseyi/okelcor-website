@@ -3,48 +3,58 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { gsap, ScrollTrigger, useGSAP, ease, scrollDefaults, prefersReducedMotion } from "@/lib/gsap";
+import { useReveal } from "@/hooks/useReveal";
+import { useLanguage } from "@/context/language-context";
 
-type Card = {
-  title: string;
-  label: string;
-  subtitle?: string;
-  image: string;
-};
-
-const cards: Card[] = [
-  {
-    title: "PCR Tyres",
-    label: "Passenger Range",
-    subtitle: "Reliable comfort and everyday road performance",
-    image:
-      "https://i.pinimg.com/1200x/2b/c4/c0/2bc4c01d9e32b3f1f989037c674e35c2.jpg",
-  },
-  {
-    title: "TBR Tyres",
-    label: "Truck & Bus Range",
-    subtitle: "Built for logistics, mileage, and commercial durability",
-    image:
-      "https://i.pinimg.com/736x/2b/b8/ce/2bb8ce0264014f144582b4d5a552f909.jpg",
-  },
-  {
-    title: "Used Tyres",
-    label: "Cost-Effective Supply",
-    subtitle: "Affordable sourcing for distributors and export buyers",
-    image:
-      "https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=2200&q=80",
-  },
-  {
-    title: "OTR Tyres",
-    label: "Heavy Duty Range",
-    subtitle: "For construction, industrial, and rugged operations",
-    image:
-      "https://images.unsplash.com/photo-1603584173870-7f23fdae1b7a?auto=format&fit=crop&w=2200&q=80",
-  },
+const CARD_IMAGES = [
+  "/images/tyre-stack.jpg",
+  "/sections/tbr-tyres.jpg",
+  "/images/tyre-truck.jpg",
+  "/images/tyre-warehouse.jpg",
 ];
 
 export default function Categories() {
+  const { t } = useLanguage();
   const sliderRef = useRef<HTMLDivElement | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+
+  // Heading reveal — eyebrow + h2 fade up together as the section enters view.
+  const headingRef = useReveal<HTMLDivElement>({ y: 20, duration: 0.6 });
+
+  // Card stagger — targets the <article> elements inside the slider container.
+  // Uses sliderRef directly (avoids a ref conflict with the scroll tracking ref).
+  // Cards cascade in left-to-right with a small y offset when the row enters view.
+  useGSAP(
+    () => {
+      const container = sliderRef.current;
+      if (!container) return;
+
+      const cards = Array.from(container.querySelectorAll<HTMLElement>("article"));
+      if (!cards.length) return;
+
+      const reduced = prefersReducedMotion();
+
+      gsap.fromTo(
+        cards,
+        { opacity: 0, y: reduced ? 0 : 28 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: reduced ? 0.01 : 0.65,
+          ease: ease.entrance,
+          stagger: reduced ? 0 : 0.1,
+          scrollTrigger: {
+            trigger: container,
+            start: scrollDefaults.start,
+            toggleActions: scrollDefaults.toggleActions,
+            once: true,
+          },
+        }
+      );
+    },
+    { scope: sliderRef, dependencies: [] }
+  );
 
   const updateActiveIndex = () => {
     if (!sliderRef.current) return;
@@ -99,19 +109,19 @@ export default function Categories() {
   };
 
   const scrollRight = () => {
-    const nextIndex = Math.min(cards.length - 1, activeIndex + 1);
+    const nextIndex = Math.min(CARD_IMAGES.length - 1, activeIndex + 1);
     scrollToCard(nextIndex);
   };
 
   return (
     <section className="w-full bg-[#f5f5f5] py-8 md:py-10">
       <div className="tesla-shell">
-        <div className="mb-6 px-1">
+        <div ref={headingRef} className="mb-6 px-1">
           <p className="text-[13px] font-bold uppercase tracking-[0.28em] text-[var(--primary)]">
-            Our Range
+            {t.categories.eyebrow}
           </p>
           <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-[var(--foreground)] md:text-4xl">
-            Tyre categories for every market
+            {t.categories.heading}
           </h2>
         </div>
 
@@ -121,14 +131,14 @@ export default function Categories() {
             onScroll={updateActiveIndex}
             className="hide-scrollbar flex gap-7 overflow-x-auto scroll-smooth px-1 pb-4 snap-x snap-mandatory"
           >
-            {cards.map((card) => (
+            {t.categories.cards.map((card, i) => (
               <article
                 key={card.title}
-                className="relative h-[420px] min-w-[88%] snap-start overflow-hidden rounded-[22px] bg-black sm:h-[480px] md:h-[620px] md:min-w-[68%] lg:min-w-[62%]"
+                className="relative h-[360px] min-w-[88%] snap-start overflow-hidden rounded-[22px] bg-black sm:h-[420px] md:h-[580px] md:min-w-[68%] lg:min-w-[62%]"
               >
                 <div
                   className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-[1.03]"
-                  style={{ backgroundImage: `url('${card.image}')` }}
+                  style={{ backgroundImage: `url('${CARD_IMAGES[i]}')` }}
                 />
 
                 <div className="absolute inset-0 bg-gradient-to-b from-black/18 via-black/10 to-black/58" />
@@ -144,30 +154,28 @@ export default function Categories() {
                   </div>
 
                   <div className="max-w-[500px]">
-                    <h2 className="text-[2.4rem] font-semibold leading-[0.94] tracking-[-0.045em] md:text-[4rem]">
+                    <h2 className="text-[1.9rem] font-semibold leading-[0.94] tracking-[-0.045em] sm:text-[2.4rem] md:text-[3.5rem]">
                       {card.title}
                     </h2>
 
-                    {card.subtitle ? (
-                      <p className="mt-3 max-w-[540px] text-[1.04rem] font-medium text-white/95 md:text-[1.15rem]">
-                        {card.subtitle}
-                      </p>
-                    ) : null}
+                    <p className="mt-3 max-w-[540px] text-[1.04rem] font-medium text-white/95 md:text-[1.15rem]">
+                      {card.subtitle}
+                    </p>
 
                     <div className="mt-5 flex flex-wrap gap-2">
                       <Link
                         href="/quote"
-                        className="inline-flex h-[46px] items-center justify-center rounded-full bg-[var(--primary)] px-6 text-[1rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
+                        className="inline-flex h-[48px] items-center justify-center rounded-full bg-[var(--primary)] px-6 text-[1rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
                       >
-                        Order Now
+                        {t.categories.orderNow}
                       </Link>
 
                       <Link
                         href="/shop"
                         style={{ color: '#171a20' }}
-                        className="inline-flex h-[46px] items-center justify-center rounded-full bg-white/95 px-6 text-[1rem] font-semibold transition hover:bg-white"
+                        className="inline-flex h-[48px] items-center justify-center rounded-full bg-white/95 px-6 text-[1rem] font-semibold transition hover:bg-white"
                       >
-                        Learn More
+                        {t.categories.learnMore}
                       </Link>
                     </div>
                   </div>
@@ -195,7 +203,7 @@ export default function Categories() {
           </button>
 
           <div className="mt-4 flex items-center justify-center gap-3">
-            {cards.map((_, index) => (
+            {CARD_IMAGES.map((_, index) => (
               <button
                 key={index}
                 type="button"

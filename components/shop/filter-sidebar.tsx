@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { useLanguage } from "@/context/language-context";
 
 export type FilterState = {
   types: string[];
@@ -35,13 +36,13 @@ type SectionConfig = {
   filterKey: keyof FilterState;
 };
 
-const SECTIONS: SectionConfig[] = [
-  { key: "types", title: "Tyre Type", items: TYPES, filterKey: "types" },
-  { key: "brands", title: "Brand", items: BRANDS, filterKey: "brands" },
-  { key: "seasons", title: "Season", items: SEASONS, filterKey: "seasons" },
-];
-
 export default function FilterSidebar({ filters, onChange }: Props) {
+  const { t } = useLanguage();
+  const SECTIONS: SectionConfig[] = [
+    { key: "types", title: t.shop.filter.tyreType, items: TYPES, filterKey: "types" },
+    { key: "brands", title: t.shop.filter.brand, items: BRANDS, filterKey: "brands" },
+    { key: "seasons", title: t.shop.filter.season, items: SEASONS, filterKey: "seasons" },
+  ];
   const [open, setOpen] = useState<Record<string, boolean>>({
     types: true,
     brands: true,
@@ -70,7 +71,7 @@ export default function FilterSidebar({ filters, onChange }: Props) {
     <div className="rounded-[22px] bg-[#efefef] p-6">
       <div className="flex items-center justify-between">
         <h2 className="text-[1rem] font-extrabold text-[var(--foreground)]">
-          Filters
+          {t.shop.catalogue.filtersHeading}
         </h2>
         {hasFilters && (
           <button
@@ -78,7 +79,7 @@ export default function FilterSidebar({ filters, onChange }: Props) {
             onClick={clearAll}
             className="text-[0.82rem] font-semibold text-[var(--primary)] transition hover:text-[var(--primary-hover)]"
           >
-            Clear all
+            {t.shop.catalogue.clearAll}
           </button>
         )}
       </div>

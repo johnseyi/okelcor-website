@@ -1,6 +1,7 @@
 "use client";
 
 import { useCart } from "@/context/cart-context";
+import { useLanguage } from "@/context/language-context";
 
 type Props = {
   deliveryCost: number;
@@ -39,6 +40,8 @@ function SummaryRow({
 
 export default function OrderSummary({ deliveryCost }: Props) {
   const { items, subtotal, totalItems } = useCart();
+  const { t } = useLanguage();
+  const c = t.checkout;
 
   const total = subtotal + deliveryCost;
 
@@ -47,10 +50,10 @@ export default function OrderSummary({ deliveryCost }: Props) {
       {/* Header */}
       <div className="border-b border-black/[0.07] px-6 py-4">
         <p className="text-[1rem] font-extrabold text-[var(--foreground)]">
-          Order Summary
+          {c.summaryTitle}
         </p>
         <p className="mt-0.5 text-[0.82rem] text-[var(--muted)]">
-          {totalItems} {totalItems === 1 ? "item" : "items"}
+          {totalItems} {totalItems === 1 ? c.item : c.items}
         </p>
       </div>
 
@@ -65,6 +68,7 @@ export default function OrderSummary({ deliveryCost }: Props) {
                 <img
                   src={item.product.image}
                   alt={item.product.name}
+                  loading="lazy"
                   className="h-full w-full object-cover"
                 />
               </div>
@@ -86,10 +90,10 @@ export default function OrderSummary({ deliveryCost }: Props) {
                 </div>
                 <div className="mt-1 flex items-center gap-1.5">
                   <span className="rounded-full bg-[#efefef] px-2 py-0.5 text-[10px] font-semibold text-[var(--muted)]">
-                    Qty {item.quantity}
+                    {c.qty} {item.quantity}
                   </span>
                   <span className="text-[0.75rem] text-[var(--muted)]">
-                    €{item.product.price.toFixed(2)} each
+                    €{item.product.price.toFixed(2)} {c.each}
                   </span>
                 </div>
               </div>
@@ -100,22 +104,22 @@ export default function OrderSummary({ deliveryCost }: Props) {
 
       {/* Totals */}
       <div className="border-t border-black/[0.07] px-6 py-5 flex flex-col gap-3">
-        <SummaryRow label="Subtotal" value={`€${subtotal.toFixed(2)}`} />
+        <SummaryRow label={c.subtotal} value={`€${subtotal.toFixed(2)}`} />
         <SummaryRow
-          label="Delivery"
-          value={deliveryCost === 0 ? "Free" : `€${deliveryCost.toFixed(2)}`}
+          label={c.delivery}
+          value={deliveryCost === 0 ? c.free : `€${deliveryCost.toFixed(2)}`}
         />
-        <SummaryRow label="Tax" value="Calculated on invoice" />
+        <SummaryRow label={c.tax} value={c.taxNote} />
         <div className="mt-1 border-t border-black/[0.07] pt-3">
           <SummaryRow
-            label="Total"
+            label={c.total}
             value={`€${total.toFixed(2)}`}
             bold
             large
           />
         </div>
         <p className="text-[0.75rem] text-[var(--muted)]">
-          Excl. applicable taxes · Final amount confirmed on order
+          {c.taxDisclaimer}
         </p>
       </div>
     </div>

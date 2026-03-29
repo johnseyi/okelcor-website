@@ -5,8 +5,10 @@ import Link from "next/link";
 import { Minus, Plus, ShoppingCart, Check } from "lucide-react";
 import type { Product } from "./data";
 import { useCart } from "@/context/cart-context";
+import { useLanguage } from "@/context/language-context";
 
 export default function ProductInfo({ product }: { product: Product }) {
+  const { t } = useLanguage();
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const { addItem, openCart } = useCart();
@@ -58,14 +60,14 @@ export default function ProductInfo({ product }: { product: Product }) {
           €{product.price.toFixed(2)}
         </p>
         <p className="mt-0.5 text-[0.82rem] text-[var(--muted)]">
-          Excluding sales tax · Free shipping
+          {t.shop.info.shipping}
         </p>
       </div>
 
       {/* Quantity */}
       <div className="mt-5">
         <p className="mb-2 text-[0.88rem] font-semibold text-[var(--foreground)]">
-          Quantity
+          {t.shop.info.quantity}
         </p>
         <div className="inline-flex items-center gap-0 overflow-hidden rounded-full border border-black/10 bg-white">
           <button
@@ -104,12 +106,12 @@ export default function ProductInfo({ product }: { product: Product }) {
           {added ? (
             <>
               <Check size={18} strokeWidth={2.5} />
-              Added to Cart
+              {t.shop.info.addedToCart}
             </>
           ) : (
             <>
               <ShoppingCart size={18} strokeWidth={2} />
-              Add to Cart
+              {t.shop.info.addToCart}
             </>
           )}
         </button>
@@ -119,7 +121,7 @@ export default function ProductInfo({ product }: { product: Product }) {
             href="/quote"
             className="flex h-[44px] flex-1 items-center justify-center rounded-full border border-black/10 bg-white text-[0.9rem] font-semibold text-[var(--foreground)] transition hover:bg-[#f5f5f5]"
           >
-            Request Quote
+            {t.shop.info.requestQuote}
           </Link>
           <a
             href={whatsappUrl}
@@ -140,7 +142,7 @@ export default function ProductInfo({ product }: { product: Product }) {
       {/* Share */}
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <span className="text-[0.8rem] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
-          Share
+          {t.shop.info.share}
         </span>
         <a
           href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(

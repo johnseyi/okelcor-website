@@ -1,39 +1,48 @@
-import Link from "next/link";
+"use client";
 
-const columns = [
-  {
-    heading: "Products",
-    links: [
-      { label: "Shop Catalogue", href: "/shop" },
-      { label: "PCR Tyres", href: "/shop" },
-      { label: "TBR Tyres", href: "/shop" },
-      { label: "Used Tyres", href: "/shop" },
-      { label: "Request a Quote", href: "/quote" },
-    ],
-  },
-  {
-    heading: "Company",
-    links: [
-      { label: "About Okelcor", href: "/about" },
-      { label: "News & Insights", href: "/news" },
-      { label: "Contact Us", href: "/contact" },
-      { label: "Locations", href: "/contact" },
-    ],
-  },
-  {
-    heading: "Support",
-    links: [
-      { label: "Get Help", href: "/contact" },
-      { label: "REX Certification", href: "/about" },
-      { label: "Wholesale Enquiries", href: "/quote" },
-      { label: "Logistics Support", href: "/about" },
-    ],
-  },
-];
+import Link from "next/link";
+import Image from "next/image";
+import NewsletterStrip from "@/components/newsletter-strip";
+import { useLanguage } from "@/context/language-context";
+import { COMPANY_EMAIL, COMPANY_PHONE, COMPANY_ADDRESS_STREET, COMPANY_ADDRESS_CITY } from "@/lib/constants";
 
 export default function Footer() {
+  const { t } = useLanguage();
+
+  const columns = [
+    {
+      heading: t.footer.col.products,
+      links: [
+        { label: t.footer.links.shopCatalogue, href: "/shop" },
+        { label: t.footer.links.pcrTyres, href: "/shop" },
+        { label: t.footer.links.tbrTyres, href: "/shop" },
+        { label: t.footer.links.usedTyres, href: "/shop" },
+        { label: t.footer.links.requestQuote, href: "/quote" },
+      ],
+    },
+    {
+      heading: t.footer.col.company,
+      links: [
+        { label: t.footer.links.aboutOkelcor, href: "/about" },
+        { label: t.footer.links.newsInsights, href: "/news" },
+        { label: t.footer.links.contactUs, href: "/contact" },
+        { label: t.footer.links.locations, href: "/contact" },
+      ],
+    },
+    {
+      heading: t.footer.col.support,
+      links: [
+        { label: t.footer.links.getHelp, href: "/contact" },
+        { label: t.footer.links.rex, href: "/about" },
+        { label: t.footer.links.wholesale, href: "/quote" },
+        { label: t.footer.links.logistics, href: "/about" },
+      ],
+    },
+  ];
+
   return (
     <footer className="w-full bg-[#f5f5f5]">
+      <NewsletterStrip />
       <div className="tesla-shell">
 
         {/* Main footer grid */}
@@ -42,22 +51,24 @@ export default function Footer() {
 
             {/* Brand column */}
             <div>
-              <img
+              <Image
                 src="/logo/okelcor-logo.png"
                 alt="Okelcor"
+                width={120}
+                height={22}
                 style={{ height: "22px", width: "auto" }}
                 className="block object-contain"
               />
-              <p className="mt-1 text-[8px] font-bold uppercase tracking-[0.28em] text-[var(--primary)]">
+              <p className="mt-1 text-[9px] font-bold uppercase tracking-[0.22em] text-[var(--primary)]">
                 Growing Together
               </p>
               <p className="mt-4 max-w-[260px] text-[0.85rem] leading-6 text-[var(--muted)]">
-                Munich-based global tyre supplier delivering PCR, TBR, and used tyres to wholesalers and distributors worldwide.
+                {t.footer.tagline}
               </p>
               <div className="mt-5 flex flex-col gap-1.5 text-[0.82rem] text-[var(--muted)]">
-                <span>Landsberger Str. 155, 80687 Munich</span>
-                <span>+49 (0) 89 / 545 583 60</span>
-                <span>info@okelcor.de</span>
+                <span>{COMPANY_ADDRESS_STREET}, {COMPANY_ADDRESS_CITY}</span>
+                <span>{COMPANY_PHONE}</span>
+                <span>{COMPANY_EMAIL}</span>
               </div>
             </div>
 
@@ -85,11 +96,11 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="border-t border-black/[0.07] py-5">
           <div className="flex flex-wrap items-center justify-between gap-3 text-[0.78rem] text-[var(--muted)]">
-            <span>© 2026 Okelcor GmbH. All rights reserved.</span>
+            <span>{t.footer.copyright}</span>
             <div className="flex flex-wrap gap-5">
-              <Link href="/contact" className="footer-link">Privacy Policy</Link>
-              <Link href="/contact" className="footer-link">Terms & Conditions</Link>
-              <Link href="/contact" className="footer-link">Imprint</Link>
+              <Link href="/privacy" className="footer-link">{t.footer.privacy}</Link>
+              <Link href="/terms" className="footer-link">{t.footer.terms}</Link>
+              <Link href="/imprint" className="footer-link">{t.footer.imprint}</Link>
             </div>
           </div>
         </div>

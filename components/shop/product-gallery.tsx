@@ -38,6 +38,7 @@ export default function ProductGallery({ product }: { product: Product }) {
             <img
               src={img}
               alt={`Thumbnail ${i + 1}`}
+              loading="lazy"
               className="h-full w-full object-cover"
             />
           </button>

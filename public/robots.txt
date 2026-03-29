@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+# Exclude legal and auth pages from indexing
+Disallow: /privacy
+Disallow: /terms
+Disallow: /imprint
+Disallow: /auth
+Disallow: /checkout
+
+Sitemap: https://okelcor.de/sitemap.xml

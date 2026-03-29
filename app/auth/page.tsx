@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { Eye, EyeOff, CheckCircle2, Check } from "lucide-react";
 import Navbar from "@/components/navbar";
+import { useLanguage } from "@/context/language-context";
 
 // ─── Input styles (matches quote-form pattern) ─────────────────────────────
 
@@ -29,48 +32,50 @@ type SignUpData = {
 };
 type SignUpErrors = Partial<SignUpData>;
 
-// ─── Trust points shown on left panel ──────────────────────────────────────
-
-const TRUST_POINTS = [
-  "Access wholesale pricing and bulk stock",
-  "Request and track tyre supply quotes",
-  "Manage orders and delivery coordination",
-];
-
 // ─── Password field with visibility toggle ─────────────────────────────────
 
 function PasswordInput({
+  id,
   placeholder,
   value,
   onChange,
   error,
+  showLabel,
+  hideLabel,
 }: {
+  id?: string;
   placeholder: string;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   error?: string;
+  showLabel: string;
+  hideLabel: string;
 }) {
   const [show, setShow] = useState(false);
+  const errorId = id ? `${id}-error` : undefined;
   return (
     <div>
       <div className="relative">
         <input
+          id={id}
           type={show ? "text" : "password"}
           placeholder={placeholder}
           value={value}
           onChange={onChange}
+          aria-describedby={error && errorId ? errorId : undefined}
+          aria-invalid={!!error}
           className={`${error ? inputErrCls : inputCls} pr-11`}
         />
         <button
           type="button"
           onClick={() => setShow((v) => !v)}
           className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)] transition hover:text-[var(--foreground)]"
-          aria-label={show ? "Hide password" : "Show password"}
+          aria-label={show ? hideLabel : showLabel}
         >
           {show ? <EyeOff size={17} /> : <Eye size={17} />}
         </button>
       </div>
-      {error && <p className="mt-1 text-[0.75rem] text-red-500">{error}</p>}
+      {error && <p id={errorId} role="alert" className="mt-1 text-[0.75rem] text-red-500">{error}</p>}
     </div>
   );
 }
@@ -79,20 +84,22 @@ function PasswordInput({
 
 function Field({
   label,
+  htmlFor,
   error,
   children,
 }: {
   label: string;
+  htmlFor?: string;
   error?: string;
   children: React.ReactNode;
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-[0.82rem] font-semibold text-[var(--foreground)]">
+      <label htmlFor={htmlFor} className="mb-1.5 block text-[0.82rem] font-semibold text-[var(--foreground)]">
         {label}
       </label>
       {children}
-      {error && <p className="mt-1 text-[0.75rem] text-red-500">{error}</p>}
+      {error && <p id={htmlFor ? `${htmlFor}-error` : undefined} role="alert" className="mt-1 text-[0.75rem] text-red-500">{error}</p>}
     </div>
   );
 }
@@ -100,23 +107,33 @@ function Field({
 // ─── Sign In Form ──────────────────────────────────────────────────────────
 
 function SignInForm() {
+  const { t } = useLanguage();
+  const a = t.auth;
+  const searchParams = useSearchParams();
+
+  // callbackUrl is set by middleware when redirecting unauthenticated users
+  // (e.g. /auth?callbackUrl=/checkout). NextAuth uses it to redirect back
+  // after a successful sign-in. Falls back to / if not present.
+  const callbackUrl = searchParams.get("callbackUrl") ?? "/";
+
   const [form, setForm] = useState<SignInData>({ email: "", password: "" });
   const [errors, setErrors] = useState<SignInErrors>({});
+  const [authError, setAuthError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
 
   const set = (key: keyof SignInData) =>
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setForm((prev) => ({ ...prev, [key]: e.target.value }));
       if (errors[key]) setErrors((prev) => ({ ...prev, [key]: undefined }));
+      if (authError) setAuthError(null);
     };
 
   const validate = (): SignInErrors => {
     const errs: SignInErrors = {};
-    if (!form.email.trim()) errs.email = "Email is required";
+    if (!form.email.trim()) errs.email = a.errEmailRequired;
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
-      errs.email = "Enter a valid email address";
-    if (!form.password) errs.password = "Password is required";
+      errs.email = a.errEmailInvalid;
+    if (!form.password) errs.password = a.errPasswordRequired;
     return errs;
   };
 
@@ -124,52 +141,72 @@ function SignInForm() {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
-    setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1200));
-    setSubmitting(false);
-    setSubmitted(true);
-  };
 
-  if (submitted) {
-    return (
-      <div className="flex flex-col items-center py-8 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
-          <CheckCircle2 size={28} strokeWidth={1.5} className="text-green-500" />
-        </div>
-        <h3 className="mt-5 text-xl font-extrabold text-[var(--foreground)]">
-          Welcome back
-        </h3>
-        <p className="mt-2 text-[0.88rem] text-[var(--muted)]">
-          You're signed in. Backend integration coming soon.
-        </p>
-        <Link
-          href="/shop"
-          className="mt-6 inline-flex h-[50px] w-full items-center justify-center rounded-full bg-[var(--primary)] text-[0.95rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
-        >
-          Browse Catalogue
-        </Link>
-      </div>
-    );
-  }
+    setSubmitting(true);
+    setAuthError(null);
+
+    // redirect: false — handle result in JS instead of letting NextAuth
+    // do a hard server redirect. This lets us show inline errors on failure.
+    //
+    // callbackUrl is forwarded so NextAuth can:
+    //   a) validate it is same-origin (open-redirect protection)
+    //   b) populate result.url with the sanitised destination
+    //
+    // On success we navigate to result.url (NextAuth's resolved URL) and
+    // fall back to the raw callbackUrl only if result.url is absent.
+    const result = await signIn("credentials", {
+      email:       form.email,
+      password:    form.password,
+      redirect:    false,
+      callbackUrl,
+    });
+
+    setSubmitting(false);
+
+    if (result?.ok) {
+      // Use NextAuth's sanitised result.url — never navigate to a raw
+      // user-supplied string without this validation step.
+      window.location.href = result.url ?? callbackUrl;
+    } else {
+      // result.error is "CredentialsSignin" for invalid credentials.
+      setAuthError("Invalid email or password. Please try again.");
+    }
+  };
 
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
-      <Field label="Email Address" error={errors.email}>
+      {/* Auth-level error (wrong credentials) — shown above the fields */}
+      {authError && (
+        <div
+          role="alert"
+          className="rounded-[10px] border border-red-200 bg-red-50 px-4 py-3 text-[0.83rem] text-red-600"
+        >
+          {authError}
+        </div>
+      )}
+
+      <Field label={a.labelEmail} htmlFor="signin-email" error={errors.email}>
         <input
+          id="signin-email"
           type="email"
-          placeholder="john@company.com"
+          placeholder={a.placeholderEmail}
           value={form.email}
           onChange={set("email")}
+          aria-describedby={errors.email ? "signin-email-error" : undefined}
+          aria-invalid={!!errors.email}
           className={errors.email ? inputErrCls : inputCls}
         />
       </Field>
 
-      <Field label="Password" error={undefined}>
+      <Field label={a.labelPassword} htmlFor="signin-password" error={undefined}>
         <PasswordInput
-          placeholder="Your password"
+          id="signin-password"
+          placeholder={a.placeholderPassword}
           value={form.password}
           onChange={set("password")}
           error={errors.password}
+          showLabel={a.showPassword}
+          hideLabel={a.hidePassword}
         />
       </Field>
 
@@ -178,7 +215,7 @@ function SignInForm() {
           type="button"
           className="text-[0.8rem] font-medium text-[var(--muted)] transition hover:text-[var(--primary)]"
         >
-          Forgot password?
+          {a.forgotPassword}
         </button>
       </div>
 
@@ -193,10 +230,10 @@ function SignInForm() {
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
             </svg>
-            Signing in…
+            {a.signingIn}
           </span>
         ) : (
-          "Sign In"
+          a.signIn
         )}
       </button>
     </form>
@@ -206,6 +243,9 @@ function SignInForm() {
 // ─── Sign Up Form ──────────────────────────────────────────────────────────
 
 function SignUpForm() {
+  const { t } = useLanguage();
+  const a = t.auth;
+
   const [form, setForm] = useState<SignUpData>({
     fullName: "", companyName: "", email: "", password: "", confirmPassword: "",
   });
@@ -221,14 +261,14 @@ function SignUpForm() {
 
   const validate = (): SignUpErrors => {
     const errs: SignUpErrors = {};
-    if (!form.fullName.trim()) errs.fullName = "Full name is required";
-    if (!form.email.trim()) errs.email = "Email is required";
+    if (!form.fullName.trim()) errs.fullName = a.errFullNameRequired;
+    if (!form.email.trim()) errs.email = a.errEmailRequired;
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
-      errs.email = "Enter a valid email address";
-    if (!form.password) errs.password = "Password is required";
-    else if (form.password.length < 8) errs.password = "Password must be at least 8 characters";
-    if (!form.confirmPassword) errs.confirmPassword = "Please confirm your password";
-    else if (form.password !== form.confirmPassword) errs.confirmPassword = "Passwords do not match";
+      errs.email = a.errEmailInvalid;
+    if (!form.password) errs.password = a.errPasswordRequired;
+    else if (form.password.length < 8) errs.password = a.errPasswordMin;
+    if (!form.confirmPassword) errs.confirmPassword = a.errConfirmRequired;
+    else if (form.password !== form.confirmPassword) errs.confirmPassword = a.errPasswordMismatch;
     return errs;
   };
 
@@ -249,16 +289,16 @@ function SignUpForm() {
           <CheckCircle2 size={28} strokeWidth={1.5} className="text-green-500" />
         </div>
         <h3 className="mt-5 text-xl font-extrabold text-[var(--foreground)]">
-          Account created
+          {a.signUpSuccessTitle}
         </h3>
         <p className="mt-2 text-[0.88rem] leading-6 text-[var(--muted)]">
-          Welcome to Okelcor. Backend integration coming soon — your account will be activated when we go live.
+          {a.signUpSuccessBody}
         </p>
         <Link
           href="/shop"
           className="mt-6 inline-flex h-[50px] w-full items-center justify-center rounded-full bg-[var(--primary)] text-[0.95rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
         >
-          Browse Catalogue
+          {a.browseCatalogue}
         </Link>
       </div>
     );
@@ -266,59 +306,72 @@ function SignUpForm() {
 
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
-      <Field label="Full Name" error={errors.fullName}>
+      <Field label={a.labelFullName} htmlFor="signup-fullName" error={errors.fullName}>
         <input
+          id="signup-fullName"
           type="text"
-          placeholder="John Smith"
+          placeholder={a.placeholderFullName}
           value={form.fullName}
           onChange={set("fullName")}
+          aria-describedby={errors.fullName ? "signup-fullName-error" : undefined}
+          aria-invalid={!!errors.fullName}
           className={errors.fullName ? inputErrCls : inputCls}
         />
       </Field>
 
-      <Field label="Company Name" error={errors.companyName}>
+      <Field label={a.labelCompanyName} htmlFor="signup-companyName" error={errors.companyName}>
         <input
+          id="signup-companyName"
           type="text"
-          placeholder="Acme Tyres GmbH (optional)"
+          placeholder={a.placeholderCompanyName}
           value={form.companyName}
           onChange={set("companyName")}
           className={inputCls}
         />
       </Field>
 
-      <Field label="Email Address" error={errors.email}>
+      <Field label={a.labelEmail} htmlFor="signup-email" error={errors.email}>
         <input
+          id="signup-email"
           type="email"
-          placeholder="john@company.com"
+          placeholder={a.placeholderEmail}
           value={form.email}
           onChange={set("email")}
+          aria-describedby={errors.email ? "signup-email-error" : undefined}
+          aria-invalid={!!errors.email}
           className={errors.email ? inputErrCls : inputCls}
         />
       </Field>
 
-      <Field label="Password" error={undefined}>
+      <Field label={a.labelPassword} htmlFor="signup-password" error={undefined}>
         <PasswordInput
-          placeholder="Min. 8 characters"
+          id="signup-password"
+          placeholder={a.placeholderPasswordMin}
           value={form.password}
           onChange={set("password")}
           error={errors.password}
+          showLabel={a.showPassword}
+          hideLabel={a.hidePassword}
         />
       </Field>
 
-      <Field label="Confirm Password" error={undefined}>
+      <Field label={a.labelConfirmPassword} htmlFor="signup-confirmPassword" error={undefined}>
         <PasswordInput
-          placeholder="Repeat your password"
+          id="signup-confirmPassword"
+          placeholder={a.placeholderConfirmPassword}
           value={form.confirmPassword}
           onChange={set("confirmPassword")}
           error={errors.confirmPassword}
+          showLabel={a.showPassword}
+          hideLabel={a.hidePassword}
         />
       </Field>
 
       <p className="text-[0.78rem] leading-5 text-[var(--muted)]">
-        By creating an account you agree to our{" "}
-        <span className="font-medium text-[var(--foreground)]">Terms & Conditions</span>{" "}
-        and{" "}
-        <span className="font-medium text-[var(--foreground)]">Privacy Policy</span>.
+        {a.termsNote}{" "}
+        <span className="font-medium text-[var(--foreground)]">{a.termsLabel}</span>{" "}
+        {a.termsNoteAnd}{" "}
+        <span className="font-medium text-[var(--foreground)]">{a.privacyLabel}</span>.
       </p>
 
       <button
@@ -332,10 +385,10 @@ function SignUpForm() {
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
             </svg>
-            Creating account…
+            {a.creatingAccount}
           </span>
         ) : (
-          "Create Account"
+          a.createAccount
         )}
       </button>
     </form>
@@ -345,6 +398,9 @@ function SignUpForm() {
 // ─── Page ──────────────────────────────────────────────────────────────────
 
 export default function AuthPage() {
+  const { t } = useLanguage();
+  const a = t.auth;
+
   const [tab, setTab] = useState<Tab>("signin");
 
   return (
@@ -359,7 +415,7 @@ export default function AuthPage() {
             className="absolute inset-0 bg-cover bg-center"
             style={{
               backgroundImage:
-                "url('https://images.unsplash.com/photo-1519638399535-1b036603ac77?auto=format&fit=crop&w=1800&q=80')",
+                "url('/images/tyre-stack.jpg')",
             }}
           />
           <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/50 to-black/30" />
@@ -381,14 +437,14 @@ export default function AuthPage() {
             {/* Message */}
             <div className="max-w-[440px]">
               <h2 className="text-4xl font-extrabold leading-[1.05] tracking-tight text-white xl:text-5xl">
-                Your global tyre supply partner.
+                {a.panelHeading}
               </h2>
               <p className="mt-4 text-[1rem] leading-7 text-white/75">
-                Access wholesale pricing, manage your orders, and stay connected with Okelcor's global supply network.
+                {a.panelSubtitle}
               </p>
 
               <ul className="mt-8 flex flex-col gap-3.5">
-                {TRUST_POINTS.map((point) => (
+                {a.trustPoints.map((point) => (
                   <li key={point} className="flex items-center gap-3">
                     <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--primary)]/20">
                       <Check size={13} strokeWidth={2.5} className="text-[var(--primary)]" />
@@ -401,7 +457,7 @@ export default function AuthPage() {
 
             {/* Bottom note */}
             <p className="text-[0.78rem] text-white/40">
-              © 2026 Okelcor GmbH · Munich, Germany
+              {a.copyright}
             </p>
           </div>
         </div>
@@ -426,12 +482,10 @@ export default function AuthPage() {
             {/* Heading */}
             <div className="mb-7">
               <h1 className="text-2xl font-extrabold tracking-tight text-[var(--foreground)] md:text-3xl">
-                {tab === "signin" ? "Welcome back." : "Create your account."}
+                {tab === "signin" ? a.headingSignIn : a.headingSignUp}
               </h1>
               <p className="mt-1.5 text-[0.88rem] text-[var(--muted)]">
-                {tab === "signin"
-                  ? "Sign in to access your Okelcor account."
-                  : "Join Okelcor and start sourcing tyres globally."}
+                {tab === "signin" ? a.subtitleSignIn : a.subtitleSignUp}
               </p>
             </div>
 
@@ -446,7 +500,7 @@ export default function AuthPage() {
                     : "text-[var(--muted)] hover:text-[var(--foreground)]"
                 }`}
               >
-                Sign In
+                {a.tabSignIn}
               </button>
               <button
                 type="button"
@@ -457,7 +511,7 @@ export default function AuthPage() {
                     : "text-[var(--muted)] hover:text-[var(--foreground)]"
                 }`}
               >
-                Create Account
+                {a.tabCreateAccount}
               </button>
             </div>
 
@@ -467,7 +521,7 @@ export default function AuthPage() {
             {/* Divider */}
             <div className="my-6 flex items-center gap-3">
               <div className="h-px flex-1 bg-black/[0.07]" />
-              <span className="text-[0.75rem] text-[var(--muted)]">or</span>
+              <span className="text-[0.75rem] text-[var(--muted)]">{a.or}</span>
               <div className="h-px flex-1 bg-black/[0.07]" />
             </div>
 
@@ -476,13 +530,13 @@ export default function AuthPage() {
               href="/shop"
               className="flex h-[50px] w-full items-center justify-center rounded-full border border-black/10 bg-white text-[0.9rem] font-semibold text-[var(--foreground)] transition hover:bg-[#f0f0f0]"
             >
-              Continue as Guest
+              {a.continueAsGuest}
             </Link>
 
             <p className="mt-5 text-center text-[0.78rem] text-[var(--muted)]">
-              Need help?{" "}
+              {a.needHelp}{" "}
               <Link href="/contact" className="font-medium text-[var(--foreground)] hover:text-[var(--primary)]">
-                Contact our team
+                {a.contactTeam}
               </Link>
             </p>
 

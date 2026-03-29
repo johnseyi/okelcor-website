@@ -1,137 +1,304 @@
 "use client";
 
-import { AnimatePresence, motion, useScroll, useTransform } from "framer-motion";
+/**
+ * components/hero.tsx
+ *
+ * Homepage hero slider — GSAP-powered, i18n-aware.
+ *
+ * Animation architecture:
+ *   useGSAP (mount, once)           — entrance timeline + ScrollTrigger parallax
+ *   useEffect (dependencies: [index]) — slide transition timeline with cleanup
+ *
+ * Background layers are all pre-rendered and GSAP controls opacity.
+ * This avoids AnimatePresence DOM mounting overhead and enables clean crossfades.
+ *
+ * i18n: slide titles and subtitles come from useLanguage() → t.hero.slides[index].
+ * CTA button labels come from t.hero.ctaPrimary / t.hero.ctaSecondary.
+ * React re-renders the text content automatically when locale or index changes;
+ * GSAP only controls opacity/position — it does not touch the text values.
+ */
+
+import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
-import { useEffect, useState } from "react";
 import Link from "next/link";
+import { gsap, ScrollTrigger, useGSAP, ease, prefersReducedMotion } from "@/lib/gsap";
+import { useLanguage } from "@/context/language-context";
 
-type Slide = {
-  title: string;
-  subtitle: string;
-  image: string;
-};
-
-const slides: Slide[] = [
-  {
-    title: "PREMIUM TYRE SOURCING",
-    subtitle:
-      "High-quality tyres for distributors, wholesalers, and global buyers",
-    image:
-      "https://static.wixstatic.com/media/0e688a_7f22e0aa01f94ef08923641df8c5c7bc~mv2.jpg/v1/fill/w_1777,h_2000,al_r,q_90,enc_avif,quality_auto/0e688a_7f22e0aa01f94ef08923641df8c5c7bc~mv2.jpg",
-  },
-  {
-    title: "USED TYRES YOU CAN TRUST",
-    subtitle:
-      "Reliable, cost-effective supply for multiple international markets",
-    image:
-      "https://static.wixstatic.com/media/c3023e_bedc998c5fe249daaf0ee7ba159cb9fb~mv2.png/v1/fill/w_823,h_768,al_c,q_90,enc_avif,quality_auto/c3023e_bedc998c5fe249daaf0ee7ba159cb9fb~mv2.png",
-  },
-  {
-    title: "TBR TYRES FOR LOGISTICS",
-    subtitle:
-      "Built for transport, durability, and dependable commercial performance",
-    image:
-      "https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=2200&q=80",
-  },
+// ── Slide images ───────────────────────────────────────────────────────────────
+// Text content (title/subtitle) is sourced from translations; images are static.
+const SLIDE_IMAGES = [
+  "/sections/tyre-bg-light.png",
+  "/sections/used-tyres.jpg",
+  "/images/tyre-primary.jpg",
 ];
 
+// ── Component ──────────────────────────────────────────────────────────────────
+
 export default function Hero() {
-  const [index, setIndex] = useState<number>(0);
-  const [isPaused, setIsPaused] = useState<boolean>(false);
+  const { t } = useLanguage();
 
-  const { scrollY } = useScroll();
-  const parallaxY = useTransform(scrollY, [0, 600], [0, 60]);
+  const [index, setIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
 
+  // ── DOM refs ────────────────────────────────────────────────────────────────
+  const sectionRef     = useRef<HTMLElement>(null);
+  const bgContainerRef = useRef<HTMLDivElement>(null);
+  const bgRefs         = useRef<(HTMLDivElement | null)[]>([]);
+  const titleRef       = useRef<HTMLHeadingElement>(null);
+  const subtitleRef    = useRef<HTMLParagraphElement>(null);
+  const buttonsRef     = useRef<HTMLDivElement>(null);
+
+  // ── Animation state refs ────────────────────────────────────────────────────
+  // prevIndexRef: the slide we're transitioning FROM
+  // isFirstRender: skip slide-transition useEffect on initial mount
+  const prevIndexRef  = useRef(0);
+  const isFirstRender = useRef(true);
+
+  // ── Autoplay ────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (isPaused) return;
 
     const timer = window.setInterval(() => {
-      setIndex((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
+      setIndex((prev) => {
+        prevIndexRef.current = prev;
+        return prev === SLIDE_IMAGES.length - 1 ? 0 : prev + 1;
+      });
     }, 5000);
 
     return () => window.clearInterval(timer);
   }, [isPaused]);
 
-  const prev = (): void => {
-    setIndex((prevIndex) =>
-      prevIndex === 0 ? slides.length - 1 : prevIndex - 1
-    );
+  // ── Navigation helpers ──────────────────────────────────────────────────────
+  const goTo = (next: number) => {
+    prevIndexRef.current = index;
+    setIndex(next);
   };
 
-  const next = (): void => {
-    setIndex((prevIndex) =>
-      prevIndex === slides.length - 1 ? 0 : prevIndex + 1
-    );
-  };
+  const goPrev = () => goTo(index === 0 ? SLIDE_IMAGES.length - 1 : index - 1);
+  const goNext = () => goTo(index === SLIDE_IMAGES.length - 1 ? 0 : index + 1);
 
-  const slide = slides[index];
+  // ── Mount animation + parallax ──────────────────────────────────────────────
+  // Runs once. Sets up entrance timeline and persistent ScrollTrigger.
+  useGSAP(
+    () => {
+      const reduced = prefersReducedMotion();
+
+      // All bg layers start invisible (also set via inline style below as SSR fallback)
+      bgRefs.current.forEach((el) => {
+        if (el) gsap.set(el, { opacity: 0 });
+      });
+
+      if (reduced) {
+        if (bgRefs.current[0]) gsap.set(bgRefs.current[0], { opacity: 1 });
+        return;
+      }
+
+      try {
+        // ── Entrance timeline ──────────────────────────────────────────────
+        // Premium first impression: background settles in, then content cascades down
+        const tl = gsap.timeline();
+
+        tl
+          // 1. Background fades in + scale settles
+          .fromTo(
+            bgRefs.current[0],
+            { opacity: 0, scale: 1.07 },
+            { opacity: 1, scale: 1.04, duration: 1.6, ease: ease.smooth }
+          )
+          // 2. Headline rises up
+          .fromTo(
+            titleRef.current,
+            { opacity: 0, y: 30 },
+            { opacity: 1, y: 0, duration: 0.8, ease: ease.entrance },
+            "-=0.85"
+          )
+          // 3. Subtitle follows
+          .fromTo(
+            subtitleRef.current,
+            { opacity: 0, y: 20 },
+            { opacity: 1, y: 0, duration: 0.65, ease: ease.entrance },
+            "-=0.55"
+          )
+          // 4. CTA buttons last
+          .fromTo(
+            buttonsRef.current,
+            { opacity: 0, y: 14 },
+            { opacity: 1, y: 0, duration: 0.55, ease: ease.entrance },
+            "-=0.45"
+          );
+
+        // ── Parallax ──────────────────────────────────────────────────────
+        // Background container drifts upward as user scrolls past the hero.
+        if (bgContainerRef.current && sectionRef.current) {
+          gsap.to(bgContainerRef.current, {
+            y: 80,
+            ease: "none",
+            scrollTrigger: {
+              trigger: sectionRef.current,
+              start: "top top",
+              end: "bottom top",
+              scrub: 1.5,
+            },
+          });
+        }
+      } catch {
+        // Entrance animation failed — snap all hero elements to their final
+        // visible states so the hero is never left as a blank section.
+        bgRefs.current.forEach((el, i) => {
+          if (el) gsap.set(el, { opacity: i === 0 ? 1 : 0, scale: 1.04 });
+        });
+        gsap.set(
+          [titleRef.current, subtitleRef.current, buttonsRef.current].filter(Boolean),
+          { clearProps: "opacity,y" }
+        );
+      }
+    },
+    { scope: sectionRef }
+  );
+
+  // ── Slide transition ────────────────────────────────────────────────────────
+  // Fires on every index change after the initial mount.
+  // Cleanup kills the in-progress timeline if user navigates before it finishes.
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    const reduced = prefersReducedMotion();
+    const prev    = prevIndexRef.current;
+    const curr    = index;
+
+    if (reduced) {
+      bgRefs.current.forEach((el, i) => {
+        if (el) gsap.set(el, { opacity: i === curr ? 1 : 0 });
+      });
+      return;
+    }
+
+    const tl = gsap.timeline();
+
+    // Step 1: Hide text (React has already updated it with new slide content)
+    tl.set(
+      [titleRef.current, subtitleRef.current, buttonsRef.current],
+      { opacity: 0, y: 10 }
+    );
+
+    // Step 2: Crossfade background layers
+    tl.to(bgRefs.current[prev], { opacity: 0, duration: 0.9, ease: ease.smooth }, 0)
+      .to(bgRefs.current[curr], { opacity: 1, duration: 0.9, ease: ease.smooth }, 0);
+
+    // Step 3: Cascade text in during/after bg crossfade
+    tl.to(
+        titleRef.current,
+        { opacity: 1, y: 0, duration: 0.6, ease: ease.entrance },
+        0.2
+      )
+      .to(
+        subtitleRef.current,
+        { opacity: 1, y: 0, duration: 0.5, ease: ease.entrance },
+        0.32
+      )
+      .to(
+        buttonsRef.current,
+        { opacity: 1, y: 0, duration: 0.45, ease: ease.entrance },
+        0.42
+      );
+
+    return () => {
+      tl.kill();
+    };
+  }, [index]);
+
+  // ── Render ──────────────────────────────────────────────────────────────────
+
+  const slideText = t.hero.slides[index];
 
   return (
-    <section className="w-full pt-20">
-      <div className="relative h-[82vh] min-h-[560px] max-h-[700px] overflow-hidden md:h-[77vh] md:max-h-[720px]">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={slide.image}
-            initial={{ opacity: 0.76, scale: 1.03 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0.72, scale: 1.01 }}
-            transition={{ duration: 0.9, ease: "easeOut" }}
-            className="absolute inset-0 scale-[1.04] bg-cover bg-center will-change-transform"
-            style={{ backgroundImage: `url("${slide.image}")`, y: parallaxY }}
-          />
-        </AnimatePresence>
+    <section ref={sectionRef} className="w-full pt-20">
+      <div className="relative h-[82vh] min-h-[460px] max-h-[700px] overflow-hidden sm:min-h-[520px] md:h-[77vh] md:min-h-[560px] md:max-h-[720px]">
 
-        <div className="absolute inset-0 bg-black/24" />
+        {/*
+          Background layers — all slides pre-rendered as stacked divs.
+          GSAP controls opacity for crossfading; only one is visible at a time.
+          opacity: 0 in inline style prevents a flash before GSAP's first tick.
+          scale-[1.06] gives the parallax container room to shift without edges.
+        */}
+        <div
+          ref={bgContainerRef}
+          className="absolute inset-0 will-change-transform"
+          aria-hidden="true"
+        >
+          {SLIDE_IMAGES.map((src, i) => (
+            <div
+              key={src}
+              ref={(el) => {
+                bgRefs.current[i] = el;
+              }}
+              className="absolute inset-0 scale-[1.06] bg-cover bg-center"
+              style={{
+                backgroundImage: `url("${src}")`,
+                opacity: 0,
+              }}
+            />
+          ))}
+        </div>
 
+        {/* Overlay — softens image contrast for text legibility */}
+        <div className="absolute inset-0 bg-black/24" aria-hidden="true" />
+
+        {/* Left arrow */}
         <button
           type="button"
-          onClick={prev}
+          onClick={goPrev}
           className="hero-nav-btn absolute left-8 top-1/2 z-20 hidden -translate-y-1/2 md:flex"
           aria-label="Previous slide"
         >
           <ChevronLeft size={22} strokeWidth={2} />
         </button>
 
+        {/* Right arrow */}
         <button
           type="button"
-          onClick={next}
+          onClick={goNext}
           className="hero-nav-btn absolute right-8 top-1/2 z-20 hidden -translate-y-1/2 md:flex"
           aria-label="Next slide"
         >
           <ChevronRight size={22} strokeWidth={2} />
         </button>
 
+        {/* Text content — i18n-aware */}
         <div className="relative z-10 flex h-full flex-col justify-between px-5 pb-6 pt-8 text-center md:px-10 md:pb-8 md:pt-12">
           <div className="flex flex-1 items-center justify-center">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={slide.title}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: -14 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.45, ease: "easeOut" }}
-                className="mx-auto flex w-full max-w-5xl flex-col items-center"
+            <div className="mx-auto flex w-full max-w-5xl flex-col items-center">
+
+              <h1 ref={titleRef} className="hero-title max-w-5xl text-white">
+                {slideText.title}
+              </h1>
+
+              <p
+                ref={subtitleRef}
+                className="hero-subtitle mt-3 max-w-4xl text-white"
               >
-                <h1 className="hero-title max-w-5xl text-white">
-                  {slide.title}
-                </h1>
+                {slideText.subtitle}
+              </p>
 
-                <p className="hero-subtitle mt-3 max-w-4xl text-white">
-                  {slide.subtitle}
-                </p>
+              <div
+                ref={buttonsRef}
+                className="mt-6 flex flex-wrap justify-center gap-3"
+              >
+                <Link href="/quote" className="tesla-hero-btn-primary">
+                  {t.hero.ctaPrimary}
+                </Link>
+                <Link href="/shop" className="tesla-hero-btn-secondary">
+                  {t.hero.ctaSecondary}
+                </Link>
+              </div>
 
-                <div className="mt-6 flex flex-wrap justify-center gap-3">
-                  <Link href="/quote" className="tesla-hero-btn-primary">
-                    Leave us your inquiry
-                  </Link>
-                  <Link href="/shop" className="tesla-hero-btn-secondary">
-                    View our catalogue
-                  </Link>
-                </div>
-              </motion.div>
-            </AnimatePresence>
+            </div>
           </div>
 
+          {/* Pause control + pagination dots */}
           <div className="flex w-full items-end justify-between">
             <button
               type="button"
@@ -143,20 +310,22 @@ export default function Hero() {
             </button>
 
             <div className="mx-auto flex items-center gap-3">
-              {slides.map((_, i) => (
+              {SLIDE_IMAGES.map((_, i) => (
                 <button
                   key={i}
                   type="button"
-                  onClick={() => setIndex(i)}
+                  onClick={() => goTo(i)}
                   className={`hero-dot ${i === index ? "hero-dot-active" : ""}`}
                   aria-label={`Go to slide ${i + 1}`}
                 />
               ))}
             </div>
 
+            {/* Spacer — balances the pause button on the left */}
             <div className="hidden w-[42px] md:block" />
           </div>
         </div>
+
       </div>
     </section>
   );

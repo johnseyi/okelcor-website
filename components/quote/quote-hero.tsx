@@ -1,12 +1,16 @@
+"use client";
+
 import PageHero from "@/components/page-hero";
+import { useLanguage } from "@/context/language-context";
 
 export default function QuoteHero() {
+  const { t } = useLanguage();
   return (
     <PageHero
-      eyebrow="Quote Request"
-      title="Request a Tyre Supply Quote"
-      subtitle="Tell us what you need and our team will prepare a tailored quotation for your business."
-      image="https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=2200&q=80"
+      eyebrow={t.quote.hero.eyebrow}
+      title={t.quote.hero.title}
+      subtitle={t.quote.hero.subtitle}
+      image="/images/tyre-primary.jpg"
     />
   );
 }

@@ -2,6 +2,7 @@
 
 import { ArrowUpDown } from "lucide-react";
 import ProductCard, { type Product } from "./product-card";
+import { useLanguage } from "@/context/language-context";
 
 type Props = {
   products: Product[];
@@ -11,13 +12,14 @@ type Props = {
 };
 
 export default function ProductGrid({ products, total, sortBy, onSortChange }: Props) {
+  const { t } = useLanguage();
   return (
     <div>
       {/* Sort bar */}
       <div className="mb-5 flex items-center justify-between">
         <p className="hidden text-[0.9rem] text-[var(--muted)] md:block">
           <span className="font-semibold text-[var(--foreground)]">{total}</span>{" "}
-          {total === 1 ? "product" : "products"}
+          {total === 1 ? t.shop.catalogue.product : t.shop.catalogue.products}
         </p>
         <div className="flex items-center gap-2">
           <ArrowUpDown size={14} className="text-[var(--muted)]" />
@@ -26,9 +28,9 @@ export default function ProductGrid({ products, total, sortBy, onSortChange }: P
             onChange={(e) => onSortChange(e.target.value)}
             className="rounded-full border border-black/10 bg-white px-3 py-1.5 text-[0.85rem] font-medium text-[var(--foreground)] outline-none transition hover:border-black/20"
           >
-            <option value="default">Default</option>
-            <option value="price-asc">Price: Low to High</option>
-            <option value="price-desc">Price: High to Low</option>
+            <option value="default">{t.shop.sort.default}</option>
+            <option value="price-asc">{t.shop.sort.priceAsc}</option>
+            <option value="price-desc">{t.shop.sort.priceDesc}</option>
           </select>
         </div>
       </div>
@@ -37,10 +39,10 @@ export default function ProductGrid({ products, total, sortBy, onSortChange }: P
       {products.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-[22px] bg-[#efefef] py-20 text-center">
           <p className="text-xl font-extrabold text-[var(--foreground)]">
-            No products found
+            {t.shop.grid.noProducts}
           </p>
           <p className="mt-2 text-[0.95rem] text-[var(--muted)]">
-            Try adjusting or clearing your filters.
+            {t.shop.grid.noProductsHint}
           </p>
         </div>
       ) : (

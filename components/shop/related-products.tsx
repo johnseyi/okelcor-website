@@ -1,9 +1,13 @@
+"use client";
+
 import Link from "next/link";
 import type { Product } from "./data";
 import Reveal from "@/components/motion/reveal";
 import { StaggerParent, StaggerChild } from "@/components/motion/stagger";
+import { useLanguage } from "@/context/language-context";
 
 export default function RelatedProducts({ products }: { products: Product[] }) {
+  const { t } = useLanguage();
   if (products.length === 0) return null;
 
   return (
@@ -11,10 +15,10 @@ export default function RelatedProducts({ products }: { products: Product[] }) {
       <div className="tesla-shell">
         <Reveal className="mb-6">
           <p className="text-[13px] font-bold uppercase tracking-[0.28em] text-[var(--primary)]">
-            You May Also Like
+            {t.shop.related.eyebrow}
           </p>
           <h2 className="mt-2 text-2xl font-extrabold tracking-tight text-[var(--foreground)] md:text-3xl">
-            Related products
+            {t.shop.related.heading}
           </h2>
         </Reveal>
 
@@ -29,6 +33,7 @@ export default function RelatedProducts({ products }: { products: Product[] }) {
                 <img
                   src={product.image}
                   alt={`${product.brand} ${product.name}`}
+                  loading="lazy"
                   className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
                 />
                 <span className="absolute right-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-[var(--foreground)] shadow-sm backdrop-blur-sm">

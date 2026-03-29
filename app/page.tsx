@@ -1,4 +1,23 @@
+import type { Metadata } from "next";
 import Navbar from "@/components/navbar";
+
+export const metadata: Metadata = {
+  title: "Okelcor – Growing Together",
+  description:
+    "Munich-based global tyre supplier. Premium PCR, TBR, and used tyres for distributors and wholesalers in over 30 countries.",
+  openGraph: {
+    title: "Okelcor – Growing Together",
+    description:
+      "Munich-based global tyre supplier. Premium PCR, TBR, and used tyres for distributors and wholesalers in over 30 countries.",
+    url: "/",
+    type: "website",
+  },
+  twitter: {
+    title: "Okelcor – Growing Together",
+    description:
+      "Munich-based global tyre supplier. PCR, TBR, and used tyres for distributors worldwide.",
+  },
+};
 import Hero from "@/components/hero";
 import Categories from "@/components/categories";
 import WhyOkelcor from "@/components/why-okelcor";

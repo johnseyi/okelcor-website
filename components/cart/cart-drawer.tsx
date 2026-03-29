@@ -1,12 +1,16 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { AnimatePresence, motion } from "framer-motion";
 import { X, Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
 import { useCart, type CartItem } from "@/context/cart-context";
+import { gsap, ease } from "@/lib/gsap";
+import { useLanguage } from "@/context/language-context";
+import type { Translations } from "@/lib/translations";
 
-function CartItemRow({ item }: { item: CartItem }) {
+type CartT = Translations["cart"];
+
+function CartItemRow({ item, t }: { item: CartItem; t: CartT }) {
   const { removeItem, updateQuantity } = useCart();
   const { product, quantity } = item;
   const lineTotal = product.price * quantity;
@@ -18,6 +22,7 @@ function CartItemRow({ item }: { item: CartItem }) {
         <img
           src={product.image}
           alt={product.name}
+          loading="lazy"
           className="h-full w-full object-cover"
         />
       </div>
@@ -40,7 +45,7 @@ function CartItemRow({ item }: { item: CartItem }) {
             type="button"
             onClick={() => removeItem(product.id)}
             className="shrink-0 rounded-full p-1 text-[var(--muted)] transition hover:bg-black/[0.06] hover:text-[var(--foreground)]"
-            aria-label="Remove item"
+            aria-label={t.removeItem}
           >
             <Trash2 size={14} />
           </button>
@@ -53,7 +58,7 @@ function CartItemRow({ item }: { item: CartItem }) {
               type="button"
               onClick={() => updateQuantity(product.id, quantity - 1)}
               className="flex h-7 w-7 items-center justify-center transition hover:bg-black/[0.05]"
-              aria-label="Decrease"
+              aria-label={t.decrease}
             >
               <Minus size={12} strokeWidth={2.5} />
             </button>
@@ -64,7 +69,7 @@ function CartItemRow({ item }: { item: CartItem }) {
               type="button"
               onClick={() => updateQuantity(product.id, quantity + 1)}
               className="flex h-7 w-7 items-center justify-center transition hover:bg-black/[0.05]"
-              aria-label="Increase"
+              aria-label={t.increase}
             >
               <Plus size={12} strokeWidth={2.5} />
             </button>
@@ -81,6 +86,11 @@ function CartItemRow({ item }: { item: CartItem }) {
 export default function CartDrawer() {
   const { items, totalItems, subtotal, isOpen, closeCart, clearCart } =
     useCart();
+  const { t } = useLanguage();
+  const ct = t.cart;
+
+  const drawerRef = useRef<HTMLElement>(null);
+  const backdropRef = useRef<HTMLDivElement>(null);
 
   // Lock body scroll when drawer is open
   useEffect(() => {
@@ -90,134 +100,183 @@ export default function CartDrawer() {
     };
   }, [isOpen]);
 
+  // Set initial hidden state synchronously before first paint
+  useEffect(() => {
+    if (drawerRef.current) gsap.set(drawerRef.current, { x: "100%", autoAlpha: 0 });
+    if (backdropRef.current) gsap.set(backdropRef.current, { autoAlpha: 0 });
+  }, []);
+
+  // Slide in / slide out on isOpen change
+  useEffect(() => {
+    const drawer = drawerRef.current;
+    const backdrop = backdropRef.current;
+
+    if (isOpen) {
+      // Backdrop fade in
+      if (backdrop) {
+        gsap.to(backdrop, {
+          autoAlpha: 1,
+          duration: 0.22,
+          ease: ease.smooth,
+          overwrite: true,
+        });
+      }
+      // Drawer slide in from right
+      if (drawer) {
+        gsap.set(drawer, { autoAlpha: 1 });
+        gsap.fromTo(
+          drawer,
+          { x: "100%" },
+          { x: "0%", duration: 0.38, ease: ease.drawer, overwrite: true }
+        );
+      }
+    } else {
+      // Backdrop fade out — onInterrupt mirrors onComplete so it never
+      // gets stuck blocking pointer events if the tween is killed mid-flight
+      if (backdrop) {
+        const hideBackdrop = () => gsap.set(backdrop, { autoAlpha: 0 });
+        gsap.to(backdrop, {
+          autoAlpha: 0,
+          duration: 0.24,
+          ease: ease.smooth,
+          overwrite: true,
+          onComplete: hideBackdrop,
+          onInterrupt: hideBackdrop,
+        });
+      }
+      // Drawer slide out to right
+      if (drawer) {
+        const hideDrawer = () => gsap.set(drawer, { autoAlpha: 0 });
+        gsap.to(drawer, {
+          x: "100%",
+          duration: 0.32,
+          ease: ease.smooth,
+          overwrite: true,
+          onComplete: hideDrawer,
+          onInterrupt: hideDrawer,
+        });
+      }
+    }
+  }, [isOpen]);
+
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            key="cart-backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.22 }}
-            className="fixed inset-0 z-[60] bg-black/30 backdrop-blur-[2px]"
-            onClick={closeCart}
-          />
+    <>
+      {/* Backdrop — always in DOM, visibility controlled by GSAP autoAlpha */}
+      <div
+        ref={backdropRef}
+        className="fixed inset-0 z-[60] bg-black/30 backdrop-blur-[2px]"
+        style={{ visibility: "hidden" }}
+        onClick={closeCart}
+      />
 
-          {/* Drawer */}
-          <motion.aside
-            key="cart-drawer"
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed right-0 top-0 z-[70] flex h-screen w-full max-w-[420px] flex-col bg-white shadow-[-16px_0_48px_rgba(0,0,0,0.12)]"
-          >
-            {/* Header */}
-            <div className="flex h-[68px] shrink-0 items-center justify-between border-b border-black/[0.07] px-5">
-              <div className="flex items-center gap-2.5">
-                <ShoppingCart size={20} strokeWidth={1.9} />
-                <span className="text-[1rem] font-extrabold text-[var(--foreground)]">
-                  Cart
-                </span>
-                {totalItems > 0 && (
-                  <span className="flex h-[20px] min-w-[20px] items-center justify-center rounded-full bg-[var(--primary)] px-1 text-[11px] font-bold text-white">
-                    {totalItems}
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-1">
-                {items.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={clearCart}
-                    className="rounded-full px-3 py-1.5 text-[0.78rem] font-semibold text-[var(--muted)] transition hover:bg-black/[0.05] hover:text-[var(--foreground)]"
-                  >
-                    Clear all
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={closeCart}
-                  className="flex h-8 w-8 items-center justify-center rounded-full transition hover:bg-black/[0.06]"
-                  aria-label="Close cart"
-                >
-                  <X size={18} strokeWidth={2} />
-                </button>
-              </div>
-            </div>
-
-            {/* Item list */}
-            {items.length === 0 ? (
-              <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-                <ShoppingCart
-                  size={44}
-                  strokeWidth={1.3}
-                  className="text-black/20"
-                />
-                <p className="text-[1rem] font-semibold text-[var(--foreground)]">
-                  Your cart is empty
-                </p>
-                <p className="text-[0.88rem] text-[var(--muted)]">
-                  Browse the catalogue and add tyres to get started.
-                </p>
-                <button
-                  type="button"
-                  onClick={closeCart}
-                  className="mt-2 rounded-full bg-[var(--primary)] px-6 py-2.5 text-[0.88rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
-                >
-                  Browse Catalogue
-                </button>
-              </div>
-            ) : (
-              <div className="hide-scrollbar flex-1 overflow-y-auto px-5">
-                <div className="divide-y divide-black/[0.06]">
-                  {items.map((item) => (
-                    <CartItemRow key={item.product.id} item={item} />
-                  ))}
-                </div>
-              </div>
+      {/* Drawer — always in DOM, slides in/out via GSAP */}
+      <aside
+        ref={drawerRef}
+        className="fixed right-0 top-0 z-[70] flex h-screen w-full max-w-[420px] flex-col bg-white shadow-[-16px_0_48px_rgba(0,0,0,0.12)]"
+        style={{ visibility: "hidden" }}
+      >
+        {/* Header */}
+        <div className="flex h-[68px] shrink-0 items-center justify-between border-b border-black/[0.07] px-5">
+          <div className="flex items-center gap-2.5">
+            <ShoppingCart size={20} strokeWidth={1.9} />
+            <span className="text-[1rem] font-extrabold text-[var(--foreground)]">
+              {ct.title}
+            </span>
+            {totalItems > 0 && (
+              <span className="flex h-[20px] min-w-[20px] items-center justify-center rounded-full bg-[var(--primary)] px-1 text-[11px] font-bold text-white">
+                {totalItems}
+              </span>
             )}
-
-            {/* Footer */}
+          </div>
+          <div className="flex items-center gap-1">
             {items.length > 0 && (
-              <div className="shrink-0 border-t border-black/[0.07] px-5 py-5">
-                {/* Subtotal */}
-                <div className="flex items-center justify-between">
-                  <span className="text-[0.9rem] text-[var(--muted)]">
-                    Subtotal ({totalItems} {totalItems === 1 ? "item" : "items"})
-                  </span>
-                  <span className="text-[1.25rem] font-extrabold text-[var(--foreground)]">
-                    €{subtotal.toFixed(2)}
-                  </span>
-                </div>
-                <p className="mt-0.5 text-[0.76rem] text-[var(--muted)]">
-                  Price estimate · Excl. tax · Shipping calculated at checkout
-                </p>
-
-                {/* CTAs */}
-                <div className="mt-4 flex flex-col gap-2.5">
-                  <Link
-                    href="/checkout"
-                    onClick={closeCart}
-                    className="flex h-[48px] items-center justify-center rounded-full bg-[var(--primary)] text-[0.95rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
-                  >
-                    Proceed to Checkout
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={closeCart}
-                    className="flex h-[44px] items-center justify-center rounded-full border border-black/10 bg-white text-[0.9rem] font-semibold text-[var(--foreground)] transition hover:bg-[#f5f5f5]"
-                  >
-                    Continue Shopping
-                  </button>
-                </div>
-              </div>
+              <button
+                type="button"
+                onClick={clearCart}
+                className="rounded-full px-3 py-1.5 text-[0.78rem] font-semibold text-[var(--muted)] transition hover:bg-black/[0.05] hover:text-[var(--foreground)]"
+              >
+                {ct.clearAll}
+              </button>
             )}
-          </motion.aside>
-        </>
-      )}
-    </AnimatePresence>
+            <button
+              type="button"
+              onClick={closeCart}
+              className="flex h-8 w-8 items-center justify-center rounded-full transition hover:bg-black/[0.06]"
+              aria-label={ct.closeCart}
+            >
+              <X size={18} strokeWidth={2} />
+            </button>
+          </div>
+        </div>
+
+        {/* Item list */}
+        {items.length === 0 ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+            <ShoppingCart
+              size={44}
+              strokeWidth={1.3}
+              className="text-black/20"
+            />
+            <p className="text-[1rem] font-semibold text-[var(--foreground)]">
+              {ct.emptyTitle}
+            </p>
+            <p className="text-[0.88rem] text-[var(--muted)]">
+              {ct.emptyBody}
+            </p>
+            <button
+              type="button"
+              onClick={closeCart}
+              className="mt-2 rounded-full bg-[var(--primary)] px-6 py-2.5 text-[0.88rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
+            >
+              {ct.browseCatalogue}
+            </button>
+          </div>
+        ) : (
+          <div className="hide-scrollbar flex-1 overflow-y-auto px-5">
+            <div className="divide-y divide-black/[0.06]">
+              {items.map((item) => (
+                <CartItemRow key={item.product.id} item={item} t={ct} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Footer */}
+        {items.length > 0 && (
+          <div className="shrink-0 border-t border-black/[0.07] px-5 py-5">
+            {/* Subtotal */}
+            <div className="flex items-center justify-between">
+              <span className="text-[0.9rem] text-[var(--muted)]">
+                {ct.subtotal} ({totalItems} {totalItems === 1 ? ct.item : ct.items})
+              </span>
+              <span className="text-[1.25rem] font-extrabold text-[var(--foreground)]">
+                €{subtotal.toFixed(2)}
+              </span>
+            </div>
+            <p className="mt-0.5 text-[0.76rem] text-[var(--muted)]">
+              {ct.priceNote}
+            </p>
+
+            {/* CTAs */}
+            <div className="mt-4 flex flex-col gap-2.5">
+              <Link
+                href="/checkout"
+                onClick={closeCart}
+                className="flex h-[48px] items-center justify-center rounded-full bg-[var(--primary)] text-[0.95rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
+              >
+                {ct.checkout}
+              </Link>
+              <button
+                type="button"
+                onClick={closeCart}
+                className="flex h-[44px] items-center justify-center rounded-full border border-black/10 bg-white text-[0.9rem] font-semibold text-[var(--foreground)] transition hover:bg-[#f5f5f5]"
+              >
+                {ct.continueShopping}
+              </button>
+            </div>
+          </div>
+        )}
+      </aside>
+    </>
   );
 }

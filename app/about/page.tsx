@@ -1,33 +1,32 @@
 import type { Metadata } from "next";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
-import PageHero from "@/components/page-hero";
-import CompanyStory from "@/components/about/company-story";
-import Services from "@/components/about/services";
-import LogisticsPartners from "@/components/about/logistics-partners";
+import AboutPageUI from "@/components/about/about-page-ui";
 import CTASection from "@/components/cta-section";
 
 export const metadata: Metadata = {
-  title: "About – Okelcor",
+  title: "About",
   description:
     "Okelcor is a Munich-based global tyre supplier delivering PCR, TBR, and used tyres to wholesalers and distributors worldwide.",
+  openGraph: {
+    title: "About Okelcor – Global Tyre Supply Partner",
+    description:
+      "Headquartered in Munich, Okelcor supplies premium PCR, TBR, and used tyres to distributors in over 30 countries.",
+    url: "/about",
+    type: "website",
+  },
+  twitter: {
+    title: "About Okelcor – Global Tyre Supply Partner",
+    description:
+      "Headquartered in Munich. Premium PCR, TBR, and used tyres for distributors in over 30 countries.",
+  },
 };
 
 export default function AboutPage() {
   return (
     <main>
       <Navbar />
-
-      <PageHero
-        eyebrow="About Okelcor"
-        title="Your trusted global tyre supply partner."
-        subtitle="Headquartered in Munich. Supplying premium PCR, TBR, LT, and used tyres to wholesalers and distributors in over 30 countries."
-        image="https://i.pinimg.com/736x/5b/e4/16/5be4168ce486d6b055931bbb60fb5a05.jpg"
-      />
-
-      <CompanyStory />
-      <Services />
-      <LogisticsPartners />
+      <AboutPageUI />
       <CTASection />
       <Footer />
     </main>

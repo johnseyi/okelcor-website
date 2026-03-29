@@ -1,20 +1,38 @@
+"use client";
+
+import { useLanguage } from "@/context/language-context";
+import { PAYMENT_PROVIDERS } from "@/lib/payment-config";
+
 type Props = {
   onSelect: (method: "applepay" | "paypal" | "googlepay") => void;
 };
 
 export default function ExpressCheckout({ onSelect }: Props) {
+  const { t } = useLanguage();
+
+  const appleEnabled  = PAYMENT_PROVIDERS.applepay.enabled;
+  const paypalEnabled = PAYMENT_PROVIDERS.paypal.enabled;
+  const googleEnabled = PAYMENT_PROVIDERS.googlepay.enabled;
+
+  // If no express provider is configured, hide the entire section to avoid
+  // showing a row of disabled buttons with no explanation.
+  if (!appleEnabled && !paypalEnabled && !googleEnabled) return null;
+
   return (
     <div className="rounded-[22px] bg-[#efefef] p-6">
       <p className="mb-4 text-[1rem] font-extrabold text-[var(--foreground)]">
-        Express Checkout
+        {t.checkout.expressCheckout}
       </p>
 
       <div className="flex flex-col gap-2.5 sm:flex-row">
         {/* Apple Pay */}
         <button
           type="button"
-          onClick={() => onSelect("applepay")}
-          className="flex h-[48px] flex-1 items-center justify-center gap-2 rounded-full bg-black text-[0.9rem] font-semibold text-white transition hover:bg-black/80"
+          onClick={() => appleEnabled && onSelect("applepay")}
+          disabled={!appleEnabled}
+          title={!appleEnabled ? "Coming soon" : undefined}
+          className={`flex h-[48px] flex-1 items-center justify-center gap-2 rounded-full bg-black text-[0.9rem] font-semibold text-white transition
+            ${appleEnabled ? "hover:bg-black/80" : "cursor-not-allowed opacity-40"}`}
         >
           {/* Apple logo mark */}
           <svg width="16" height="18" viewBox="0 0 16 18" fill="currentColor">
@@ -26,8 +44,11 @@ export default function ExpressCheckout({ onSelect }: Props) {
         {/* PayPal */}
         <button
           type="button"
-          onClick={() => onSelect("paypal")}
-          className="flex h-[48px] flex-1 items-center justify-center gap-2 rounded-full bg-[#003087] text-[0.9rem] font-semibold text-white transition hover:bg-[#00256b]"
+          onClick={() => paypalEnabled && onSelect("paypal")}
+          disabled={!paypalEnabled}
+          title={!paypalEnabled ? "Coming soon" : undefined}
+          className={`flex h-[48px] flex-1 items-center justify-center gap-2 rounded-full bg-[#003087] text-[0.9rem] font-semibold text-white transition
+            ${paypalEnabled ? "hover:bg-[#00256b]" : "cursor-not-allowed opacity-40"}`}
         >
           {/* PayPal P mark */}
           <svg width="16" height="18" viewBox="0 0 24 28" fill="currentColor">
@@ -40,8 +61,11 @@ export default function ExpressCheckout({ onSelect }: Props) {
         {/* Google Pay */}
         <button
           type="button"
-          onClick={() => onSelect("googlepay")}
-          className="flex h-[48px] flex-1 items-center justify-center gap-2 rounded-full border border-black/10 bg-white text-[0.9rem] font-semibold text-[var(--foreground)] transition hover:bg-[#f5f5f5]"
+          onClick={() => googleEnabled && onSelect("googlepay")}
+          disabled={!googleEnabled}
+          title={!googleEnabled ? "Coming soon" : undefined}
+          className={`flex h-[48px] flex-1 items-center justify-center gap-2 rounded-full border border-black/10 bg-white text-[0.9rem] font-semibold text-[var(--foreground)] transition
+            ${googleEnabled ? "hover:bg-[#f5f5f5]" : "cursor-not-allowed opacity-40"}`}
         >
           {/* Coloured G */}
           <span className="font-bold">

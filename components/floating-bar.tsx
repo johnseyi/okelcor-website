@@ -4,8 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MessageSquareMore, ArrowUp, CircleDollarSign } from "lucide-react";
+import { useLanguage } from "@/context/language-context";
 
 export default function FloatingBar() {
+  const { t } = useLanguage();
   const [query, setQuery] = useState("");
   const router = useRouter();
 
@@ -20,14 +22,14 @@ export default function FloatingBar() {
 
         <form
           onSubmit={handleSubmit}
-          className="flex h-[44px] flex-1 items-center gap-3 rounded-full border border-black/10 bg-white px-4"
+          className="flex h-[48px] flex-1 items-center gap-3 rounded-full border border-black/10 bg-white px-4"
         >
           <MessageSquareMore size={18} className="text-[var(--muted)]" />
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Ask about tyre supply"
+            placeholder={t.floating.placeholder}
             className="w-full bg-transparent text-[14px] outline-none placeholder:text-[var(--muted)]"
           />
           <button
@@ -41,10 +43,10 @@ export default function FloatingBar() {
 
         <Link
           href="/quote"
-          className="flex h-[44px] shrink-0 items-center gap-2 rounded-full bg-[var(--primary)] px-4 text-[14px] font-semibold text-white transition hover:bg-[var(--primary-hover)] sm:px-5"
+          className="flex h-[48px] shrink-0 items-center gap-2 rounded-full bg-[var(--primary)] px-4 text-[14px] font-semibold text-white transition hover:bg-[var(--primary-hover)] sm:px-5"
         >
           <CircleDollarSign size={18} />
-          <span className="hidden sm:inline">Request a Quote</span>
+          <span className="hidden sm:inline">{t.floating.cta}</span>
         </Link>
 
       </div>

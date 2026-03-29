@@ -5,8 +5,10 @@ import { SlidersHorizontal, X } from "lucide-react";
 import FilterSidebar, { type FilterState } from "./filter-sidebar";
 import ProductGrid from "./product-grid";
 import { ALL_PRODUCTS } from "./data";
+import { useLanguage } from "@/context/language-context";
 
 export default function ShopCatalogue() {
+  const { t } = useLanguage();
   const [filters, setFilters] = useState<FilterState>({
     types: [],
     brands: [],
@@ -41,15 +43,15 @@ export default function ShopCatalogue() {
             <span className="font-semibold text-[var(--foreground)]">
               {filtered.length}
             </span>{" "}
-            products
+            {filtered.length === 1 ? t.shop.catalogue.product : t.shop.catalogue.products}
           </p>
           <button
             type="button"
             onClick={() => setMobileFiltersOpen(true)}
-            className="flex h-[38px] items-center gap-2 rounded-full border border-black/10 bg-white px-4 text-[0.88rem] font-semibold text-[var(--foreground)] transition hover:border-black/20"
+            className="flex h-[48px] items-center gap-2 rounded-full border border-black/10 bg-white px-5 text-[0.88rem] font-semibold text-[var(--foreground)] transition hover:border-black/20"
           >
             <SlidersHorizontal size={15} />
-            Filters
+            {t.shop.catalogue.filtersBtn}
             {activeFilterCount > 0 && (
               <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-[var(--primary)] text-[10px] font-bold text-white">
                 {activeFilterCount}
@@ -87,12 +89,12 @@ export default function ShopCatalogue() {
           <div className="fixed bottom-0 left-0 right-0 z-50 max-h-[82vh] overflow-y-auto rounded-t-[24px] bg-[#f5f5f5] p-5 pb-8 shadow-[0_-8px_40px_rgba(0,0,0,0.14)] md:hidden">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-[1.05rem] font-extrabold text-[var(--foreground)]">
-                Filters
+                {t.shop.catalogue.filtersHeading}
               </h2>
               <button
                 type="button"
                 onClick={() => setMobileFiltersOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-black/[0.06] transition hover:bg-black/10"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-black/[0.06] transition hover:bg-black/10"
                 aria-label="Close filters"
               >
                 <X size={17} />
@@ -104,7 +106,7 @@ export default function ShopCatalogue() {
               onClick={() => setMobileFiltersOpen(false)}
               className="mt-5 w-full rounded-full bg-[var(--primary)] py-3 text-[0.95rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
             >
-              Show {filtered.length} results
+              {t.shop.catalogue.show} {filtered.length} {t.shop.catalogue.results}
             </button>
           </div>
         </>

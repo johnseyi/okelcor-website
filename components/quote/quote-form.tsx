@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Paperclip, CheckCircle2 } from "lucide-react";
+import { useLanguage } from "@/context/language-context";
+import { trackQuoteSubmit } from "@/lib/analytics";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -36,11 +38,6 @@ const REQUIRED: (keyof FormData)[] = [
 
 // ─── Select options ───────────────────────────────────────────────────────────
 
-const BUSINESS_TYPES = ["Wholesaler", "Distributor", "Retailer", "Fleet Operator", "Individual Buyer", "Other"];
-const TYRE_CATEGORIES = ["PCR Tyres", "TBR Tyres", "Used Tyres", "Mixed Request"];
-const BUDGET_RANGES = ["Under €1,000", "€1,000 – €5,000", "€5,000 – €20,000", "€20,000 – €50,000", "€50,000+", "Prefer not to say"];
-const TIMELINES = ["As soon as possible", "Within 1 week", "Within 1 month", "Flexible"];
-
 const COUNTRIES = [
   "Germany", "United Kingdom", "Netherlands", "Belgium", "France", "Italy", "Spain",
   "Sweden", "Poland", "Austria", "Switzerland", "United States", "Canada",
@@ -60,23 +57,25 @@ const inputErrCls =
 
 function Field({
   label,
+  htmlFor,
   required,
   error,
   children,
 }: {
   label: string;
+  htmlFor?: string;
   required?: boolean;
   error?: string;
   children: React.ReactNode;
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-[0.82rem] font-semibold text-[var(--foreground)]">
+      <label htmlFor={htmlFor} className="mb-1.5 block text-[0.82rem] font-semibold text-[var(--foreground)]">
         {label}
         {required && <span className="ml-0.5 text-[var(--primary)]">*</span>}
       </label>
       {children}
-      {error && <p className="mt-1 text-[0.75rem] text-red-500">{error}</p>}
+      {error && <p id={htmlFor ? `${htmlFor}-error` : undefined} role="alert" className="mt-1 text-[0.75rem] text-red-500">{error}</p>}
     </div>
   );
 }
@@ -92,6 +91,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 // ─── Main form ────────────────────────────────────────────────────────────────
 
 export default function QuoteForm() {
+  const { t } = useLanguage();
   const [form, setForm] = useState<FormData>({
     fullName: "", companyName: "", email: "", phone: "",
     country: "", businessType: "",
@@ -103,6 +103,7 @@ export default function QuoteForm() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [refNumber, setRefNumber] = useState("");
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -116,15 +117,15 @@ export default function QuoteForm() {
 
   const validate = (): FormErrors => {
     const errs: FormErrors = {};
-    if (!form.fullName.trim()) errs.fullName = "Full name is required";
-    if (!form.email.trim()) errs.email = "Email is required";
+    if (!form.fullName.trim()) errs.fullName = t.quote.form.errFullName;
+    if (!form.email.trim()) errs.email = t.quote.form.errEmail;
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
-      errs.email = "Enter a valid email address";
-    if (!form.country) errs.country = "Please select a country";
-    if (!form.tyreCategory) errs.tyreCategory = "Please select a tyre category";
-    if (!form.quantity.trim()) errs.quantity = "Quantity is required";
-    if (!form.deliveryLocation.trim()) errs.deliveryLocation = "Delivery location is required";
-    if (!form.notes.trim()) errs.notes = "Please describe your requirements";
+      errs.email = t.quote.form.errEmailInvalid;
+    if (!form.country) errs.country = t.quote.form.errCountry;
+    if (!form.tyreCategory) errs.tyreCategory = t.quote.form.errCategory;
+    if (!form.quantity.trim()) errs.quantity = t.quote.form.errQuantity;
+    if (!form.deliveryLocation.trim()) errs.deliveryLocation = t.quote.form.errDelivery;
+    if (!form.notes.trim()) errs.notes = t.quote.form.errNotes;
     return errs;
   };
 
@@ -143,11 +144,31 @@ export default function QuoteForm() {
       return;
     }
     setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1400));
-    const ref = `OKL-QR-${Date.now().toString().slice(-6)}`;
-    setRefNumber(ref);
-    setSubmitting(false);
-    setSubmitted(true);
+    setSubmitError(null);
+
+    try {
+      const res = await fetch("/api/quote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+
+      const json = await res.json();
+
+      if (!res.ok) {
+        throw new Error(json.error || "Something went wrong. Please try again.");
+      }
+
+      setRefNumber(json.refNumber ?? `OKL-QR-${Date.now().toString().slice(-6)}`);
+      trackQuoteSubmit({ tyreCategory: form.tyreCategory, country: form.country });
+      setSubmitted(true);
+    } catch (err) {
+      setSubmitError(
+        err instanceof Error ? err.message : t.quote.form.errGeneric
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleReset = () => {
@@ -171,28 +192,26 @@ export default function QuoteForm() {
           <CheckCircle2 size={32} strokeWidth={1.5} className="text-green-500" />
         </div>
         <h2 className="mt-6 text-2xl font-extrabold tracking-tight text-[var(--foreground)]">
-          Quote Request Received
+          {t.quote.form.successTitle}
         </h2>
         <p className="mx-auto mt-3 max-w-md text-[0.95rem] leading-7 text-[var(--muted)]">
-          Your quote request has been received. Our team will review your
-          requirements and contact you with a tailored quotation within one
-          business day.
+          {t.quote.form.successBody}
         </p>
         <div className="mt-6 rounded-[14px] bg-white px-6 py-4">
-          <p className="text-[0.78rem] text-[var(--muted)]">Reference number</p>
+          <p className="text-[0.78rem] text-[var(--muted)]">{t.quote.form.refLabel}</p>
           <p className="mt-0.5 text-[1.2rem] font-extrabold tracking-wider text-[var(--foreground)]">
             {refNumber}
           </p>
         </div>
         <p className="mt-4 text-[0.82rem] text-[var(--muted)]">
-          Please keep this reference for any follow-up with our team.
+          {t.quote.form.refNote}
         </p>
         <button
           type="button"
           onClick={handleReset}
           className="mt-8 rounded-full bg-[var(--primary)] px-8 py-3 text-[0.9rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
         >
-          Submit Another Request
+          {t.quote.form.successButton}
         </button>
       </div>
     );
@@ -203,158 +222,177 @@ export default function QuoteForm() {
   return (
     <div className="rounded-[22px] bg-[#efefef] p-7 md:p-10">
       <p className="text-[13px] font-bold uppercase tracking-[0.28em] text-[var(--primary)]">
-        Quote Request Form
+        {t.quote.form.eyebrow}
       </p>
       <h2 className="mt-2 text-2xl font-extrabold tracking-tight text-[var(--foreground)] md:text-3xl">
-        Tell us what you need.
+        {t.quote.form.heading}
       </h2>
       <p className="mt-1.5 text-[0.88rem] text-[var(--muted)]">
-        Fields marked <span className="text-[var(--primary)]">*</span> are required.
+        {t.quote.form.requiredNote}
       </p>
 
       <form onSubmit={handleSubmit} noValidate className="mt-8">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 
           {/* ── Business Information ── */}
-          <SectionLabel>Business / Customer Information</SectionLabel>
+          <SectionLabel>{t.quote.form.sectionBusiness}</SectionLabel>
 
-          <Field label="Full Name" required error={errors.fullName}>
+          <Field label={t.quote.form.labelFullName} htmlFor="quote-fullName" required error={errors.fullName}>
             <div id="field-fullName">
               <input
+                id="quote-fullName"
                 type="text"
-                placeholder="John Smith"
+                placeholder={t.quote.form.placeholderFullName}
                 value={form.fullName}
                 onChange={set("fullName")}
+                aria-describedby={errors.fullName ? "quote-fullName-error" : undefined}
+                aria-invalid={!!errors.fullName}
                 className={ic("fullName")}
               />
             </div>
           </Field>
 
-          <Field label="Company Name" error={errors.companyName}>
+          <Field label={t.quote.form.labelCompany} htmlFor="quote-companyName" error={errors.companyName}>
             <input
+              id="quote-companyName"
               type="text"
-              placeholder="Acme Tyres GmbH"
+              placeholder={t.quote.form.placeholderCompany}
               value={form.companyName}
               onChange={set("companyName")}
               className={ic("companyName")}
             />
           </Field>
 
-          <Field label="Email Address" required error={errors.email}>
+          <Field label={t.quote.form.labelEmail} htmlFor="quote-email" required error={errors.email}>
             <div id="field-email">
               <input
+                id="quote-email"
                 type="email"
-                placeholder="john@company.com"
+                placeholder={t.quote.form.placeholderEmail}
                 value={form.email}
                 onChange={set("email")}
+                aria-describedby={errors.email ? "quote-email-error" : undefined}
+                aria-invalid={!!errors.email}
                 className={ic("email")}
               />
             </div>
           </Field>
 
-          <Field label="Phone Number" error={errors.phone}>
+          <Field label={t.quote.form.labelPhone} htmlFor="quote-phone" error={errors.phone}>
             <input
+              id="quote-phone"
               type="tel"
-              placeholder="+49 89 000 0000"
+              placeholder={t.quote.form.placeholderPhone}
               value={form.phone}
               onChange={set("phone")}
               className={ic("phone")}
             />
           </Field>
 
-          <Field label="Country / Region" required error={errors.country}>
+          <Field label={t.quote.form.labelCountry} htmlFor="quote-country" required error={errors.country}>
             <div id="field-country">
-              <select value={form.country} onChange={set("country")} className={ic("country")}>
-                <option value="">Select country</option>
+              <select id="quote-country" value={form.country} onChange={set("country")} aria-describedby={errors.country ? "quote-country-error" : undefined} aria-invalid={!!errors.country} className={ic("country")}>
+                <option value="">{t.quote.form.placeholderCountry}</option>
                 {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
           </Field>
 
-          <Field label="Business Type" error={errors.businessType}>
-            <select value={form.businessType} onChange={set("businessType")} className={ic("businessType")}>
-              <option value="">Select type</option>
-              {BUSINESS_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          <Field label={t.quote.form.labelBusiness} htmlFor="quote-businessType" error={errors.businessType}>
+            <select id="quote-businessType" value={form.businessType} onChange={set("businessType")} className={ic("businessType")}>
+              <option value="">{t.quote.form.placeholderBusiness}</option>
+              {t.quote.form.businessTypes.map((v) => <option key={v} value={v}>{v}</option>)}
             </select>
           </Field>
 
           {/* ── Product Request ── */}
-          <SectionLabel>Product Request Information</SectionLabel>
+          <SectionLabel>{t.quote.form.sectionProduct}</SectionLabel>
 
-          <Field label="Tyre Category" required error={errors.tyreCategory}>
+          <Field label={t.quote.form.labelTyreCategory} htmlFor="quote-tyreCategory" required error={errors.tyreCategory}>
             <div id="field-tyreCategory">
-              <select value={form.tyreCategory} onChange={set("tyreCategory")} className={ic("tyreCategory")}>
-                <option value="">Select category</option>
-                {TYRE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              <select id="quote-tyreCategory" value={form.tyreCategory} onChange={set("tyreCategory")} aria-describedby={errors.tyreCategory ? "quote-tyreCategory-error" : undefined} aria-invalid={!!errors.tyreCategory} className={ic("tyreCategory")}>
+                <option value="">{t.quote.form.placeholderCategory}</option>
+                {t.quote.form.tyreCategories.map((v) => <option key={v} value={v}>{v}</option>)}
               </select>
             </div>
           </Field>
 
-          <Field label="Brand Preference" error={errors.brandPreference}>
+          <Field label={t.quote.form.labelBrand} htmlFor="quote-brandPreference" error={errors.brandPreference}>
             <input
+              id="quote-brandPreference"
               type="text"
-              placeholder="e.g. Michelin, Bridgestone, Any"
+              placeholder={t.quote.form.placeholderBrand}
               value={form.brandPreference}
               onChange={set("brandPreference")}
               className={ic("brandPreference")}
             />
           </Field>
 
-          <Field label="Tyre Size / Specification" error={errors.tyreSize}>
+          <Field label={t.quote.form.labelTyreSize} htmlFor="quote-tyreSize" error={errors.tyreSize}>
             <input
+              id="quote-tyreSize"
               type="text"
-              placeholder="e.g. 205/55R16 91H or 295/80R22.5"
+              placeholder={t.quote.form.placeholderSize}
               value={form.tyreSize}
               onChange={set("tyreSize")}
               className={ic("tyreSize")}
             />
           </Field>
 
-          <Field label="Quantity Needed" required error={errors.quantity}>
+          <Field label={t.quote.form.labelQuantity} htmlFor="quote-quantity" required error={errors.quantity}>
             <div id="field-quantity">
               <input
+                id="quote-quantity"
                 type="text"
-                placeholder="e.g. 500 units, 2 containers"
+                placeholder={t.quote.form.placeholderQuantity}
                 value={form.quantity}
                 onChange={set("quantity")}
+                aria-describedby={errors.quantity ? "quote-quantity-error" : undefined}
+                aria-invalid={!!errors.quantity}
                 className={ic("quantity")}
               />
             </div>
           </Field>
 
-          <Field label="Budget Range" error={errors.budgetRange}>
-            <select value={form.budgetRange} onChange={set("budgetRange")} className={ic("budgetRange")}>
-              <option value="">Select range</option>
-              {BUDGET_RANGES.map((b) => <option key={b} value={b}>{b}</option>)}
+          <Field label={t.quote.form.labelBudget} htmlFor="quote-budgetRange" error={errors.budgetRange}>
+            <select id="quote-budgetRange" value={form.budgetRange} onChange={set("budgetRange")} className={ic("budgetRange")}>
+              <option value="">{t.quote.form.placeholderBudget}</option>
+              {t.quote.form.budgetRanges.map((v) => <option key={v} value={v}>{v}</option>)}
             </select>
           </Field>
 
-          <Field label="Required Delivery Timeline" error={errors.deliveryTimeline}>
-            <select value={form.deliveryTimeline} onChange={set("deliveryTimeline")} className={ic("deliveryTimeline")}>
-              <option value="">Select timeline</option>
-              {TIMELINES.map((t) => <option key={t} value={t}>{t}</option>)}
+          <Field label={t.quote.form.labelTimeline} htmlFor="quote-deliveryTimeline" error={errors.deliveryTimeline}>
+            <select id="quote-deliveryTimeline" value={form.deliveryTimeline} onChange={set("deliveryTimeline")} className={ic("deliveryTimeline")}>
+              <option value="">{t.quote.form.placeholderTimeline}</option>
+              {t.quote.form.timelines.map((v) => <option key={v} value={v}>{v}</option>)}
             </select>
           </Field>
 
-          <Field label="Preferred Delivery Location" required error={errors.deliveryLocation} >
+          <Field label={t.quote.form.labelDelivery} htmlFor="quote-deliveryLocation" required error={errors.deliveryLocation}>
             <div id="field-deliveryLocation" className="col-span-full">
               <input
+                id="quote-deliveryLocation"
                 type="text"
-                placeholder="e.g. Hamburg Port, Lagos, Dubai — include port or city"
+                placeholder={t.quote.form.placeholderDelivery}
                 value={form.deliveryLocation}
                 onChange={set("deliveryLocation")}
+                aria-describedby={errors.deliveryLocation ? "quote-deliveryLocation-error" : undefined}
+                aria-invalid={!!errors.deliveryLocation}
                 className={ic("deliveryLocation")}
               />
             </div>
           </Field>
 
-          <Field label="Additional Notes / Inquiry" required error={errors.notes}>
+          <Field label={t.quote.form.labelNotes} htmlFor="quote-notes" required error={errors.notes}>
             <div id="field-notes" className="col-span-full">
               <textarea
-                placeholder="Describe your requirements in detail — tyre specs, intended use, volume, any other relevant information…"
+                id="quote-notes"
+                placeholder={t.quote.form.placeholderNotes}
                 value={form.notes}
                 onChange={set("notes")}
                 rows={5}
+                aria-describedby={errors.notes ? "quote-notes-error" : undefined}
+                aria-invalid={!!errors.notes}
                 className={`${ic("notes")} resize-none`}
               />
             </div>
@@ -363,18 +401,25 @@ export default function QuoteForm() {
           {/* ── File upload placeholder ── */}
           <div className="col-span-full">
             <label className="mb-1.5 block text-[0.82rem] font-semibold text-[var(--foreground)]">
-              Upload Product List / Specification Sheet
-              <span className="ml-2 text-[0.75rem] font-normal text-[var(--muted)]">(optional — coming soon)</span>
+              {t.quote.form.labelUpload}
+              <span className="ml-2 text-[0.75rem] font-normal text-[var(--muted)]">({t.quote.form.uploadComingSoon})</span>
             </label>
             <div className="flex cursor-not-allowed items-center gap-3 rounded-[12px] border border-dashed border-black/[0.12] bg-white/60 px-4 py-4 opacity-50">
               <Paperclip size={16} className="shrink-0 text-[var(--muted)]" />
               <span className="text-[0.88rem] text-[var(--muted)]">
-                Drag & drop or click to upload — PDF, XLS, CSV accepted
+                {t.quote.form.uploadHint}
               </span>
             </div>
           </div>
 
         </div>
+
+        {/* Submit error */}
+        {submitError && (
+          <div className="mt-5 rounded-[10px] border border-red-200 bg-red-50 px-4 py-3 text-[0.85rem] text-red-700">
+            {submitError}
+          </div>
+        )}
 
         {/* Submit */}
         <div className="mt-7">
@@ -389,14 +434,14 @@ export default function QuoteForm() {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                 </svg>
-                Submitting Request…
+                {t.quote.form.submitting}
               </span>
             ) : (
-              "Submit Quote Request"
+              t.quote.form.submit
             )}
           </button>
           <p className="mt-3 text-center text-[0.78rem] text-[var(--muted)]">
-            We respond to all requests within one business day. Your information is kept strictly confidential.
+            {t.quote.form.submitNote}
           </p>
         </div>
       </form>

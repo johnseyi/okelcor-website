@@ -91,8 +91,8 @@ a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   border: none;
   border-radius: 999px;
   background: transparent;
@@ -123,7 +123,7 @@ a {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 46px;
+  min-height: 48px;
   padding: 0 16px;
   border-radius: 14px;
   color: var(--foreground);
@@ -346,6 +346,9 @@ a {
   .tesla-hero-btn-primary,
   .tesla-hero-btn-secondary {
     height: 50px;
+    min-width: 140px;
+    padding: 0 20px;
+    font-size: 0.9rem;
   }
 
   .hero-title {
@@ -376,6 +379,33 @@ a {
 
 button {
   transition: all 0.25s ease;
+}
+
+/* ─── Global focus-visible — keyboard accessibility ─────────────────────────
+   :focus-visible only fires on keyboard / sequential navigation, never on
+   mouse clicks, so this ring never shows for pointer users.
+   Modern browsers (Chrome 94+, Firefox 88+) auto-follow border-radius on
+   outline, so pill/rounded shapes get matching pill/rounded rings.          */
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Form controls — ring sits flush with the existing border */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline-offset: 0;
+}
+
+/* Hero elements sit on dark image backgrounds — use white ring for contrast */
+.tesla-hero-btn-primary:focus-visible,
+.tesla-hero-btn-secondary:focus-visible,
+.hero-nav-btn:focus-visible,
+.hero-control-btn:focus-visible,
+.hero-dot:focus-visible {
+  outline-color: #ffffff;
 }
 
 .hide-scrollbar {
