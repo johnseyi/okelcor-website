@@ -10,7 +10,7 @@ import { useLanguage } from "@/context/language-context";
 const CARD_IMAGES = [
   "/images/pexels-piotr-arnoldes-7862031-6063163.jpg",
   "/images/pexels-furkanakt-29235902.jpg",
-  "/images/pexels-muhammedtarikkahraman-16706765.jpg",
+  "/sections/tbr-tyres.jpg",
   "/images/pexels-mikebirdy-250307.jpg",
 ];
 
