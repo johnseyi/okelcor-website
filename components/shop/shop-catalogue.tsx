@@ -4,10 +4,15 @@ import { useMemo, useState } from "react";
 import { SlidersHorizontal, X } from "lucide-react";
 import FilterSidebar, { type FilterState } from "./filter-sidebar";
 import ProductGrid from "./product-grid";
-import { ALL_PRODUCTS } from "./data";
+import { ALL_PRODUCTS, type Product } from "./data";
 import { useLanguage } from "@/context/language-context";
 
-export default function ShopCatalogue() {
+type ShopCatalogueProps = {
+  /** Live products from the API. Falls back to static ALL_PRODUCTS when undefined. */
+  products?: Product[];
+};
+
+export default function ShopCatalogue({ products: apiProducts }: ShopCatalogueProps) {
   const { t } = useLanguage();
   const [filters, setFilters] = useState<FilterState>({
     types: [],
@@ -17,8 +22,11 @@ export default function ShopCatalogue() {
   const [sortBy, setSortBy] = useState("default");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
+  // Use API products when available; fall back to static data
+  const allProducts = apiProducts ?? ALL_PRODUCTS;
+
   const filtered = useMemo(() => {
-    let result = ALL_PRODUCTS;
+    let result = allProducts;
     if (filters.types.length > 0)
       result = result.filter((p) => filters.types.includes(p.type));
     if (filters.brands.length > 0)

@@ -67,15 +67,21 @@ function ResultItem({
     >
       {/* Thumbnail */}
       <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-[10px] bg-[#efefef]">
-        <Image
-          src={result.image}
-          alt={label}
-          fill
-          className="object-cover"
-          sizes="48px"
-          loading="lazy"
-          unoptimized
-        />
+        {result.image ? (
+          <Image
+            src={result.image}
+            alt={label}
+            fill
+            className="object-cover"
+            sizes="48px"
+            loading="lazy"
+            unoptimized
+          />
+        ) : (
+          <span className="flex h-full w-full items-center justify-center text-[0.6rem] font-bold uppercase tracking-widest text-[#aaa]">
+            {label.slice(0, 2)}
+          </span>
+        )}
       </div>
 
       {/* Text */}
@@ -238,14 +244,14 @@ export default function SearchModal() {
         gsap.to(backdrop, {
           autoAlpha: 0,
           duration: 0.18,
-          onInterrupt: () => gsap.set(backdrop, { autoAlpha: 0 }),
+          onInterrupt: () => { gsap.set(backdrop, { autoAlpha: 0 }); },
         });
         gsap.to(modal, {
           autoAlpha: 0,
           y: 12,
           duration: 0.18,
           ease: ease.sharp,
-          onInterrupt: () => gsap.set(modal, { autoAlpha: 0 }),
+          onInterrupt: () => { gsap.set(modal, { autoAlpha: 0 }); },
         });
       }
     }

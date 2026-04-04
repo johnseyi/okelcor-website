@@ -3,11 +3,18 @@
 import Link from "next/link";
 import Image from "next/image";
 import NewsletterStrip from "@/components/newsletter-strip";
+import FadeUp from "@/components/motion/fade-up";
 import { useLanguage } from "@/context/language-context";
+import { useSiteSettings } from "@/context/site-settings-context";
 import { COMPANY_EMAIL, COMPANY_PHONE, COMPANY_ADDRESS_STREET, COMPANY_ADDRESS_CITY } from "@/lib/constants";
 
 export default function Footer() {
   const { t } = useLanguage();
+  const s = useSiteSettings();
+
+  const address  = s.company_address ?? `${COMPANY_ADDRESS_STREET}, ${COMPANY_ADDRESS_CITY}`;
+  const phone    = s.company_phone   ?? COMPANY_PHONE;
+  const email    = s.company_email   ?? COMPANY_EMAIL;
 
   const columns = [
     {
@@ -42,12 +49,12 @@ export default function Footer() {
 
   return (
     <footer className="w-full bg-[#f5f5f5]">
-      <NewsletterStrip />
+      <FadeUp><NewsletterStrip /></FadeUp>
       <div className="tesla-shell">
 
         {/* Main footer grid */}
         <div className="border-t border-black/[0.07] py-12 md:py-16">
-          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
+          <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
 
             {/* Brand column */}
             <div>
@@ -66,9 +73,9 @@ export default function Footer() {
                 {t.footer.tagline}
               </p>
               <div className="mt-5 flex flex-col gap-1.5 text-[0.82rem] text-[var(--muted)]">
-                <span>{COMPANY_ADDRESS_STREET}, {COMPANY_ADDRESS_CITY}</span>
-                <span>{COMPANY_PHONE}</span>
-                <span>{COMPANY_EMAIL}</span>
+                <span>{address}</span>
+                <span>{phone}</span>
+                <span>{email}</span>
               </div>
             </div>
 

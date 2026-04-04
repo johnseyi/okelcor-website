@@ -8,6 +8,26 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  serverActions: {
+    bodySizeLimit: "300mb",
+  },
+  images: {
+    remotePatterns: [
+      {
+        // Local Laravel dev server
+        protocol: "http",
+        hostname: "localhost",
+        port: "8000",
+        pathname: "/storage/**",
+      },
+      {
+        // Production API server
+        protocol: "https",
+        hostname: "api.okelcor.de",
+        pathname: "/storage/**",
+      },
+    ],
+  },
   async headers() {
     return [
       {

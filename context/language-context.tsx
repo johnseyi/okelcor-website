@@ -21,15 +21,23 @@ const LanguageContext = createContext<LanguageContextValue>({
 });
 
 const STORAGE_KEY = "okelcor_locale";
+const COOKIE_NAME = "okelcor_locale";
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
+
+function persistLocale(value: Locale) {
+  localStorage.setItem(STORAGE_KEY, value);
+  document.cookie = `${COOKIE_NAME}=${value};path=/;max-age=${COOKIE_MAX_AGE};SameSite=Lax`;
+}
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(defaultLocale);
 
-  // Restore saved locale on mount
+  // Restore saved locale on mount and sync cookie so server components see it
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY) as Locale | null;
     if (stored && stored in translations) {
       setLocaleState(stored);
+      persistLocale(stored);
     }
   }, []);
 
@@ -40,7 +48,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   const setLocale = (next: Locale) => {
     setLocaleState(next);
-    localStorage.setItem(STORAGE_KEY, next);
+    persistLocale(next);
   };
 
   return (

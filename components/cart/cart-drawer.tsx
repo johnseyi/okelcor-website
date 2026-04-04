@@ -134,7 +134,7 @@ export default function CartDrawer() {
       // Backdrop fade out — onInterrupt mirrors onComplete so it never
       // gets stuck blocking pointer events if the tween is killed mid-flight
       if (backdrop) {
-        const hideBackdrop = () => gsap.set(backdrop, { autoAlpha: 0 });
+        const hideBackdrop = () => { gsap.set(backdrop, { autoAlpha: 0 }); };
         gsap.to(backdrop, {
           autoAlpha: 0,
           duration: 0.24,
@@ -146,7 +146,7 @@ export default function CartDrawer() {
       }
       // Drawer slide out to right
       if (drawer) {
-        const hideDrawer = () => gsap.set(drawer, { autoAlpha: 0 });
+        const hideDrawer = () => { gsap.set(drawer, { autoAlpha: 0 }); };
         gsap.to(drawer, {
           x: "100%",
           duration: 0.32,

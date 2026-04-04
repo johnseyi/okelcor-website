@@ -14,7 +14,7 @@ export default function PageHero({
   image,
 }: PageHeroProps) {
   return (
-    <section className="w-full pt-20">
+    <section className="w-full pt-[76px] lg:pt-20">
       <div className="relative min-h-[62vh] overflow-hidden">
         <div
           className="absolute inset-0 bg-cover bg-center"

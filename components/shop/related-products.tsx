@@ -25,36 +25,42 @@ export default function RelatedProducts({ products }: { products: Product[] }) {
         <StaggerParent className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {products.map((product) => (
             <StaggerChild key={product.id}>
-            <Link
-              href={`/shop/${product.id}`}
-              className="group flex flex-col overflow-hidden rounded-[22px] bg-[#efefef] transition-shadow hover:shadow-[0_8px_28px_rgba(0,0,0,0.10)]"
-            >
-              <div className="relative aspect-[4/3] overflow-hidden bg-[#e0e0e0]">
-                <img
-                  src={product.image}
-                  alt={`${product.brand} ${product.name}`}
-                  loading="lazy"
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
-                />
-                <span className="absolute right-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-[var(--foreground)] shadow-sm backdrop-blur-sm">
-                  {product.type}
-                </span>
-              </div>
-              <div className="flex flex-1 flex-col p-4">
-                <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--primary)]">
-                  {product.brand}
-                </p>
-                <h3 className="mt-1 text-[0.95rem] font-semibold text-[var(--foreground)]">
-                  {product.name}
-                </h3>
-                <p className="mt-0.5 text-[0.82rem] text-[var(--muted)]">
-                  {product.size} · {product.spec}
-                </p>
-                <p className="mt-auto pt-3 text-[1.2rem] font-extrabold text-[var(--foreground)]">
-                  €{product.price.toFixed(2)}
-                </p>
-              </div>
-            </Link>
+              <Link
+                href={`/shop/${product.id}`}
+                className="group flex flex-col overflow-hidden rounded-[22px] bg-[#efefef] transition-shadow hover:shadow-[0_8px_28px_rgba(0,0,0,0.10)]"
+              >
+                <div className="relative aspect-[4/3] overflow-hidden bg-[#e0e0e0]">
+                  {product.image ? (
+                    <img
+                      src={product.image}
+                      alt={`${product.brand} ${product.name}`}
+                      loading="lazy"
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-[#d8d8d8] text-[0.65rem] font-bold uppercase tracking-widest text-[#aaa]">
+                      No image
+                    </div>
+                  )}
+                  <span className="absolute right-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-[var(--foreground)] shadow-sm backdrop-blur-sm">
+                    {product.type}
+                  </span>
+                </div>
+                <div className="flex flex-1 flex-col p-4">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--primary)]">
+                    {product.brand}
+                  </p>
+                  <h3 className="mt-1 text-[0.95rem] font-semibold text-[var(--foreground)]">
+                    {product.name}
+                  </h3>
+                  <p className="mt-0.5 text-[0.82rem] text-[var(--muted)]">
+                    {product.size} · {product.spec}
+                  </p>
+                  <p className="mt-auto pt-3 text-[1.2rem] font-extrabold text-[var(--foreground)]">
+                    €{product.price.toFixed(2)}
+                  </p>
+                </div>
+              </Link>
             </StaggerChild>
           ))}
         </StaggerParent>

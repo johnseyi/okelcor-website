@@ -27,7 +27,7 @@ export default function LogisticsPartners() {
               className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-[1.03]"
               style={{
                 backgroundImage:
-                  "url('/images/logistics.jpg')",
+                  "url('/images/pexels-einfoto-2091159.jpg')",
               }}
             />
             <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/20 to-black/65" />

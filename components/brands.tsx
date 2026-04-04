@@ -5,18 +5,32 @@ import Image from "next/image";
 import Reveal from "@/components/motion/reveal";
 import { StaggerParent, StaggerChild } from "@/components/motion/stagger";
 import { useLanguage } from "@/context/language-context";
+import type { Brand } from "@/lib/api";
 
-const brands = [
-  { name: "Michelin", src: "/brands/brand%20logo/michelin-logo-6.png" },
+// ── Static fallback logos ─────────────────────────────────────────────────────
+// Used when the API is unavailable.
+const STATIC_BRANDS = [
+  { name: "Michelin",    src: "/brands/brand%20logo/michelin-logo-6.png" },
   { name: "Bridgestone", src: "/brands/brand%20logo/Bridgestone-Logo.png" },
-  { name: "Goodyear", src: "/brands/brand%20logo/goodyear-logo-01.jpg" },
+  { name: "Goodyear",   src: "/brands/brand%20logo/goodyear-logo-01.jpg" },
   { name: "Continental", src: "/brands/brand%20logo/Continental_Logo.png" },
-  { name: "Pirelli", src: "/brands/brand%20logo/Pirelli_-_logo_full_(Italy,_1997).svg.png" },
-  { name: "Dunlop", src: "/brands/brand%20logo/dunlop-3.svg" },
+  { name: "Pirelli",    src: "/brands/brand%20logo/Pirelli_-_logo_full_(Italy,_1997).svg.png" },
+  { name: "Dunlop",     src: "/brands/brand%20logo/dunlop-3.svg" },
 ];
 
-export default function Brands() {
+type BrandsProps = {
+  /** Live brands from the API. When undefined falls back to static logos. */
+  brands?: Brand[];
+};
+
+export default function Brands({ brands: apiBrands }: BrandsProps) {
   const { t } = useLanguage();
+
+  // Map API brands to the { name, src } shape expected by the grid,
+  // or use the static list when the API is unavailable.
+  const effectiveBrands = apiBrands?.length
+    ? apiBrands.map((b) => ({ name: b.name, src: b.logo_url }))
+    : STATIC_BRANDS;
   return (
     <section className="w-full bg-[#f5f5f5] py-6">
       <div className="tesla-shell">
@@ -36,18 +50,24 @@ export default function Brands() {
             </p>
 
             <StaggerParent className="mt-10 grid grid-cols-2 gap-4 md:grid-cols-3">
-              {brands.map((brand) => (
+              {effectiveBrands.map((brand) => (
                 <StaggerChild
                   key={brand.name}
                   className="flex min-h-[110px] items-center justify-center rounded-2xl border border-black/5 bg-white p-5 shadow-sm"
                 >
-                  <Image
-                    src={brand.src}
-                    alt={brand.name}
-                    width={120}
-                    height={60}
-                    style={{ width: "auto", height: "auto", maxWidth: "110px", maxHeight: "48px" }}
-                  />
+                  {brand.src ? (
+                    <Image
+                      src={brand.src}
+                      alt={brand.name}
+                      width={120}
+                      height={60}
+                      style={{ width: "auto", height: "auto", maxWidth: "110px", maxHeight: "48px" }}
+                    />
+                  ) : (
+                    <span className="text-[0.75rem] font-bold uppercase tracking-widest text-[#aaa]">
+                      {brand.name.slice(0, 3)}
+                    </span>
+                  )}
                 </StaggerChild>
               ))}
             </StaggerParent>
@@ -63,12 +83,12 @@ export default function Brands() {
           </Reveal>
 
           {/* Right panel */}
-          <Reveal delay={0.15} className="relative min-h-[280px] overflow-hidden rounded-[22px] md:min-h-[600px]">
+          <Reveal delay={0.15} className="relative min-h-[220px] overflow-hidden rounded-[22px] sm:min-h-[280px] md:min-h-[600px]">
             <div
               className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-[1.03]"
               style={{
                 backgroundImage:
-                  "url('/images/logistics.jpg')",
+                  "url('/images/schwoaze-highway-3392100.jpg')",
               }}
             />
             <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/10 to-black/35" />

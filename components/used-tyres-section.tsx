@@ -47,7 +47,7 @@ export default function UsedTyresSection() {
             <div className="relative min-h-[320px] md:min-h-[420px]">
               <div
                 className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-[1.02]"
-                style={{ backgroundImage: "url('/sections/used-tyres.jpg')" }}
+                style={{ backgroundImage: "url('/images/pexels-jonathanborba-18372024.jpg')" }}
               />
               <div className="absolute inset-0 bg-gradient-to-r from-black/8 via-transparent to-transparent" />
             </div>

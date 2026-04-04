@@ -35,7 +35,7 @@ export default function WhyOkelcor() {
             style={{
               minHeight: "280px",
               backgroundImage:
-                "url('/sections/tyre-bg-light.png')",
+                "url('/images/pexels-franco-monsalvo-252430633-16242030.jpg')",
             }}
           />
 
@@ -63,7 +63,7 @@ export default function WhyOkelcor() {
             style={{
               minHeight: "280px",
               backgroundImage:
-                "url('/images/tyre-truck.jpg')",
+                "url('/images/pexels-mavickty-16520868.jpg')",
             }}
           />
 

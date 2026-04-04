@@ -56,7 +56,7 @@ export default function Navbar() {
   const { totalItems, openCart } = useCart();
   const { locale, setLocale, t } = useLanguage();
   const { openSearch } = useSearch();
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const isAuthed = status === "authenticated";
 
   const navItems = [
@@ -68,26 +68,31 @@ export default function Navbar() {
     { label: t.nav.quote,   href: "/quote" },
   ];
 
-  const [openMenu, setOpenMenu]           = useState(false);
-  const [openLang, setOpenLang]           = useState(false);
+  const [openMenu, setOpenMenu]             = useState(false);
+  const [openLang, setOpenLang]             = useState(false);
   const [openMobileLang, setOpenMobileLang] = useState(false);
+  const [openProfile, setOpenProfile]       = useState(false);
 
   // ── DOM refs ─────────────────────────────────────────────────────────────
-  const headerRef         = useRef<HTMLElement>(null);
-  const langBackdropRef   = useRef<HTMLButtonElement>(null);
-  const langPanelRef      = useRef<HTMLDivElement>(null);
-  const drawerBackdropRef = useRef<HTMLButtonElement>(null);
-  const drawerRef         = useRef<HTMLElement>(null);
+  const headerRef           = useRef<HTMLElement>(null);
+  const langBackdropRef     = useRef<HTMLButtonElement>(null);
+  const langPanelRef        = useRef<HTMLDivElement>(null);
+  const drawerBackdropRef   = useRef<HTMLButtonElement>(null);
+  const drawerRef           = useRef<HTMLElement>(null);
+  const profileBackdropRef  = useRef<HTMLButtonElement>(null);
+  const profilePanelRef     = useRef<HTMLDivElement>(null);
 
   // Skip the initial mount run for toggle effects (panels are already hidden)
-  const isLangFirstRender = useRef(true);
-  const isMenuFirstRender = useRef(true);
+  const isLangFirstRender     = useRef(true);
+  const isMenuFirstRender     = useRef(true);
+  const isProfileFirstRender  = useRef(true);
 
   // ── Route change: close all panels ───────────────────────────────────────
   useEffect(() => {
     setOpenMenu(false);
     setOpenLang(false);
     setOpenMobileLang(false);
+    setOpenProfile(false);
   }, [pathname]);
 
   // ── Scroll lock for mobile overlays ──────────────────────────────────────
@@ -103,6 +108,7 @@ export default function Navbar() {
     setOpenMenu(false);
     setOpenLang(false);
     setOpenMobileLang(false);
+    setOpenProfile(false);
   };
 
   // ── Escape key: close any open panel ─────────────────────────────────────
@@ -113,6 +119,7 @@ export default function Navbar() {
       setOpenMenu(false);
       setOpenLang(false);
       setOpenMobileLang(false);
+      setOpenProfile(false);
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
@@ -122,10 +129,12 @@ export default function Navbar() {
   // Runs before the first paint to prevent any flash of visible panels.
   // autoAlpha: 0 sets both opacity: 0 AND visibility: hidden.
   useEffect(() => {
-    gsap.set(langPanelRef.current,      { autoAlpha: 0, y: -8 });
-    gsap.set(langBackdropRef.current,   { autoAlpha: 0 });
-    gsap.set(drawerRef.current,         { autoAlpha: 0, x: "100%" });
-    gsap.set(drawerBackdropRef.current, { autoAlpha: 0 });
+    gsap.set(langPanelRef.current,       { autoAlpha: 0, y: -8 });
+    gsap.set(langBackdropRef.current,    { autoAlpha: 0 });
+    gsap.set(drawerRef.current,          { autoAlpha: 0, x: "100%" });
+    gsap.set(drawerBackdropRef.current,  { autoAlpha: 0 });
+    gsap.set(profilePanelRef.current,    { autoAlpha: 0, y: -8 });
+    gsap.set(profileBackdropRef.current, { autoAlpha: 0 });
   }, []);
 
   // ── Header entrance ───────────────────────────────────────────────────────
@@ -189,6 +198,52 @@ export default function Navbar() {
       gsap.killTweensOf([panel, backdrop]);
     };
   }, [openLang]);
+
+  // ── Profile dropdown ──────────────────────────────────────────────────────
+  useEffect(() => {
+    if (isProfileFirstRender.current) {
+      isProfileFirstRender.current = false;
+      return;
+    }
+
+    const panel    = profilePanelRef.current;
+    const backdrop = profileBackdropRef.current;
+    const reduced  = prefersReducedMotion();
+
+    if (openProfile) {
+      if (reduced) {
+        gsap.set([panel, backdrop], { autoAlpha: 1, y: 0 });
+      } else {
+        gsap.to(backdrop, { autoAlpha: 1, duration: 0.18 });
+        gsap.fromTo(
+          panel,
+          { autoAlpha: 0, y: -10 },
+          { autoAlpha: 1, y: 0, duration: 0.26, ease: ease.smooth }
+        );
+      }
+    } else {
+      if (reduced) {
+        gsap.set([panel, backdrop], { autoAlpha: 0, y: -8 });
+      } else {
+        gsap.to(backdrop, {
+          autoAlpha: 0,
+          duration: 0.18,
+          onInterrupt: () => { gsap.set(backdrop, { autoAlpha: 0 }); },
+        });
+        gsap.to(panel, {
+          autoAlpha: 0,
+          y: -8,
+          duration: 0.2,
+          ease: ease.sharp,
+          onInterrupt: () => { gsap.set(panel, { autoAlpha: 0 }); },
+        });
+      }
+    }
+
+    return () => {
+      gsap.killTweensOf([panel, backdrop]);
+    };
+  }, [openProfile]);
 
   // ── Mobile drawer ─────────────────────────────────────────────────────────
   // Open:  slides in from right with expo.out deceleration.
@@ -314,19 +369,50 @@ export default function Navbar() {
                 </button>
 
                 {isAuthed ? (
-                  <>
-                    <Link href="/account" className="tesla-icon-btn" aria-label="Account">
-                      <UserCircle2 size={21} strokeWidth={1.9} />
-                    </Link>
+                  <div className="relative">
                     <button
                       type="button"
-                      onClick={() => signOut({ callbackUrl: "/" })}
-                      className="tesla-icon-btn"
-                      aria-label="Sign out"
+                      onClick={() => {
+                        setOpenProfile((prev) => !prev);
+                        setOpenLang(false);
+                        setOpenMenu(false);
+                      }}
+                      className={`tesla-icon-btn ${openProfile ? "tesla-icon-btn-active" : ""}`}
+                      aria-label="Account"
+                      aria-expanded={openProfile}
                     >
-                      <LogOut size={19} strokeWidth={1.9} />
+                      <UserCircle2 size={21} strokeWidth={1.9} />
                     </button>
-                  </>
+
+                    {/* Profile dropdown panel */}
+                    <div
+                      ref={profilePanelRef}
+                      className="absolute right-0 top-[calc(100%+10px)] z-50 min-w-[220px] rounded-2xl border border-black/[0.07] bg-white/95 shadow-[0_12px_32px_rgba(0,0,0,0.1)] backdrop-blur-xl"
+                      style={{ visibility: "hidden" }}
+                    >
+                      {/* Email */}
+                      <div className="px-4 pb-3 pt-4">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-black/40">Signed in as</p>
+                        <p className="mt-1 truncate text-[0.875rem] font-semibold text-black">
+                          {session?.user?.email ?? "—"}
+                        </p>
+                      </div>
+
+                      <div className="mx-4 border-t border-black/[0.06]" />
+
+                      {/* Sign out */}
+                      <div className="p-2">
+                        <button
+                          type="button"
+                          onClick={() => { setOpenProfile(false); signOut({ callbackUrl: "/" }); }}
+                          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[0.875rem] font-semibold text-black/70 transition hover:bg-black/[0.04] hover:text-black"
+                        >
+                          <LogOut size={16} strokeWidth={2} />
+                          Sign Out
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 ) : (
                   <Link href="/auth" className="tesla-icon-btn" aria-label="Sign in">
                     <UserCircle2 size={21} strokeWidth={1.9} />
@@ -389,6 +475,15 @@ export default function Navbar() {
           className="fixed inset-0 z-40 hidden bg-transparent lg:block"
           style={{ visibility: "hidden" }}
           onClick={() => setOpenLang(false)}
+        />
+
+        <button
+          ref={profileBackdropRef}
+          type="button"
+          aria-label="Close profile panel"
+          className="fixed inset-0 z-40 hidden bg-transparent lg:block"
+          style={{ visibility: "hidden" }}
+          onClick={() => setOpenProfile(false)}
         />
 
         {/*
@@ -531,18 +626,19 @@ export default function Navbar() {
 
                 {isAuthed ? (
                   <>
-                    <Link
-                      href="/account"
-                      onClick={closeAll}
-                      className="tesla-mobile-meta-link"
-                    >
-                      <div className="flex items-center gap-4">
-                        <UserCircle2 size={23} strokeWidth={1.9} />
-                        <span className="text-[1rem] font-semibold text-black">
-                          {t.nav.account}
-                        </span>
+                    <div className="tesla-mobile-meta-link cursor-default">
+                      <div className="flex items-start gap-4">
+                        <UserCircle2 size={23} strokeWidth={1.9} className="mt-0.5 shrink-0" />
+                        <div>
+                          <div className="text-[0.78rem] font-bold uppercase tracking-wider text-black/40">
+                            Signed in as
+                          </div>
+                          <div className="mt-0.5 truncate text-[0.95rem] font-semibold text-black">
+                            {session?.user?.email ?? "—"}
+                          </div>
+                        </div>
                       </div>
-                    </Link>
+                    </div>
                     <button
                       type="button"
                       onClick={() => { closeAll(); signOut({ callbackUrl: "/" }); }}

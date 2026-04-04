@@ -1,14 +1,32 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Navbar from "@/components/navbar";
+import WhyOkelcor from "@/components/why-okelcor";
+import FadeUp from "@/components/motion/fade-up";
+import Logistics from "@/components/logistics";
+import WhoWeServeSection from "@/components/who-we-serve";
+import TyreHighlightsSection from "@/components/tyre-highlights";
+import RexCertified from "@/components/rex-certified";
+import CTASection from "@/components/cta-section";
+import Footer from "@/components/footer";
+import FloatingBar from "@/components/floating-bar";
+import HeroSection from "@/components/home/hero-section";
+import CategoriesSection from "@/components/home/categories-section";
+import BrandsSection from "@/components/home/brands-section";
+import {
+  HeroSkeleton,
+  CategoriesSkeleton,
+  BrandsSkeleton,
+} from "@/components/ui/skeleton";
 
 export const metadata: Metadata = {
   title: "Okelcor – Growing Together",
   description:
-    "Munich-based global tyre supplier. Premium PCR, TBR, and used tyres for distributors and wholesalers in over 30 countries.",
+    "Munich-based global tyre supplier. Premium PCR, TBR, and used tyres for businesses, fleets, and individual drivers in over 30 countries.",
   openGraph: {
     title: "Okelcor – Growing Together",
     description:
-      "Munich-based global tyre supplier. Premium PCR, TBR, and used tyres for distributors and wholesalers in over 30 countries.",
+      "Munich-based global tyre supplier. Premium PCR, TBR, and used tyres for businesses, fleets, and individual drivers in over 30 countries.",
     url: "/",
     type: "website",
   },
@@ -18,29 +36,29 @@ export const metadata: Metadata = {
       "Munich-based global tyre supplier. PCR, TBR, and used tyres for distributors worldwide.",
   },
 };
-import Hero from "@/components/hero";
-import Categories from "@/components/categories";
-import WhyOkelcor from "@/components/why-okelcor";
-import Brands from "@/components/brands";
-import Logistics from "@/components/logistics";
-import UsedTyresSection from "@/components/used-tyres-section";
-import TbrFeatureSection from "@/components/tbr-feature-section";
-import RexCertified from "@/components/rex-certified";
-import CTASection from "@/components/cta-section";
-import Footer from "@/components/footer";
-import FloatingBar from "@/components/floating-bar";
 
 export default function Home() {
   return (
-    <main>
+    <main className="w-full">
       <Navbar />
-      <Hero />
-      <Categories />
-      <WhyOkelcor />
-      <Brands />
+
+      <Suspense fallback={<HeroSkeleton />}>
+        <HeroSection />
+      </Suspense>
+
+      <Suspense fallback={<CategoriesSkeleton />}>
+        <CategoriesSection />
+      </Suspense>
+
+      <FadeUp><WhyOkelcor /></FadeUp>
+      <WhoWeServeSection />
+
+      <Suspense fallback={<BrandsSkeleton />}>
+        <BrandsSection />
+      </Suspense>
+
       <Logistics />
-      <UsedTyresSection />
-      <TbrFeatureSection />
+      <TyreHighlightsSection />
       <RexCertified />
       <CTASection />
       <FloatingBar />

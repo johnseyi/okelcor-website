@@ -7,16 +7,50 @@ export default function NewsletterStrip() {
   const { t } = useLanguage();
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setError("Please enter a valid email address.");
       return;
     }
     setError("");
-    setSubmitted(true);
+    setSubmitting(true);
+
+    try {
+      if (!API_URL) {
+        throw new Error("Newsletter API URL is not configured.");
+      }
+
+      const res = await fetch(`${API_URL}/newsletter/subscribe`, {
+        method: "POST",
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const json = await res.json().catch(() => ({} as {
+        message?: string;
+        errors?: Record<string, string[]>;
+      }));
+
+      if (!res.ok) {
+        const validationError = json.errors?.email?.[0];
+        throw new Error(validationError || json.message || "Subscription failed. Please try again.");
+      }
+
+      setSubmitted(true);
+      setEmail("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -53,9 +87,10 @@ export default function NewsletterStrip() {
                 />
                 <button
                   type="submit"
-                  className="h-[48px] shrink-0 rounded-full bg-[var(--primary)] px-6 text-[0.9rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
+                  disabled={submitting}
+                  className="h-[48px] shrink-0 rounded-full bg-[var(--primary)] px-6 text-[0.9rem] font-semibold text-white transition hover:bg-[var(--primary-hover)] disabled:opacity-60"
                 >
-                  {t.newsletter.button}
+                  {submitting ? "..." : t.newsletter.button}
                 </button>
               </div>
               {error && (

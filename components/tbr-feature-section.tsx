@@ -15,7 +15,7 @@ export default function TbrFeatureSection() {
           <div className="relative min-h-[320px] md:min-h-[420px]">
             <div
               className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-[1.02]"
-              style={{ backgroundImage: "url('/sections/tbr-tyres.jpg')" }}
+              style={{ backgroundImage: "url('/images/pexels-biplabsau-5359359.jpg')" }}
             />
           </div>
 

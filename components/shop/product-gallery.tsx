@@ -22,7 +22,7 @@ export default function ProductGallery({ product }: { product: Product }) {
       </div>
 
       {/* Thumbnails */}
-      <div className="flex gap-3">
+      <div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {product.images.map((img, i) => (
           <button
             key={i}

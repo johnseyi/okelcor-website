@@ -415,7 +415,7 @@ export default function AuthPage() {
             className="absolute inset-0 bg-cover bg-center"
             style={{
               backgroundImage:
-                "url('/images/tyre-stack.jpg')",
+                "url('/images/pexels-einfoto-2091159.jpg')",
             }}
           />
           <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/50 to-black/30" />
@@ -518,22 +518,7 @@ export default function AuthPage() {
             {/* Form */}
             {tab === "signin" ? <SignInForm /> : <SignUpForm />}
 
-            {/* Divider */}
-            <div className="my-6 flex items-center gap-3">
-              <div className="h-px flex-1 bg-black/[0.07]" />
-              <span className="text-[0.75rem] text-[var(--muted)]">{a.or}</span>
-              <div className="h-px flex-1 bg-black/[0.07]" />
-            </div>
-
-            {/* Guest CTA */}
-            <Link
-              href="/shop"
-              className="flex h-[50px] w-full items-center justify-center rounded-full border border-black/10 bg-white text-[0.9rem] font-semibold text-[var(--foreground)] transition hover:bg-[#f0f0f0]"
-            >
-              {a.continueAsGuest}
-            </Link>
-
-            <p className="mt-5 text-center text-[0.78rem] text-[var(--muted)]">
+            <p className="mt-6 text-center text-[0.78rem] text-[var(--muted)]">
               {a.needHelp}{" "}
               <Link href="/contact" className="font-medium text-[var(--foreground)] hover:text-[var(--primary)]">
                 {a.contactTeam}

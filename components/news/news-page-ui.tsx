@@ -4,12 +4,18 @@ import PageHero from "@/components/page-hero";
 import NewsCard from "@/components/news/news-card";
 import Reveal from "@/components/motion/reveal";
 import { StaggerParent, StaggerChild } from "@/components/motion/stagger";
+import FadeUp from "@/components/motion/fade-up";
 import { useLanguage } from "@/context/language-context";
-import { getLocalizedArticles } from "./data";
+import { getLocalizedArticles, type Article } from "./data";
 
-export default function NewsPageUI() {
+type NewsPageUIProps = {
+  /** Live articles from the API (locale pre-resolved). Falls back to static when undefined. */
+  articles?: Article[];
+};
+
+export default function NewsPageUI({ articles: apiArticles }: NewsPageUIProps) {
   const { locale, t } = useLanguage();
-  const [featured, ...rest] = getLocalizedArticles(locale);
+  const [featured, ...rest] = apiArticles ?? getLocalizedArticles(locale);
 
   return (
     <>
@@ -17,9 +23,10 @@ export default function NewsPageUI() {
         eyebrow={t.news.hero.eyebrow}
         title={t.news.hero.title}
         subtitle={t.news.hero.subtitle}
-        image="/images/logistics.jpg"
+        image="/images/pexels-muhammedtarikkahraman-16706765.jpg"
       />
 
+      <FadeUp>
       <section className="w-full bg-[#f5f5f5] py-10 md:py-14">
         <div className="tesla-shell flex flex-col gap-6">
 
@@ -48,6 +55,7 @@ export default function NewsPageUI() {
 
         </div>
       </section>
+      </FadeUp>
     </>
   );
 }

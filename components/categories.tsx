@@ -8,11 +8,99 @@ import { useReveal } from "@/hooks/useReveal";
 import { useLanguage } from "@/context/language-context";
 
 const CARD_IMAGES = [
-  "/images/tyre-stack.jpg",
-  "/sections/tbr-tyres.jpg",
-  "/images/tyre-truck.jpg",
-  "/images/tyre-warehouse.jpg",
+  "/images/pexels-piotr-arnoldes-7862031-6063163.jpg",
+  "/images/pexels-furkanakt-29235902.jpg",
+  "/images/pexels-muhammedtarikkahraman-16706765.jpg",
+  "/images/pexels-mikebirdy-250307.jpg",
 ];
+
+type CardData = { label: string; title: string; subtitle: string };
+
+function CategoryCard({
+  card,
+  image,
+  orderNow,
+  learnMore,
+}: {
+  card: CardData;
+  image: string;
+  orderNow: string;
+  learnMore: string;
+}) {
+  const cardRef = useRef<HTMLElement>(null);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLElement>) => {
+    if (typeof window === "undefined" || !window.matchMedia("(pointer: fine)").matches) return;
+    const el = cardRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const px = (e.clientX - rect.left) / rect.width;
+    const py = (e.clientY - rect.top) / rect.height;
+    const rotateY = (px - 0.5) * 16;
+    const rotateX = (0.5 - py) * 16;
+    el.style.transition = "transform 0.1s ease";
+    el.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+  };
+
+  const handleMouseLeave = () => {
+    const el = cardRef.current;
+    if (!el) return;
+    el.style.transition = "transform 0.5s ease";
+    el.style.transform = "perspective(1000px) rotateX(0deg) rotateY(0deg)";
+  };
+
+  return (
+    <article
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      className="relative h-[360px] min-w-[88%] snap-start overflow-hidden rounded-[22px] bg-black sm:h-[420px] md:h-[580px] md:min-w-[68%] lg:min-w-[62%]"
+    >
+      <div
+        className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-[1.03]"
+        style={{ backgroundImage: `url('${image}')` }}
+      />
+
+      <div className="absolute inset-0 bg-gradient-to-b from-black/18 via-black/10 to-black/58" />
+      <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-transparent to-black/12" />
+      <div className="absolute inset-x-0 top-0 h-[34%] bg-gradient-to-b from-black/18 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t from-black/58 to-transparent" />
+
+      <div className="relative z-10 flex h-full flex-col justify-between p-6 text-white md:p-10">
+        <div>
+          <p className="text-[1rem] font-semibold md:text-[1.15rem]">{card.label}</p>
+        </div>
+
+        <div className="max-w-[500px]">
+          <h2 className="text-[1.9rem] font-semibold leading-[0.94] tracking-[-0.045em] sm:text-[2.4rem] md:text-[3.5rem]">
+            {card.title}
+          </h2>
+
+          <p className="mt-3 max-w-[540px] text-[1.04rem] font-medium text-white/95 md:text-[1.15rem]">
+            {card.subtitle}
+          </p>
+
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Link
+              href="/quote"
+              className="inline-flex h-[48px] items-center justify-center rounded-full bg-[var(--primary)] px-6 text-[1rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
+            >
+              {orderNow}
+            </Link>
+
+            <Link
+              href="/shop"
+              style={{ color: "#171a20" }}
+              className="inline-flex h-[48px] items-center justify-center rounded-full bg-white/95 px-6 text-[1rem] font-semibold transition hover:bg-white"
+            >
+              {learnMore}
+            </Link>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
 
 export default function Categories() {
   const { t } = useLanguage();
@@ -132,55 +220,13 @@ export default function Categories() {
             className="hide-scrollbar flex gap-7 overflow-x-auto scroll-smooth px-1 pb-4 snap-x snap-mandatory"
           >
             {t.categories.cards.map((card, i) => (
-              <article
+              <CategoryCard
                 key={card.title}
-                className="relative h-[360px] min-w-[88%] snap-start overflow-hidden rounded-[22px] bg-black sm:h-[420px] md:h-[580px] md:min-w-[68%] lg:min-w-[62%]"
-              >
-                <div
-                  className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-[1.03]"
-                  style={{ backgroundImage: `url('${CARD_IMAGES[i]}')` }}
-                />
-
-                <div className="absolute inset-0 bg-gradient-to-b from-black/18 via-black/10 to-black/58" />
-                <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-transparent to-black/12" />
-                <div className="absolute inset-x-0 top-0 h-[34%] bg-gradient-to-b from-black/18 to-transparent" />
-                <div className="absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t from-black/58 to-transparent" />
-
-                <div className="relative z-10 flex h-full flex-col justify-between p-6 text-white md:p-10">
-                  <div>
-                    <p className="text-[1rem] font-semibold md:text-[1.15rem]">
-                      {card.label}
-                    </p>
-                  </div>
-
-                  <div className="max-w-[500px]">
-                    <h2 className="text-[1.9rem] font-semibold leading-[0.94] tracking-[-0.045em] sm:text-[2.4rem] md:text-[3.5rem]">
-                      {card.title}
-                    </h2>
-
-                    <p className="mt-3 max-w-[540px] text-[1.04rem] font-medium text-white/95 md:text-[1.15rem]">
-                      {card.subtitle}
-                    </p>
-
-                    <div className="mt-5 flex flex-wrap gap-2">
-                      <Link
-                        href="/quote"
-                        className="inline-flex h-[48px] items-center justify-center rounded-full bg-[var(--primary)] px-6 text-[1rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
-                      >
-                        {t.categories.orderNow}
-                      </Link>
-
-                      <Link
-                        href="/shop"
-                        style={{ color: '#171a20' }}
-                        className="inline-flex h-[48px] items-center justify-center rounded-full bg-white/95 px-6 text-[1rem] font-semibold transition hover:bg-white"
-                      >
-                        {t.categories.learnMore}
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              </article>
+                card={card}
+                image={CARD_IMAGES[i]}
+                orderNow={t.categories.orderNow}
+                learnMore={t.categories.learnMore}
+              />
             ))}
           </div>
 

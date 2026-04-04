@@ -10,7 +10,7 @@ export type Translations = {
   };
   lang: { panelTitle: string; en: string; de: string; fr: string };
   hero: {
-    slides: Array<{ title: string; subtitle: string }>;
+    slides: Array<{ title: string; subtitle: string; label: string }>;
     ctaPrimary: string;
     ctaSecondary: string;
   };
@@ -162,7 +162,7 @@ export type Translations = {
     breadcrumbNews: string; backToNews: string;
     continueReading: string; moreFromNews: string;
   };
-  cta: { eyebrow: string; title: string; subtitle: string; button: string };
+  cta: { eyebrow: string; title: string; subtitle: string; button: string; button2: string };
   floating: { placeholder: string; cta: string };
   newsletter: {
     eyebrow: string; title: string; subtitle: string;
@@ -247,6 +247,12 @@ export type Translations = {
     articlesHeading: string;
     close: string;
   };
+  whoWeServe: {
+    eyebrow: string;
+    heading: string;
+    business: { label: string; title: string; body: string; cta: string };
+    driver: { label: string; title: string; body: string; cta: string };
+  };
 };
 
 // ─── English ──────────────────────────────────────────────────────────────────
@@ -260,12 +266,15 @@ const en: Translations = {
   lang: { panelTitle: "Select Language", en: "English", de: "Deutsch", fr: "Français" },
   hero: {
     slides: [
-      { title: "PREMIUM TYRE SOURCING", subtitle: "High-quality tyres for distributors, wholesalers, and global buyers" },
-      { title: "USED TYRES YOU CAN TRUST", subtitle: "Reliable, cost-effective supply for multiple international markets" },
-      { title: "TBR TYRES FOR LOGISTICS", subtitle: "Built for transport, durability, and dependable commercial performance" },
+      { label: "Global Tyre Supply", title: "PREMIUM TYRE SOURCING", subtitle: "High-quality tyres for distributors, wholesalers, fleets, and individual drivers" },
+      { label: "Used Tyre Range", title: "USED TYRES YOU CAN TRUST", subtitle: "Reliable, cost-effective supply for multiple international markets" },
+      { label: "Commercial & Logistics", title: "TBR TYRES FOR LOGISTICS", subtitle: "Built for transport, durability, and dependable commercial performance" },
+      { label: "Quality Assured", title: "QUALITY USED TYRES, GLOBALLY SOURCED", subtitle: "Rigorously graded used tyres for markets that demand value without compromising safety." },
+      { label: "Quality Assured", title: "QUALITY USED TYRES, GLOBALLY SOURCED", subtitle: "Rigorously graded used tyres for markets that demand value without compromising safety." },
+      { label: "Quality Assured", title: "QUALITY USED TYRES, GLOBALLY SOURCED", subtitle: "Rigorously graded used tyres for markets that demand value without compromising safety." },
     ],
-    ctaPrimary: "Leave us your inquiry",
-    ctaSecondary: "View our catalogue",
+    ctaPrimary: "Request a Quote",
+    ctaSecondary: "Browse Catalogue",
   },
   categories: {
     eyebrow: "Our Range",
@@ -282,12 +291,12 @@ const en: Translations = {
   why: {
     card1: {
       title: "Why Choose Okelcor",
-      body: "Premium tyre sourcing, dependable logistics, and strong supplier relationships designed for wholesalers and distributors.",
+      body: "Premium tyre sourcing, dependable logistics, and trusted brands — serving distributors, retailers, and individual buyers worldwide.",
       button: "About Okelcor",
     },
     card2: {
       title: "Trusted Supply",
-      body: "Competitive pricing, consistent availability, and a long-term distribution mindset for growing tyre businesses.",
+      body: "Competitive pricing, consistent availability, and flexible options for growing businesses and everyday drivers.",
       button: "Request a Quote",
     },
   },
@@ -503,9 +512,26 @@ const en: Translations = {
   },
   cta: {
     eyebrow: "Ready to Work With Okelcor",
-    title: "Ready to build your next tyre supply partnership?",
-    subtitle: "Get in touch for catalogue access, wholesale pricing, current stock availability, and sourcing support.",
-    button: "Get Your Quote",
+    title: "Tyres for businesses. Tyres for drivers.",
+    subtitle: "Whether you need bulk supply for your business or the right tyre for your car — Okelcor delivers quality, pricing, and support for every buyer.",
+    button: "Request a Quote",
+    button2: "Browse Catalogue",
+  },
+  whoWeServe: {
+    eyebrow: "Who We Serve",
+    heading: "Tyres for every buyer.",
+    business: {
+      label: "For Businesses",
+      title: "Wholesale & Bulk Supply",
+      body: "Distributors, wholesalers, fleet operators, and tyre retailers. Competitive bulk pricing, international logistics, and dedicated account support.",
+      cta: "Request Bulk Quote",
+    },
+    driver: {
+      label: "For Drivers",
+      title: "Quality Tyres for Your Vehicle",
+      body: "Individual drivers and car owners — find the right tyre for your vehicle from trusted global brands at competitive prices.",
+      cta: "Shop Catalogue",
+    },
   },
   floating: { placeholder: "Ask about tyre supply", cta: "Request a Quote" },
   newsletter: {
@@ -661,9 +687,12 @@ const de: Translations = {
   lang: { panelTitle: "Sprache wählen", en: "English", de: "Deutsch", fr: "Français" },
   hero: {
     slides: [
-      { title: "PREMIUM-REIFENBESCHAFFUNG", subtitle: "Hochwertige Reifen für Händler, Großhändler und globale Käufer" },
-      { title: "GEBRAUCHTREIFEN MIT GARANTIE", subtitle: "Zuverlässige, kostengünstige Versorgung für internationale Märkte" },
-      { title: "LKW-REIFEN FÜR DIE LOGISTIK", subtitle: "Konzipiert für Transport, Haltbarkeit und kommerzielle Leistung" },
+      { label: "Globale Reifenversorgung", title: "PREMIUM-REIFENBESCHAFFUNG", subtitle: "Hochwertige Reifen für Händler, Großhändler und globale Käufer" },
+      { label: "Gebrauchtreifen Sortiment", title: "GEBRAUCHTREIFEN MIT GARANTIE", subtitle: "Zuverlässige, kostengünstige Versorgung für internationale Märkte" },
+      { label: "Nutzfahrzeuge & Logistik", title: "LKW-REIFEN FÜR DIE LOGISTIK", subtitle: "Konzipiert für Transport, Haltbarkeit und kommerzielle Leistung" },
+      { label: "Qualitätsgarantie", title: "QUALITÄTS-GEBRAUCHTREIFEN, WELTWEIT BEZOGEN", subtitle: "Streng klassifizierte Gebrauchtreifen für Märkte, die Wert ohne Kompromisse bei der Sicherheit fordern." },
+      { label: "Qualitätsgarantie", title: "QUALITÄTS-GEBRAUCHTREIFEN, WELTWEIT BEZOGEN", subtitle: "Streng klassifizierte Gebrauchtreifen für Märkte, die Wert ohne Kompromisse bei der Sicherheit fordern." },
+      { label: "Qualitätsgarantie", title: "QUALITÄTS-GEBRAUCHTREIFEN, WELTWEIT BEZOGEN", subtitle: "Streng klassifizierte Gebrauchtreifen für Märkte, die Wert ohne Kompromisse bei der Sicherheit fordern." },
     ],
     ctaPrimary: "Anfrage stellen",
     ctaSecondary: "Katalog ansehen",
@@ -904,9 +933,26 @@ const de: Translations = {
   },
   cta: {
     eyebrow: "Bereit für Okelcor",
-    title: "Bereit, Ihre nächste Reifenlieferpartnerschaft aufzubauen?",
-    subtitle: "Kontaktieren Sie uns für Katalogzugang, Großhandelspreise, aktuelle Lagerbestände und Beschaffungssupport.",
+    title: "Reifen für Unternehmen. Reifen für Fahrer.",
+    subtitle: "Ob Großbestellung für Ihr Unternehmen oder der richtige Reifen für Ihr Auto — Okelcor liefert Qualität, Preise und Support für jeden Käufer.",
     button: "Angebot anfordern",
+    button2: "Katalog ansehen",
+  },
+  whoWeServe: {
+    eyebrow: "Für wen wir da sind",
+    heading: "Reifen für jeden Käufer.",
+    business: {
+      label: "Für Unternehmen",
+      title: "Großhandel & Großmengen",
+      body: "Händler, Großhändler, Flottenoperatoren und Reifenhändler. Wettbewerbsfähige Mengenpreise, internationale Logistik und dedizierter Account-Support.",
+      cta: "Großmengen-Angebot anfragen",
+    },
+    driver: {
+      label: "Für Fahrer",
+      title: "Qualitätsreifen für Ihr Fahrzeug",
+      body: "Einzelne Fahrer und Autobesitzer — finden Sie den richtigen Reifen für Ihr Fahrzeug von vertrauenswürdigen Marken zu wettbewerbsfähigen Preisen.",
+      cta: "Katalog ansehen",
+    },
   },
   floating: { placeholder: "Fragen zur Reifenversorgung", cta: "Angebot anfordern" },
   newsletter: {
@@ -1062,9 +1108,12 @@ const fr: Translations = {
   lang: { panelTitle: "Choisir la langue", en: "English", de: "Deutsch", fr: "Français" },
   hero: {
     slides: [
-      { title: "APPROVISIONNEMENT EN PNEUS PREMIUM", subtitle: "Pneus de haute qualité pour distributeurs, grossistes et acheteurs mondiaux" },
-      { title: "PNEUS USAGÉS DE CONFIANCE", subtitle: "Approvisionnement fiable et rentable pour les marchés internationaux" },
-      { title: "PNEUS POIDS LOURD POUR LA LOGISTIQUE", subtitle: "Conçus pour le transport, la durabilité et les performances commerciales" },
+      { label: "Approvisionnement Mondial", title: "APPROVISIONNEMENT EN PNEUS PREMIUM", subtitle: "Pneus de haute qualité pour distributeurs, grossistes et acheteurs mondiaux" },
+      { label: "Gamme Pneus Usagés", title: "PNEUS USAGÉS DE CONFIANCE", subtitle: "Approvisionnement fiable et rentable pour les marchés internationaux" },
+      { label: "Commercial & Logistique", title: "PNEUS POIDS LOURD POUR LA LOGISTIQUE", subtitle: "Conçus pour le transport, la durabilité et les performances commerciales" },
+      { label: "Qualité Garantie", title: "PNEUS USAGÉS DE QUALITÉ, SOURCÉS MONDIALEMENT", subtitle: "Pneus usagés rigoureusement classés pour les marchés exigeant de la valeur sans compromis sur la sécurité." },
+      { label: "Qualité Garantie", title: "PNEUS USAGÉS DE QUALITÉ, SOURCÉS MONDIALEMENT", subtitle: "Pneus usagés rigoureusement classés pour les marchés exigeant de la valeur sans compromis sur la sécurité." },
+      { label: "Qualité Garantie", title: "PNEUS USAGÉS DE QUALITÉ, SOURCÉS MONDIALEMENT", subtitle: "Pneus usagés rigoureusement classés pour les marchés exigeant de la valeur sans compromis sur la sécurité." },
     ],
     ctaPrimary: "Nous envoyer votre demande",
     ctaSecondary: "Voir notre catalogue",
@@ -1305,9 +1354,26 @@ const fr: Translations = {
   },
   cta: {
     eyebrow: "Prêt à travailler avec Okelcor",
-    title: "Prêt à construire votre prochain partenariat d'approvisionnement en pneus ?",
-    subtitle: "Contactez-nous pour l'accès au catalogue, les prix de gros, la disponibilité des stocks et le support d'approvisionnement.",
-    button: "Obtenir votre devis",
+    title: "Des pneus pour les entreprises. Des pneus pour les conducteurs.",
+    subtitle: "Que vous ayez besoin d'un approvisionnement en gros ou du bon pneu pour votre voiture — Okelcor propose qualité, prix et support pour chaque acheteur.",
+    button: "Demander un devis",
+    button2: "Parcourir le catalogue",
+  },
+  whoWeServe: {
+    eyebrow: "Qui nous servons",
+    heading: "Des pneus pour chaque acheteur.",
+    business: {
+      label: "Pour les entreprises",
+      title: "Approvisionnement en gros",
+      body: "Distributeurs, grossistes, exploitants de flottes et revendeurs de pneus. Tarifs compétitifs en volume, logistique internationale et assistance dédiée.",
+      cta: "Demander un devis en gros",
+    },
+    driver: {
+      label: "Pour les conducteurs",
+      title: "Des pneus de qualité pour votre véhicule",
+      body: "Conducteurs individuels et propriétaires de voiture — trouvez le bon pneu pour votre véhicule parmi les marques mondiales reconnues.",
+      cta: "Parcourir le catalogue",
+    },
   },
   floating: { placeholder: "Renseignements sur les pneus", cta: "Demander un devis" },
   newsletter: {

@@ -27,7 +27,20 @@ type CartContextType = {
   closeCart: () => void;
 };
 
-const CartContext = createContext<CartContextType | null>(null);
+const DEFAULT_CART: CartContextType = {
+  items: [],
+  addItem: () => {},
+  removeItem: () => {},
+  updateQuantity: () => {},
+  clearCart: () => {},
+  totalItems: 0,
+  subtotal: 0,
+  isOpen: false,
+  openCart: () => {},
+  closeCart: () => {},
+};
+
+const CartContext = createContext<CartContextType>(DEFAULT_CART);
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
@@ -111,7 +124,5 @@ export function CartProvider({ children }: { children: ReactNode }) {
 }
 
 export function useCart(): CartContextType {
-  const ctx = useContext(CartContext);
-  if (!ctx) throw new Error("useCart must be used within a CartProvider");
-  return ctx;
+  return useContext(CartContext);
 }

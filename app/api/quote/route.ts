@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { COMPANY_NAME, COMPANY_LEGAL_NAME, COMPANY_EMAIL, COMPANY_NOREPLY_EMAIL, COMPANY_PHONE, COMPANY_ADDRESS_STREET, COMPANY_ADDRESS_CITY, COMPANY_ADDRESS_COUNTRY } from "@/lib/constants";
+import { getSiteSettings } from "@/lib/site-settings";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const FROM_EMAIL = process.env.FROM_EMAIL || `${COMPANY_NAME} Website <${COMPANY_NOREPLY_EMAIL}>`;
-const QUOTE_EMAIL = process.env.QUOTE_EMAIL || process.env.CONTACT_EMAIL || COMPANY_EMAIL;
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -274,6 +274,9 @@ export async function POST(req: NextRequest) {
       { status: 503 }
     );
   }
+
+  const settings = await getSiteSettings();
+  const QUOTE_EMAIL = settings.quote_email || settings.contact_email || process.env.QUOTE_EMAIL || process.env.CONTACT_EMAIL || COMPANY_EMAIL;
 
   let body: unknown;
   try {

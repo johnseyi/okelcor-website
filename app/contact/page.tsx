@@ -8,6 +8,7 @@ import PageHero from "@/components/page-hero";
 import { getConsent, setConsent, CONSENT_EVENT, type ConsentValue } from "@/lib/cookie-consent";
 import { trackContactSubmit } from "@/lib/analytics";
 import { COMPANY_EMAIL, COMPANY_PHONE, COMPANY_FAX, COMPANY_ADDRESS_STREET, COMPANY_ADDRESS_CITY, COMPANY_ADDRESS_COUNTRY } from "@/lib/constants";
+import { useSiteSettings } from "@/context/site-settings-context";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -23,10 +24,10 @@ type FormErrors = Partial<FormData>;
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const inputCls =
-  "w-full rounded-[12px] border border-black/[0.08] bg-white px-4 py-3 text-[0.93rem] text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
+  "w-full rounded-[12px] border border-black/[0.08] bg-white px-4 py-3.5 text-[0.93rem] text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
 
 const inputErrCls =
-  "w-full rounded-[12px] border border-red-400 bg-red-50/50 px-4 py-3 text-[0.93rem] text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] transition focus:border-red-500";
+  "w-full rounded-[12px] border border-red-400 bg-red-50/50 px-4 py-3.5 text-[0.93rem] text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] transition focus:border-red-500";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -38,6 +39,7 @@ const INFO_ICONS = [MapPin, Phone, Printer, Mail, Clock];
 
 export default function ContactPage() {
   const { t } = useLanguage();
+  const s = useSiteSettings();
   const [form, setForm] = useState<FormData>({ name: "", email: "", subject: "", inquiry: "" });
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
@@ -46,11 +48,16 @@ export default function ContactPage() {
   const [mapConsent, setMapConsent] = useState<ConsentValue | null>(null);
 
   const INFO_ITEMS = [
-    { Icon: INFO_ICONS[0], label: t.contact.infoAddress,  lines: [COMPANY_ADDRESS_STREET, `${COMPANY_ADDRESS_CITY}, ${COMPANY_ADDRESS_COUNTRY}`] },
-    { Icon: INFO_ICONS[1], label: t.contact.infoPhone,    lines: [COMPANY_PHONE] },
-    { Icon: INFO_ICONS[2], label: t.contact.infoFax,      lines: [COMPANY_FAX] },
-    { Icon: INFO_ICONS[3], label: t.contact.infoEmail,    lines: [COMPANY_EMAIL] },
-    { Icon: INFO_ICONS[4], label: t.contact.infoHours,    lines: ["Mon \u2013 Fri: 08:00 \u2013 17:00 CET"] },
+    {
+      Icon: INFO_ICONS[0], label: t.contact.infoAddress,
+      lines: s.company_address
+        ? [s.company_address]
+        : [COMPANY_ADDRESS_STREET, `${COMPANY_ADDRESS_CITY}, ${COMPANY_ADDRESS_COUNTRY}`],
+    },
+    { Icon: INFO_ICONS[1], label: t.contact.infoPhone, lines: [s.company_phone  ?? COMPANY_PHONE] },
+    { Icon: INFO_ICONS[2], label: t.contact.infoFax,   lines: [s.company_fax    ?? COMPANY_FAX] },
+    { Icon: INFO_ICONS[3], label: t.contact.infoEmail, lines: [s.company_email  ?? COMPANY_EMAIL] },
+    { Icon: INFO_ICONS[4], label: t.contact.infoHours, lines: ["Mon \u2013 Fri: 08:00 \u2013 17:00 CET"] },
   ];
 
   useEffect(() => {
@@ -86,8 +93,10 @@ export default function ContactPage() {
     setSubmitting(true);
     setSubmitError(null);
 
+    const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+
     try {
-      const res = await fetch("/api/contact", {
+      const res = await fetch(`${API_URL}/contact`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -96,7 +105,7 @@ export default function ContactPage() {
       const json = await res.json();
 
       if (!res.ok) {
-        throw new Error(json.error || "Something went wrong. Please try again.");
+        throw new Error(json.message || "Something went wrong. Please try again.");
       }
 
       trackContactSubmit();
@@ -121,7 +130,7 @@ export default function ContactPage() {
         eyebrow={t.contact.hero.eyebrow}
         title={t.contact.hero.title}
         subtitle={t.contact.hero.subtitle}
-        image="/images/tyre-truck.jpg"
+        image="/images/pexels-albinberlin-919073.jpg"
       />
 
       {/* ── Contact grid ── */}

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { COMPANY_NAME, COMPANY_LEGAL_NAME, COMPANY_EMAIL, COMPANY_NOREPLY_EMAIL, COMPANY_ADDRESS_STREET, COMPANY_ADDRESS_CITY } from "@/lib/constants";
+import { getSiteSettings } from "@/lib/site-settings";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const FROM_EMAIL = process.env.FROM_EMAIL || `${COMPANY_NAME} Website <${COMPANY_NOREPLY_EMAIL}>`;
-const CONTACT_EMAIL = process.env.CONTACT_EMAIL || COMPANY_EMAIL;
 
 // ─── Server-side validation ────────────────────────────────────────────────────
 
@@ -122,6 +122,9 @@ export async function POST(req: NextRequest) {
       { status: 503 }
     );
   }
+
+  const settings = await getSiteSettings();
+  const CONTACT_EMAIL = settings.contact_email || process.env.CONTACT_EMAIL || COMPANY_EMAIL;
 
   let body: unknown;
   try {

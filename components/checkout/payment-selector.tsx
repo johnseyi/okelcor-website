@@ -3,6 +3,7 @@
 import { CreditCard, Wallet } from "lucide-react";
 import { useLanguage } from "@/context/language-context";
 import { PAYMENT_PROVIDERS } from "@/lib/payment-config";
+import { useSiteSettings } from "@/context/site-settings-context";
 
 export type PaymentMethod = "card" | "paypal" | "applepay" | "klarna";
 
@@ -50,6 +51,22 @@ export default function PaymentSelector({
 }: Props) {
   const { t } = useLanguage();
   const c = t.checkout;
+  const s = useSiteSettings();
+
+  // Admin settings override env-var flags: if the admin explicitly enabled a provider
+  // in the CMS settings panel, treat it as enabled regardless of env vars.
+  function isEnabled(key: PaymentMethod): boolean {
+    const settingsKey =
+      key === "card" || key === "applepay" ? "stripe_enabled" :
+      key === "paypal" ? "paypal_enabled" :
+      key === "klarna" ? "klarna_enabled" : null;
+
+    if (settingsKey && s[settingsKey] === "true") return true;
+    return PAYMENT_PROVIDERS[key]?.enabled ?? false;
+  }
+
+  const anyEnabled =
+    (["card", "paypal", "applepay", "klarna"] as PaymentMethod[]).some(isEnabled);
 
   const METHODS: { key: PaymentMethod; label: string; description: string }[] = [
     { key: "card",     label: c.payCardLabel,   description: c.payCardDesc   },
@@ -67,8 +84,7 @@ export default function PaymentSelector({
       {/* Method grid */}
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
         {METHODS.map((m) => {
-          const providerKey = m.key === "applepay" ? "applepay" : m.key;
-          const enabled = PAYMENT_PROVIDERS[providerKey]?.enabled ?? false;
+          const enabled = isEnabled(m.key);
           const isSelected = method === m.key;
 
           return (
@@ -217,7 +233,7 @@ export default function PaymentSelector({
       )}
 
       {/* Info panel when no payment provider is live yet */}
-      {!Object.values(PAYMENT_PROVIDERS).some((p) => p.enabled) && (
+      {!anyEnabled && (
         <div className="mt-4 rounded-[12px] border border-amber-200 bg-amber-50 px-4 py-3">
           <p className="text-[0.82rem] font-semibold text-amber-800">
             Online payment coming soon

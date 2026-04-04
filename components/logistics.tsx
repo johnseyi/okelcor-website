@@ -12,17 +12,17 @@ export default function Logistics() {
       <div className="tesla-shell">
         <div className="grid gap-6 md:grid-cols-[1.35fr_0.9fr]">
           {/* Large logistics card */}
-          <Reveal className="relative min-h-[400px] overflow-hidden rounded-[22px] md:min-h-[580px]">
+          <Reveal className="relative min-h-[260px] overflow-hidden rounded-[22px] sm:min-h-[340px] md:min-h-[580px]">
             <div
               className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-105"
               style={{
                 backgroundImage:
-                  "url('/images/logistics.jpg')",
+                  "url('/images/pexels-einfoto-2091159.jpg')",
               }}
             />
             <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/12 to-black/55" />
 
-            <div className="absolute bottom-0 left-0 right-0 z-10 p-8 md:p-10">
+            <div className="absolute bottom-0 left-0 right-0 z-10 p-5 sm:p-8 md:p-10">
               <p className="text-lg font-medium text-white/90">
                 {t.logistics.eyebrow}
               </p>
@@ -58,7 +58,7 @@ export default function Logistics() {
             <div className="relative overflow-hidden rounded-[22px] min-h-[300px]">
               <div
                 className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-105"
-                style={{ backgroundImage: "url('/sections/used-tyres.jpg')" }}
+                style={{ backgroundImage: "url('/images/pexels-stockphotoartist-8305319.jpg')" }}
               />
               <div className="absolute inset-0 bg-gradient-to-b from-black/8 to-black/45" />
 

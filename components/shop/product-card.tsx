@@ -1,57 +1,47 @@
 "use client";
 
-import { useRef } from "react";
 import Link from "next/link";
 import type { Product } from "./data";
 export type { Product } from "./data";
 import { useLanguage } from "@/context/language-context";
-import { gsap, useGSAP, ease } from "@/lib/gsap";
+import { useDepthTilt } from "@/hooks/useDepthTilt";
 
 export default function ProductCard({ product }: { product: Product }) {
   const { t } = useLanguage();
-  const cardRef = useRef<HTMLDivElement>(null);
-  const imgRef = useRef<HTMLImageElement>(null);
-
-  useGSAP(() => {
-    const card = cardRef.current;
-    const img = imgRef.current;
-    if (!card) return;
-
-    const onEnter = () => {
-      gsap.to(card, { scale: 1.016, boxShadow: "0 12px 32px rgba(0,0,0,0.10)", duration: 0.28, ease: ease.subtle });
-      if (img) gsap.to(img, { scale: 1.04, duration: 0.5, ease: ease.smooth });
-    };
-    const onLeave = () => {
-      gsap.to(card, { scale: 1, boxShadow: "0 0px 0px rgba(0,0,0,0)", duration: 0.28, ease: ease.subtle });
-      if (img) gsap.to(img, { scale: 1, duration: 0.5, ease: ease.smooth });
-    };
-
-    card.addEventListener("mouseenter", onEnter);
-    card.addEventListener("mouseleave", onLeave);
-    return () => {
-      card.removeEventListener("mouseenter", onEnter);
-      card.removeEventListener("mouseleave", onLeave);
-    };
-  }, { scope: cardRef });
+  const cardRef = useDepthTilt<HTMLDivElement>({ maxRotate: 6, maxShift: 9, scale: 1.012 });
 
   return (
-    <div ref={cardRef} className="flex flex-col overflow-hidden rounded-[22px] bg-[#efefef]">
-      {/* Image */}
+    <div
+      ref={cardRef}
+      className="group relative flex flex-col overflow-hidden rounded-[22px] border border-black/[0.05] bg-[#efefef] shadow-[0_10px_30px_rgba(0,0,0,0.06)]"
+    >
+      <div
+        data-depth-glare
+        className="pointer-events-none absolute inset-[-18%] z-[1] rounded-full bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.20),transparent_56%)]"
+        aria-hidden="true"
+      />
+
       <div className="relative aspect-[4/3] overflow-hidden bg-[#e0e0e0]">
-        <img
-          ref={imgRef}
-          src={product.image}
-          alt={`${product.brand} ${product.name}`}
-          loading="lazy"
-          className="h-full w-full object-cover"
-        />
+        {product.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={product.image}
+            alt={`${product.brand} ${product.name}`}
+            loading="lazy"
+            className="h-full w-full object-cover transition-transform duration-[6000ms] ease-in-out group-hover:scale-[1.08] lg:group-hover:scale-[1.1]"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-[#d8d8d8] text-[0.65rem] font-bold uppercase tracking-widest text-[#aaa]">
+            No image
+          </div>
+        )}
+        <div className="pointer-events-none absolute inset-x-[14%] top-0 h-px bg-gradient-to-r from-transparent via-white/90 to-transparent" />
         <span className="absolute right-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-[var(--foreground)] shadow-sm backdrop-blur-sm">
           {product.type}
         </span>
       </div>
 
-      {/* Details */}
-      <div className="flex flex-1 flex-col p-5">
+      <div className="relative z-10 flex flex-1 flex-col p-5">
         <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--primary)]">
           {product.brand}
         </p>
@@ -73,13 +63,13 @@ export default function ProductCard({ product }: { product: Product }) {
           <div className="mt-3 flex gap-2">
             <Link
               href={`/shop/${product.id}`}
-              className="flex h-[48px] flex-1 items-center justify-center rounded-full bg-[var(--primary)] text-[0.88rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
+              className="flex h-[48px] flex-1 items-center justify-center rounded-full bg-[var(--primary)] text-[0.88rem] font-semibold text-white shadow-[0_16px_32px_rgba(244,81,30,0.22)] transition hover:bg-[var(--primary-hover)]"
             >
               {t.shop.card.viewDetails}
             </Link>
             <Link
               href="/quote"
-              className="flex h-[48px] min-w-[80px] items-center justify-center rounded-full border border-black/10 bg-white px-4 text-[0.88rem] font-semibold text-[var(--foreground)] transition hover:bg-[#f0f0f0]"
+              className="flex h-[48px] min-w-[80px] items-center justify-center rounded-full border border-black/10 bg-white px-4 text-[0.88rem] font-semibold text-[var(--foreground)] shadow-[0_10px_24px_rgba(0,0,0,0.06)] transition hover:bg-[#f0f0f0]"
             >
               {t.shop.card.quote}
             </Link>

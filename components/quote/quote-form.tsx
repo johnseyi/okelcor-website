@@ -48,10 +48,10 @@ const COUNTRIES = [
 // ─── Shared input styles ──────────────────────────────────────────────────────
 
 const inputCls =
-  "w-full rounded-[12px] border border-black/[0.08] bg-white px-4 py-3 text-[0.93rem] text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
+  "w-full rounded-[12px] border border-black/[0.08] bg-white px-4 py-3.5 text-[0.93rem] text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
 
 const inputErrCls =
-  "w-full rounded-[12px] border border-red-400 bg-red-50/50 px-4 py-3 text-[0.93rem] text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] transition focus:border-red-500";
+  "w-full rounded-[12px] border border-red-400 bg-red-50/50 px-4 py-3.5 text-[0.93rem] text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] transition focus:border-red-500";
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -146,20 +146,37 @@ export default function QuoteForm() {
     setSubmitting(true);
     setSubmitError(null);
 
+    const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+
     try {
-      const res = await fetch("/api/quote", {
+      const res = await fetch(`${API_URL}/quote-requests`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          full_name:         form.fullName,
+          company_name:      form.companyName,
+          email:             form.email,
+          phone:             form.phone,
+          country:           form.country,
+          business_type:     form.businessType,
+          tyre_category:     form.tyreCategory,
+          brand_preference:  form.brandPreference,
+          tyre_size:         form.tyreSize,
+          quantity:          form.quantity,
+          budget_range:      form.budgetRange,
+          delivery_location: form.deliveryLocation,
+          delivery_timeline: form.deliveryTimeline,
+          notes:             form.notes,
+        }),
       });
 
       const json = await res.json();
 
       if (!res.ok) {
-        throw new Error(json.error || "Something went wrong. Please try again.");
+        throw new Error(json.message || "Something went wrong. Please try again.");
       }
 
-      setRefNumber(json.refNumber ?? `OKL-QR-${Date.now().toString().slice(-6)}`);
+      setRefNumber(json.data?.ref_number ?? `OKL-QR-${Date.now().toString().slice(-6)}`);
       trackQuoteSubmit({ tyreCategory: form.tyreCategory, country: form.country });
       setSubmitted(true);
     } catch (err) {

@@ -338,6 +338,7 @@ FROM_EMAIL=Okelcor Website <noreply@okelcor.de>
 CONTACT_EMAIL=info@okelcor.de
 QUOTE_EMAIL=info@okelcor.de        # optional — falls back to CONTACT_EMAIL
 NEXT_PUBLIC_BASE_URL=https://okelcor.de
+OPENROUTER_API_KEY=sk-or-xxxx      # AI chat widget — get key at openrouter.ai
 ```
 
 ### Step 7 — i18n system (EN / DE / FR)
@@ -436,7 +437,7 @@ NEXT_PUBLIC_BASE_URL=https://okelcor.de
 | Section | Status |
 |---|---|
 | Navbar | Complete — logo, 9px tagline, 44px icon buttons, mobile drawer, language switcher (EN/DE/FR), i18n |
-| Hero slider | Complete — GSAP parallax + crossfade, autoplay, dots; i18n slide content; responsive min-height |
+| Hero slider | Complete — GSAP parallax + crossfade, autoplay, dots; i18n slide content; responsive min-height; video slide support (autoplay/muted/loop, dynamic overlay, error fallback) |
 | Categories carousel | Complete — i18n, 48px buttons, responsive card height + heading scale |
 | Why Okelcor | Complete — orange CTAs, tyre imagery, 48px buttons, sm: padding |
 | Trusted Brands | Complete — real logos, 48px buttons, sm: padding step |
@@ -479,10 +480,163 @@ NEXT_PUBLIC_BASE_URL=https://okelcor.de
 | README | Complete |
 | Analytics (GA4) | Complete — consent-aware GA4 loader, typed event tracker, product/quote/contact tracking wired |
 | Search | Complete — site-wide modal, products + articles, GSAP animation, keyboard nav, Cmd/Ctrl+K, i18n |
+| **Admin — Products** | Complete — list, create, edit, delete (soft), deactivate/reactivate, trash/restore, gallery images |
+| **Admin — Articles** | Complete — list, create, edit, delete (soft), publish/unpublish, trash/restore, slug auto-gen |
+| **Admin — Orders** | Complete — list with status filter + search + pagination, detail view, status update |
+| **Admin — Brands** | Complete — grid management, add/edit name inline, logo upload, delete with confirmation overlay |
+| **Admin — Hero Slides** | Complete — list ordered by position, add/edit form, image + video support, Route Handler upload |
+| **Admin — Quote Requests** | Complete — list with status filter + search + pagination, detail view, status update |
+| **Admin — Settings** | Complete — grouped cards, per-group save, toggle fields, empty state, normalises array/map API response |
 
 ---
 
-## Completed in Latest Session — Auth, Payment Config & Checkout API
+## Completed in Latest Session — Admin CMS: Quote Requests (2026-04-01)
+
+### Quote Requests Admin Section (NEW)
+
+| File | Notes |
+|---|---|
+| `app/admin/quotes/actions.ts` | `QUOTE_STATUSES` constant (`new/reviewed/quoted/closed`); `updateQuoteStatus(id, status)` — PUT to `/admin/quote-requests/{id}` |
+| `app/admin/quotes/page.tsx` | Server page — fetches with `?status=`, `?q=`, `?page=` params; renders `QuotesTable` |
+| `app/admin/quotes/[id]/page.tsx` | Server page — fetches full quote detail; renders `QuoteDetail` |
+| `components/admin/quotes-table.tsx` | Status filter tabs (all/new/reviewed/quoted/closed); search by ref, name, or email; pagination; eye icon links to detail |
+| `components/admin/quote-detail.tsx` | Status dropdown + Save button (PUT via `updateQuoteStatus`); after save: `router.push("/admin/quotes")`; requester details card + request details card (2-column); optional notes panel |
+| `lib/admin-api.ts` | Added `AdminQuoteFull` type (extends `AdminQuote` with `phone`, `delivery_location`, `notes`, `updated_at`) |
+
+**API endpoints required from backend:**
+- `GET /admin/quote-requests` — paginated list with `?status=`, `?q=`, `?page=`, `?per_page=` params
+- `GET /admin/quote-requests/{id}` — full quote detail
+- `PUT /admin/quote-requests/{id}` — update status; body: `{ status: string }`
+
+---
+
+## Completed in Latest Session — Admin Settings + Frontend Settings Reflection (2026-04-01)
+
+### Admin Settings Section (NEW)
+
+| File | Notes |
+|---|---|
+| `app/admin/settings/actions.ts` | `updateSettingsBulk(updates)` — PUT to `/admin/settings` with `{ settings: [{ key, value }] }`; calls `revalidatePath("/admin/settings")` + `revalidatePath("/", "layout")` |
+| `app/admin/settings/page.tsx` | Server page — fetches settings (normalises both array and map API responses); renders `SettingsPanel`; shows `EmptyState` if no settings returned |
+| `components/admin/settings-panel.tsx` | Static schema approach — 4 groups: Company Information, Payment Methods, Shop & Commerce, Site Configuration. `mergeWithSchema(apiSettings)` seeds defaults then overlays API values. Per-group save with inline success/error feedback. Toggle fields, password fields with show/hide, textarea fields, number fields. |
+
+**Settings schema keys:**
+- Company: `company_name`, `company_email`, `company_phone`, `company_fax`, `company_address`
+- Payment: `stripe_enabled`, `paypal_enabled`, `klarna_enabled`, `stripe_publishable_key`, `paypal_client_id`
+- Shop: `vat_rate`, `default_currency`, `free_shipping_threshold`, `order_prefix`
+- Site: `maintenance_mode`, `site_tagline`, `google_analytics_id`, `contact_email`, `quote_email`
+
+**API endpoints required from backend:**
+- `GET /admin/settings` — returns settings as array `[{ key, value }]` or map `{ key: value }`
+- `PUT /admin/settings` — body: `{ settings: [{ key: string, value: string }] }`
+
+---
+
+### Frontend Settings Reflection (NEW)
+
+Settings saved in the admin panel now reflect on the live website via a shared `SiteSettings` context.
+
+| File | Notes |
+|---|---|
+| `lib/site-settings.ts` | `getSiteSettings()` — fetches `GET /api/v1/settings/public`; ISR-cached (`revalidate: 60`); handles array + map responses; returns `{}` on error (graceful degradation) |
+| `context/site-settings-context.tsx` | `SiteSettingsProvider` + `useSiteSettings()` — passes server-fetched settings into the client tree |
+| `app/layout.tsx` | Made `async`; calls `getSiteSettings()`; wraps entire tree with `<SiteSettingsProvider settings={settings}>` |
+| `components/footer.tsx` | Reads `useSiteSettings()` — `company_address`, `company_phone`, `company_email` override constants when set |
+| `app/contact/page.tsx` | Reads `useSiteSettings()` — `INFO_ITEMS` (address, phone, fax, email) use settings with constant fallbacks |
+| `app/api/contact/route.ts` | Calls `getSiteSettings()` inside POST handler; `contact_email` setting overrides `CONTACT_EMAIL` env var (which falls back to `COMPANY_EMAIL`) |
+| `app/api/quote/route.ts` | Same pattern — `quote_email` → `contact_email` → `QUOTE_EMAIL` env var → `CONTACT_EMAIL` env var → `COMPANY_EMAIL` |
+| `components/checkout/payment-selector.tsx` | Reads `useSiteSettings()` — `stripe_enabled`, `paypal_enabled`, `klarna_enabled` settings toggle payment methods on/off, overriding the `NEXT_PUBLIC_` env var flags |
+
+**Priority chain for email routing:**
+```
+contact route: settings.contact_email → CONTACT_EMAIL env → COMPANY_EMAIL constant
+quote route:   settings.quote_email → settings.contact_email → QUOTE_EMAIL env → CONTACT_EMAIL env → COMPANY_EMAIL constant
+```
+
+**Priority chain for payment methods:**
+```
+settings.stripe_enabled === "true" → OR → NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is set
+settings.paypal_enabled === "true" → OR → NEXT_PUBLIC_PAYPAL_CLIENT_ID is set
+settings.klarna_enabled === "true" → OR → (Stripe configured AND NEXT_PUBLIC_KLARNA_ENABLED set)
+```
+
+**Backend endpoint required:**
+- `GET /api/v1/settings/public` — publicly accessible (no auth); returns site settings as array `[{ key, value }]` or map `{ key: value }`. Keys to expose: `company_name`, `company_email`, `company_phone`, `company_fax`, `company_address`, `stripe_enabled`, `paypal_enabled`, `klarna_enabled`, `vat_rate`, `default_currency`, `site_tagline`, `contact_email`, `quote_email`.
+- Do NOT expose: `stripe_publishable_key`, `paypal_client_id`, `google_analytics_id`, `maintenance_mode`, `order_prefix`.
+
+**Caching:** Settings are ISR-cached for 60 seconds. After an admin saves settings, the frontend will reflect them within 60 seconds without a full redeploy.
+
+---
+
+## Completed in Previous Session — Admin CMS: Orders, Brands & Hero Slides (2026-04-01)
+
+### Orders Admin Section (NEW)
+
+| File | Notes |
+|---|---|
+| `app/admin/orders/actions.ts` | `ORDER_STATUSES` constant; `updateOrderStatus(id, status)` — PUT to `/admin/orders/{id}` |
+| `app/admin/orders/page.tsx` | Server page — fetches with `?status=`, `?q=`, `?page=` params; renders `OrdersTable` |
+| `app/admin/orders/[id]/page.tsx` | Server page — fetches full order detail; renders `OrderDetail` |
+| `components/admin/orders-table.tsx` | Status filter tabs (all/pending/confirmed/shipped/delivered/cancelled); search by ref or customer name; pagination; eye icon links to detail |
+| `components/admin/order-detail.tsx` | Status dropdown + Save button (PUT via `updateOrderStatus`); after save: `router.push("/admin/orders")`; customer details card + order summary card (2-column); order items table with subtotals + footer total |
+| `lib/admin-api.ts` | Added `AdminOrderItem` and `AdminOrderFull` types |
+
+---
+
+### Brands Admin Section (NEW)
+
+| File | Notes |
+|---|---|
+| `app/admin/brands/actions.ts` | `createBrand(name)` POST JSON; `updateBrand(id, name)` PUT JSON; `uploadBrandLogo(id, fd)` POST multipart to `/admin/brands/{id}/logo`; `deleteBrand(id)` DELETE handles 204; all call `revalidatePath("/admin/brands")` + `revalidatePath("/", "page")` |
+| `app/admin/brands/page.tsx` | Server page fetching all brands; renders `BrandsManager` |
+| `components/admin/brands-manager.tsx` | `BrandCard`: logo display area, replace-logo button (top-right upload icon), inline name edit (Enter/Escape), delete confirmation overlay. `AddBrandCard`: logo picker click area, name input, Add Brand button — creates brand then uploads logo. `BrandsManager`: responsive grid `sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5` |
+| `lib/admin-api.ts` | `AdminBrand` updated — added `order?: number` |
+
+**Frontend brands fix:** Homepage was falling back to static logos because `getBrands()` called `GET /api/v1/brands` (public, no auth) but backend had only built `GET /api/v1/admin/brands`. Backend added the public endpoint — logos now display from the API.
+
+---
+
+### Hero Slides Admin Section (NEW)
+
+| File | Notes |
+|---|---|
+| `app/admin/hero-slides/actions.ts` | `createHeroSlide(input)` POST JSON; `updateHeroSlide(id, input)` PUT JSON; `deleteHeroSlide(id)` DELETE handles 204; `uploadHeroSlideMedia` kept as reference but upload now uses Route Handler |
+| `app/admin/hero-slides/page.tsx` | Server page fetching all slides; renders `HeroSlidesManager` |
+| `components/admin/hero-slides-manager.tsx` | `SlideForm`: image/video toggle, file drop zone, title/subtitle/order fields, collapsible CTA override section. `SlideRow`: thumbnail or video badge, title + subtitle preview, order number badge, media type badge (Image/Video), edit + inline delete confirmation. `HeroSlidesManager`: `mode` state (`"list"` | `"add"` | `{ editing: AdminHeroSlide }`) drives form vs list view; slides sorted by `order` |
+| `app/api/admin/hero-slides-upload/route.ts` | **Route Handler** (not Server Action) — bypasses Next.js body size limit entirely. Reads `admin_token` cookie, receives multipart FormData, proxies file directly to Laravel. Handles auth, calls `revalidatePath` on success |
+
+**Upload architecture note:** Server Action body size limit (`serverActions.bodySizeLimit`) applies to ALL Server Actions regardless of config value for large files. Video uploads (up to 300 MB) use a Next.js Route Handler instead — browser POSTs to `/api/admin/hero-slides-upload?id={slideId}`, Route Handler proxies to Laravel. Image uploads for other sections still use Server Actions (adequate for typical image sizes).
+
+---
+
+### Hero Frontend — Video Slide Support
+
+| File | Changes |
+|---|---|
+| `lib/api.ts` | `HeroSlide` type: added `video_url?: string \| null`, `media_type?: "image" \| "video"` |
+| `lib/admin-api.ts` | `AdminHeroSlide` type: added `video_url?: string \| null`, `media_type?: "image" \| "video"` |
+| `components/hero.tsx` | `videoErrors` state (`Set<number>`) tracks failed video loads. `getSlideMedia(i)` returns `{ type, src, fallbackSrc }` — falls back to `image_url` / static image if video errors. Each bg layer now renders `<video autoPlay muted loop playsInline>` for video slides or `<div style={{ backgroundImage }}>` for image slides. Overlay is dynamic: `rgba(0,0,0,0.50)` for video slides, `rgba(0,0,0,0.24)` for image slides, with `transition-colors duration-700` between them. `onError` on each video triggers fallback to static image — hero never blank. |
+
+---
+
+### Config Changes
+
+| File | Change |
+|---|---|
+| `next.config.ts` | `serverActions.bodySizeLimit` bumped `"10mb"` → `"300mb"` (covers product images and other Server Action uploads) |
+
+---
+
+### Backend Messages Sent
+
+- **Orders API:** `GET /admin/orders`, `GET /admin/orders/{id}`, `PUT /admin/orders/{id}` — all confirmed working
+- **Brands API:** `GET /brands` (public), `GET /admin/brands`, `POST /admin/brands`, `PUT /admin/brands/{id}`, `POST /admin/brands/{id}/logo`, `DELETE /admin/brands/{id}` — all confirmed working
+- **Hero Slides API:** `GET /hero-slides` (public, returns `video_url` + `media_type`), `GET /admin/hero-slides`, `POST /admin/hero-slides`, `PUT /admin/hero-slides/{id}`, `POST /admin/hero-slides/{id}/media` (image or video), `DELETE /admin/hero-slides/{id}`
+- **PHP/nginx upload limits:** `upload_max_filesize = 300M`, `post_max_size = 300M`, `client_max_body_size 300m`
+
+---
+
+## Completed in Previous Session — Auth, Payment Config & Checkout API
 
 ### Authentication (NextAuth.js)
 

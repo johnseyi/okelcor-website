@@ -4,16 +4,18 @@ import Link from "next/link";
 import { ChevronRight, ArrowLeft, Clock, Calendar } from "lucide-react";
 import NewsCard from "@/components/news/news-card";
 import { useLanguage } from "@/context/language-context";
-import { getLocalizedArticle, getLocalizedRelatedArticles } from "./data";
+import { getLocalizedArticle, getLocalizedRelatedArticles, type Article } from "./data";
 
 type Props = {
   slug: string;
+  article?: Article;
+  related?: Article[];
 };
 
-export default function ArticleUI({ slug }: Props) {
+export default function ArticleUI({ slug, article: articleProp, related: relatedProp }: Props) {
   const { locale, t } = useLanguage();
-  const article = getLocalizedArticle(slug, locale);
-  const related = getLocalizedRelatedArticles(slug, locale);
+  const article = articleProp ?? getLocalizedArticle(slug, locale);
+  const related = relatedProp ?? getLocalizedRelatedArticles(slug, locale);
 
   if (!article) return null;
 
@@ -21,7 +23,7 @@ export default function ArticleUI({ slug }: Props) {
     <>
       {/* Hero image */}
       <div className="w-full pt-[76px] lg:pt-20">
-        <div className="relative h-[52vh] min-h-[320px] max-h-[560px] overflow-hidden">
+        <div className="relative h-[45vh] min-h-[260px] max-h-[560px] overflow-hidden sm:h-[52vh] sm:min-h-[320px]">
           <div
             className="absolute inset-0 bg-cover bg-center transition-transform duration-700"
             style={{ backgroundImage: `url('${article.image}')` }}
@@ -37,7 +39,7 @@ export default function ArticleUI({ slug }: Props) {
 
           {/* Title overlay */}
           <div className="absolute bottom-0 left-0 right-0 z-10 px-6 pb-10 text-center">
-            <h1 className="mx-auto max-w-4xl text-3xl font-extrabold leading-tight tracking-tight text-white md:text-5xl">
+            <h1 className="mx-auto max-w-4xl text-2xl font-extrabold leading-tight tracking-tight text-white sm:text-3xl md:text-5xl">
               {article.title}
             </h1>
             <div className="mt-4 flex items-center justify-center gap-5 text-white/70">
@@ -80,7 +82,7 @@ export default function ArticleUI({ slug }: Props) {
 
             {/* Body paragraphs */}
             <div className="flex flex-col gap-6">
-              {article.body.map((paragraph, i) => (
+              {(article.body ?? []).map((paragraph, i) => (
                 <p key={i} className="text-[1rem] leading-8 text-[var(--muted)]">
                   {paragraph}
                 </p>

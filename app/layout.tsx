@@ -10,6 +10,8 @@ import { SearchProvider } from "@/context/search-context";
 import SearchModal from "@/components/search/search-modal";
 import { SITE_URL as SITE_URL_FALLBACK } from "@/lib/constants";
 import AuthSessionProvider from "@/components/auth/session-provider";
+import { SiteSettingsProvider } from "@/context/site-settings-context";
+import { getSiteSettings } from "@/lib/site-settings";
 
 const SITE_URL = (() => {
   try {
@@ -50,27 +52,31 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const settings = await getSiteSettings();
+
   return (
-    <html lang="en">
-      <body>
+    <html lang="en" className="w-full">
+      <body className="m-0 w-full p-0">
         <AuthSessionProvider>
-          <LanguageProvider>
-            <SearchProvider>
-              <CartProvider>
-                {children}
-                <CartDrawer />
-                <SearchModal />
-                <CookieConsent />
-                <BackToTop />
-                <AnalyticsScript />
-              </CartProvider>
-            </SearchProvider>
-          </LanguageProvider>
+          <SiteSettingsProvider settings={settings}>
+            <LanguageProvider>
+              <SearchProvider>
+                <CartProvider>
+                  {children}
+                  <CartDrawer />
+                  <SearchModal />
+                  <CookieConsent />
+                  <BackToTop />
+                  <AnalyticsScript />
+                </CartProvider>
+              </SearchProvider>
+            </LanguageProvider>
+          </SiteSettingsProvider>
         </AuthSessionProvider>
       </body>
     </html>

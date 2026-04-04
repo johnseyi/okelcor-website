@@ -40,10 +40,10 @@ const COUNTRIES = [
 ];
 
 const inputCls =
-  "w-full rounded-[12px] border border-black/[0.08] bg-white px-4 py-3 text-[0.93rem] text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
+  "w-full rounded-[12px] border border-black/[0.08] bg-white px-4 py-3.5 text-[0.93rem] text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
 
 const inputErrCls =
-  "w-full rounded-[12px] border border-red-400 bg-red-50/50 px-4 py-3 text-[0.93rem] text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] transition focus:border-red-500";
+  "w-full rounded-[12px] border border-red-400 bg-red-50/50 px-4 py-3.5 text-[0.93rem] text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] transition focus:border-red-500";
 
 // ─── Small helpers ────────────────────────────────────────────────────────────
 
@@ -240,8 +240,10 @@ export default function CheckoutFlow() {
     setSubmitting(true);
     setSubmitError(null);
 
+    const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+
     try {
-      const res = await fetch("/api/checkout", {
+      const res = await fetch(`${API_URL}/orders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -262,15 +264,15 @@ export default function CheckoutFlow() {
 
       const data = await res.json();
 
-      if (!res.ok || !data.success) {
+      if (!res.ok) {
         setSubmitError(data.message ?? "Something went wrong. Please try again.");
         setSubmitting(false);
         return;
       }
 
       clearCart();
-      setOrderRef(data.orderRef ?? "");
-      setOrderMode(data.mode ?? "manual");
+      setOrderRef(data.data?.ref ?? "");
+      setOrderMode(data.data?.mode ?? "manual");
       setSubmitted(true);
     } catch {
       setSubmitError("Network error. Please check your connection and try again.");

@@ -15,21 +15,16 @@ type Props = {
 export default function NewsCard({ article, featured = false }: Props) {
   const { t } = useLanguage();
   const featuredRef = useRef<HTMLDivElement>(null);
-  const featuredImgRef = useRef<HTMLImageElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
-  const cardImgRef = useRef<HTMLImageElement>(null);
 
   useGSAP(() => {
     const el = featuredRef.current;
-    const img = featuredImgRef.current;
     if (!el) return;
     const onEnter = () => {
       gsap.to(el, { scale: 1.012, boxShadow: "0 12px 36px rgba(0,0,0,0.09)", duration: 0.28, ease: ease.subtle });
-      if (img) gsap.to(img, { scale: 1.04, duration: 0.6, ease: ease.smooth });
     };
     const onLeave = () => {
       gsap.to(el, { scale: 1, boxShadow: "0 0px 0px rgba(0,0,0,0)", duration: 0.28, ease: ease.subtle });
-      if (img) gsap.to(img, { scale: 1, duration: 0.6, ease: ease.smooth });
     };
     el.addEventListener("mouseenter", onEnter);
     el.addEventListener("mouseleave", onLeave);
@@ -41,15 +36,12 @@ export default function NewsCard({ article, featured = false }: Props) {
 
   useGSAP(() => {
     const el = cardRef.current;
-    const img = cardImgRef.current;
     if (!el) return;
     const onEnter = () => {
       gsap.to(el, { scale: 1.018, boxShadow: "0 10px 28px rgba(0,0,0,0.09)", duration: 0.28, ease: ease.subtle });
-      if (img) gsap.to(img, { scale: 1.04, duration: 0.6, ease: ease.smooth });
     };
     const onLeave = () => {
       gsap.to(el, { scale: 1, boxShadow: "0 0px 0px rgba(0,0,0,0)", duration: 0.28, ease: ease.subtle });
-      if (img) gsap.to(img, { scale: 1, duration: 0.6, ease: ease.smooth });
     };
     el.addEventListener("mouseenter", onEnter);
     el.addEventListener("mouseleave", onLeave);
@@ -68,20 +60,25 @@ export default function NewsCard({ article, featured = false }: Props) {
       >
         {/* Image */}
         <div className="relative aspect-[16/10] overflow-hidden md:aspect-auto md:min-h-[380px]">
-          <img
-            ref={featuredImgRef}
-            src={article.image}
-            alt={article.title}
-            loading="lazy"
-            className="h-full w-full object-cover"
-          />
+          {article.image ? (
+            <img
+              src={article.image}
+              alt={article.title}
+              loading="lazy"
+              className="h-full w-full object-cover transition-transform duration-[6000ms] ease-in-out group-hover:scale-[1.08]"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-[#e0e0e0] text-[0.65rem] font-bold uppercase tracking-widest text-[#aaa]">
+              No image
+            </div>
+          )}
           <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--primary)] backdrop-blur-sm">
             {article.category}
           </span>
         </div>
 
         {/* Content */}
-        <div className="flex flex-col justify-between p-8 md:p-10">
+        <div className="flex flex-col justify-between p-6 sm:p-8 md:p-10">
           <div>
             <p className="text-[0.8rem] text-[var(--muted)]">
               {article.date} · {article.readTime}
@@ -112,13 +109,18 @@ export default function NewsCard({ article, featured = false }: Props) {
     >
       {/* Image */}
       <div className="relative aspect-[16/10] overflow-hidden">
-        <img
-          ref={cardImgRef}
-          src={article.image}
-          alt={article.title}
-          loading="lazy"
-          className="h-full w-full object-cover"
-        />
+        {article.image ? (
+          <img
+            src={article.image}
+            alt={article.title}
+            loading="lazy"
+            className="h-full w-full object-cover transition-transform duration-[6000ms] ease-in-out group-hover:scale-[1.08]"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-[#e0e0e0] text-[0.65rem] font-bold uppercase tracking-widest text-[#aaa]">
+            No image
+          </div>
+        )}
         <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--primary)] backdrop-blur-sm">
           {article.category}
         </span>
