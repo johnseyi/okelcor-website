@@ -224,16 +224,14 @@ function SlideForm({
               <div className="flex flex-col items-center gap-1 text-[#bbb]">
                 <Upload size={18} strokeWidth={1.5} />
                 <span className="text-[0.72rem]">
-                  {mediaType === "video"
-                    ? "Click to upload video (MP4, WebM)"
-                    : "Click to upload image (JPG, PNG, WebP)"}
+                  Click to upload image or video (JPG, PNG, WebP, MP4, MOV, WebM)
                 </span>
               </div>
             )}
             <input
               ref={fileInputRef}
               type="file"
-              accept={mediaType === "video" ? "video/mp4,video/webm,video/*" : "image/*"}
+              accept="image/*,video/mp4,video/mov,video/avi,video/webm"
               onChange={handleFileSelect}
               className="sr-only"
             />

@@ -373,12 +373,12 @@ export default function ProductForm(props: Props) {
             <input
               id="product-image"
               type="file"
-              accept="image/*"
+              accept="image/*,video/mp4,video/mov,video/avi,video/webm"
               onChange={handleImageChange}
               className="sr-only"
             />
             <p className="text-[0.73rem] text-[#5c5e62]">
-              JPG, PNG or WebP · Max 5 MB recommended
+              JPG, PNG, WebP or MP4/MOV · Max 50 MB
             </p>
             {imageFile && (
               <p className="text-[0.73rem] font-medium text-[#E85C1A]">
@@ -425,19 +425,19 @@ export default function ProductForm(props: Props) {
                 <input
                   ref={galleryInputRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/*,video/mp4,video/mov,video/avi,video/webm"
                   multiple
                   onChange={handleGalleryChange}
                   className="sr-only"
                 />
                 {galleryFiles.length > 0 && (
                   <span className="text-[0.78rem] text-[#5c5e62]">
-                    {galleryFiles.length} image{galleryFiles.length !== 1 ? "s" : ""} selected
+                    {galleryFiles.length} file{galleryFiles.length !== 1 ? "s" : ""} selected
                   </span>
                 )}
               </div>
               <p className="text-[0.72rem] text-[#aaa]">
-                JPG, PNG or WebP · Max 5 MB per image · Optional — can also be added after creation
+                JPG, PNG, WebP or MP4/MOV · Max 50 MB per file · Optional — can also be added after creation
               </p>
             </div>
           </>

@@ -186,7 +186,7 @@ export default function GalleryManager({ productId, images }: Props) {
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept="image/*,video/mp4,video/mov,video/avi,video/webm"
             multiple
             onChange={handleFileChange}
             className="sr-only"
@@ -234,7 +234,7 @@ export default function GalleryManager({ productId, images }: Props) {
         )}
 
         <p className="mt-2.5 text-[0.72rem] text-[#aaa]">
-          JPG, PNG or WebP · Max 5 MB per image
+          JPG, PNG, WebP or MP4/MOV · Max 50 MB per file
         </p>
       </div>
     </div>
