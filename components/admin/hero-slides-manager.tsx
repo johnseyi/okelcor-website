@@ -9,14 +9,17 @@ import {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
-function getCookie(name: string): string | null {
-  if (typeof document === "undefined") return null;
-  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
-  return match ? decodeURIComponent(match[1]) : null;
-}
-
 async function uploadSlideMedia(slideId: number | string, file: File, mediaType: "image" | "video"): Promise<{ error?: string }> {
-  const token = getCookie("admin_token");
+  // Fetch the token from the httpOnly cookie via the relay endpoint
+  let token: string | null = null;
+  try {
+    const tokenRes = await fetch("/api/admin/token");
+    if (!tokenRes.ok) return { error: "Not authenticated." };
+    const tokenJson = await tokenRes.json();
+    token = tokenJson.token ?? null;
+  } catch {
+    return { error: "Could not retrieve auth token." };
+  }
   if (!token) return { error: "Not authenticated." };
 
   const fd = new FormData();
