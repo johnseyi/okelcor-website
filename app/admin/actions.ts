@@ -47,7 +47,7 @@ export async function loginAdmin(
   const cookieStore = await cookies();
 
   cookieStore.set("admin_token", token, {
-    httpOnly: true,
+    httpOnly: false, // must be readable by client JS for direct-to-API uploads
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",

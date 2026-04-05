@@ -6,6 +6,40 @@ import {
   Plus, Pencil, Trash2, Upload, Check, X,
   Film, Image as ImageIcon, ChevronDown, ChevronUp,
 } from "lucide-react";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+async function uploadSlideMedia(slideId: number | string, file: File, mediaType: "image" | "video"): Promise<{ error?: string }> {
+  const token = getCookie("admin_token");
+  if (!token) return { error: "Not authenticated." };
+
+  const fd = new FormData();
+  fd.append("media", file);
+  fd.append("media_type", mediaType);
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/admin/hero-slides/${slideId}/media`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      body: fd,
+    });
+  } catch {
+    return { error: "Network error. Could not reach the server." };
+  }
+
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    return { error: json.message || json.error || `Upload failed (HTTP ${res.status}).` };
+  }
+  return {};
+}
 import {
   createHeroSlide,
   updateHeroSlide,
@@ -90,30 +124,16 @@ function SlideForm({
         if (result.error) { setError(result.error); return; }
 
         if (mediaFile) {
-          const fd = new FormData();
-          fd.append("media", mediaFile);
-          fd.append("media_type", mediaType);
-          // Route Handler — no body size limit (works for large videos)
-          const uploadRes = await fetch(`/api/admin/hero-slides-upload?id=${initial!.id}`, {
-            method: "POST", body: fd,
-          });
-          const uploadJson = await uploadRes.json().catch(() => ({}));
-          if (!uploadRes.ok) { setError(uploadJson.error || "Failed to upload media."); return; }
+          const uploadResult = await uploadSlideMedia(initial!.id, mediaFile, mediaType);
+          if (uploadResult.error) { setError(uploadResult.error); return; }
         }
       } else {
         const result = await createHeroSlide(input);
         if (result.error) { setError(result.error); return; }
 
         if (mediaFile && result.id) {
-          const fd = new FormData();
-          fd.append("media", mediaFile);
-          fd.append("media_type", mediaType);
-          // Route Handler — no body size limit (works for large videos)
-          const uploadRes = await fetch(`/api/admin/hero-slides-upload?id=${result.id}`, {
-            method: "POST", body: fd,
-          });
-          const uploadJson = await uploadRes.json().catch(() => ({}));
-          if (!uploadRes.ok) { setError(uploadJson.error || "Failed to upload media."); return; }
+          const uploadResult = await uploadSlideMedia(result.id, mediaFile, mediaType);
+          if (uploadResult.error) { setError(uploadResult.error); return; }
         }
       }
 
