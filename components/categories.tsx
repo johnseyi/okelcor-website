@@ -144,30 +144,33 @@ export default function Categories() {
     { scope: sliderRef, dependencies: [] }
   );
 
+  const rafId = useRef<number | null>(null);
+
   const updateActiveIndex = () => {
-    if (!sliderRef.current) return;
+    if (rafId.current !== null) return; // already scheduled
+    rafId.current = requestAnimationFrame(() => {
+      rafId.current = null;
+      if (!sliderRef.current) return;
 
-    const container = sliderRef.current;
-    const children = Array.from(container.children) as HTMLElement[];
+      const container = sliderRef.current;
+      const children = Array.from(container.children) as HTMLElement[];
+      if (!children.length) return;
 
-    if (!children.length) return;
+      const containerCenter = container.scrollLeft + container.clientWidth / 2;
+      let closestIndex = 0;
+      let closestDistance = Infinity;
 
-    const containerCenter = container.scrollLeft + container.clientWidth / 2;
+      children.forEach((child, index) => {
+        const childCenter = child.offsetLeft + child.clientWidth / 2;
+        const distance = Math.abs(containerCenter - childCenter);
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestIndex = index;
+        }
+      });
 
-    let closestIndex = 0;
-    let closestDistance = Infinity;
-
-    children.forEach((child, index) => {
-      const childCenter = child.offsetLeft + child.clientWidth / 2;
-      const distance = Math.abs(containerCenter - childCenter);
-
-      if (distance < closestDistance) {
-        closestDistance = distance;
-        closestIndex = index;
-      }
+      setActiveIndex(closestIndex);
     });
-
-    setActiveIndex(closestIndex);
   };
 
   useEffect(() => {

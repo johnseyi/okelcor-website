@@ -47,6 +47,9 @@ export function useReveal<T extends HTMLElement = HTMLDivElement>(
       const reduced = prefersReducedMotion();
 
       try {
+        // Pre-hint the compositor so the layer is promoted before the first frame.
+        el.style.willChange = "transform, opacity";
+
         gsap.fromTo(
           el,
           {
@@ -65,11 +68,13 @@ export function useReveal<T extends HTMLElement = HTMLDivElement>(
               toggleActions: scrollDefaults.toggleActions,
               once: true,
             },
+            onComplete: () => { el.style.willChange = "auto"; },
           }
         );
       } catch {
         // Animation failed — snap element to its final visible state so
         // content is never left hidden due to a GSAP error.
+        el.style.willChange = "auto";
         gsap.set(el, { clearProps: "opacity,y" });
       }
 

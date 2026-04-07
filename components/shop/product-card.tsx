@@ -28,7 +28,7 @@ export default function ProductCard({ product }: { product: Product }) {
             src={product.image}
             alt={`${product.brand} ${product.name}`}
             loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-[6000ms] ease-in-out group-hover:scale-[1.08] lg:group-hover:scale-[1.1]"
+            className="h-full w-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-[1.08] lg:group-hover:scale-[1.1]"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-[#d8d8d8] text-[0.65rem] font-bold uppercase tracking-widest text-[#aaa]">

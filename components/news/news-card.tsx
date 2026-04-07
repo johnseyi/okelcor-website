@@ -65,7 +65,7 @@ export default function NewsCard({ article, featured = false }: Props) {
               src={article.image}
               alt={article.title}
               loading="lazy"
-              className="h-full w-full object-cover transition-transform duration-[6000ms] ease-in-out group-hover:scale-[1.08]"
+              className="h-full w-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-[1.08]"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-[#e0e0e0] text-[0.65rem] font-bold uppercase tracking-widest text-[#aaa]">
@@ -114,7 +114,7 @@ export default function NewsCard({ article, featured = false }: Props) {
             src={article.image}
             alt={article.title}
             loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-[6000ms] ease-in-out group-hover:scale-[1.08]"
+            className="h-full w-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-[1.08]"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-[#e0e0e0] text-[0.65rem] font-bold uppercase tracking-widest text-[#aaa]">

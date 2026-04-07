@@ -64,6 +64,9 @@ export function useStagger<T extends HTMLElement = HTMLDivElement>(
       const reduced = prefersReducedMotion();
 
       try {
+        // Pre-hint the compositor on all children before the first frame.
+        children.forEach((c) => { c.style.willChange = "transform, opacity"; });
+
         gsap.fromTo(
           children,
           {
@@ -83,10 +86,14 @@ export function useStagger<T extends HTMLElement = HTMLDivElement>(
               toggleActions: scrollDefaults.toggleActions,
               once: true,
             },
+            onComplete: () => {
+              children.forEach((c) => { c.style.willChange = "auto"; });
+            },
           }
         );
       } catch {
         // Animation failed — snap all children to their final visible state.
+        children.forEach((c) => { c.style.willChange = "auto"; });
         gsap.set(children, { clearProps: "opacity,y" });
       }
 

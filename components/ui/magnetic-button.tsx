@@ -17,6 +17,7 @@ type Props = {
  * easing when the cursor moves out of range.
  *
  * Disabled automatically on touch/coarse-pointer devices.
+ * Uses gsap.quickTo() for high-frequency mousemove tracking (no tween storm).
  */
 export default function MagneticButton({
   children,
@@ -31,6 +32,11 @@ export default function MagneticButton({
     const el = wrapRef.current;
     if (!el) return;
 
+    // quickTo pre-creates the tween once — subsequent calls just update the
+    // end value, eliminating per-frame tween creation/destruction overhead.
+    const setX = gsap.quickTo(el, "x", { duration: 0.3, ease: "power2.out" });
+    const setY = gsap.quickTo(el, "y", { duration: 0.3, ease: "power2.out" });
+
     let isNear = false;
 
     const onMove = (e: MouseEvent) => {
@@ -43,25 +49,14 @@ export default function MagneticButton({
 
       if (dist < radius) {
         if (!isNear) isNear = true;
-        // Pull strength grows linearly from 0 at the radius edge to maxShift at the centre.
         const strength = (1 - dist / radius) * maxShift;
         const norm = dist === 0 ? 1 : dist;
-        gsap.to(el, {
-          x: (dx / norm) * strength,
-          y: (dy / norm) * strength,
-          duration: 0.3,
-          ease: "power2.out",
-          overwrite: true,
-        });
+        setX((dx / norm) * strength);
+        setY((dy / norm) * strength);
       } else if (isNear) {
         isNear = false;
-        gsap.to(el, {
-          x: 0,
-          y: 0,
-          duration: 0.5,
-          ease: "elastic.out(1, 0.3)",
-          overwrite: true,
-        });
+        // Spring back with elastic easing — create a one-off tween for the return.
+        gsap.to(el, { x: 0, y: 0, duration: 0.5, ease: "elastic.out(1, 0.3)", overwrite: true });
       }
     };
 

@@ -115,45 +115,26 @@ export default function Hero({ slides: apiSlides }: HeroProps) {
             `textIn+=${stagger * 3}`
           );
 
-        if (bgContainerRef.current && sectionRef.current) {
-          gsap.to(bgContainerRef.current, {
-            y: 80,
-            ease: "none",
+        // Single ScrollTrigger driving all three parallax layers — one scroll
+        // listener instead of three, same visual output.
+        if (sectionRef.current) {
+          const parallaxTl = gsap.timeline({
             scrollTrigger: {
               trigger: sectionRef.current,
               start: "top top",
               end: "bottom top",
-              scrub: 1.5,
+              scrub: 1.4,
             },
           });
-        }
-
-        if (depthOrbRef.current && sectionRef.current) {
-          gsap.to(depthOrbRef.current, {
-            y: 110,
-            x: 24,
-            ease: "none",
-            scrollTrigger: {
-              trigger: sectionRef.current,
-              start: "top top",
-              end: "bottom top",
-              scrub: 1.6,
-            },
-          });
-        }
-
-        if (accentGlowRef.current && sectionRef.current) {
-          gsap.to(accentGlowRef.current, {
-            y: -52,
-            x: -18,
-            ease: "none",
-            scrollTrigger: {
-              trigger: sectionRef.current,
-              start: "top top",
-              end: "bottom top",
-              scrub: 1.15,
-            },
-          });
+          if (bgContainerRef.current) {
+            parallaxTl.to(bgContainerRef.current, { y: 80, ease: "none" }, 0);
+          }
+          if (depthOrbRef.current) {
+            parallaxTl.to(depthOrbRef.current, { y: 110, x: 24, ease: "none" }, 0);
+          }
+          if (accentGlowRef.current) {
+            parallaxTl.to(accentGlowRef.current, { y: -52, x: -18, ease: "none" }, 0);
+          }
         }
       } catch {
         bgRefs.current.forEach((el, i) => {
