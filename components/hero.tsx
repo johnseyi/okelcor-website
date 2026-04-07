@@ -123,7 +123,7 @@ export default function Hero({ slides: apiSlides }: HeroProps) {
               trigger: sectionRef.current,
               start: "top top",
               end: "bottom top",
-              scrub: 1.4,
+              scrub: 0.8,
             },
           });
           if (bgContainerRef.current) {

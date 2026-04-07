@@ -1,45 +1,15 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { Tag, Globe, Headphones, ChevronDown } from "lucide-react";
 import { StaggerParent, StaggerChild } from "@/components/motion/stagger";
 import Reveal from "@/components/motion/reveal";
 import { useLanguage } from "@/context/language-context";
-import { gsap, ease } from "@/lib/gsap";
 
 const TRUST_ICONS = [Tag, Globe, Headphones];
 
 function FaqItem({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const chevronRef = useRef<HTMLSpanElement>(null);
-
-  // Set initial hidden state before first paint
-  useEffect(() => {
-    if (panelRef.current) gsap.set(panelRef.current, { height: 0, opacity: 0 });
-  }, []);
-
-  // Animate panel + chevron whenever open toggles
-  useEffect(() => {
-    const panel = panelRef.current;
-    const chevron = chevronRef.current;
-
-    if (panel) {
-      if (open) {
-        gsap.fromTo(
-          panel,
-          { height: 0, opacity: 0 },
-          { height: "auto", opacity: 1, duration: 0.32, ease: ease.sharp, overwrite: true }
-        );
-      } else {
-        gsap.to(panel, { height: 0, opacity: 0, duration: 0.26, ease: ease.sharp, overwrite: true });
-      }
-    }
-
-    if (chevron) {
-      gsap.to(chevron, { rotation: open ? 180 : 0, duration: 0.25, ease: ease.sharp, overwrite: true });
-    }
-  }, [open]);
 
   return (
     <div className="border-b border-black/[0.07] last:border-0">
@@ -49,12 +19,21 @@ function FaqItem({ q, a }: { q: string; a: string }) {
         className="flex w-full items-center justify-between py-4 text-left"
       >
         <span className="pr-4 text-[0.95rem] font-semibold text-[var(--foreground)]">{q}</span>
-        <span ref={chevronRef} style={{ display: "flex", flexShrink: 0 }}>
+        <span
+          className="flex shrink-0 transition-transform duration-250 ease-out"
+          style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
+        >
           <ChevronDown size={17} className="text-[var(--muted)]" />
         </span>
       </button>
-      <div ref={panelRef} style={{ overflow: "hidden" }}>
-        <p className="pb-4 text-[0.88rem] leading-7 text-[var(--muted)]">{a}</p>
+      {/* CSS grid-rows trick: animates from 0fr → 1fr with no layout reads */}
+      <div
+        className="grid transition-all duration-300 ease-out"
+        style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
+      >
+        <div className="overflow-hidden">
+          <p className="pb-4 text-[0.88rem] leading-7 text-[var(--muted)]">{a}</p>
+        </div>
       </div>
     </div>
   );

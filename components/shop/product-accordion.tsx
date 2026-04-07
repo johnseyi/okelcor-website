@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import type { Product } from "./data";
 import { useLanguage } from "@/context/language-context";
-import { gsap, ease } from "@/lib/gsap";
 import { COMPANY_EMAIL } from "@/lib/constants";
 
 type AccordionItem = {
@@ -51,9 +50,6 @@ function Row({ label, value }: { label: string; value: string }) {
 export default function ProductAccordion({ product }: { product: Product }) {
   const { t } = useLanguage();
   const [open, setOpen] = useState<string | null>("size");
-
-  const panelRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
-  const chevronRefs = useRef<Map<string, HTMLSpanElement | null>>(new Map());
 
   const parsed = parseTyreSize(product.size);
   const specParsed = parseSpec(product.spec);
@@ -147,43 +143,7 @@ export default function ProductAccordion({ product }: { product: Product }) {
     },
   ];
 
-  // Set initial GSAP state on mount — closed panels hidden, open chevron rotated
-  useEffect(() => {
-    items.forEach((item) => {
-      const panel = panelRefs.current.get(item.key);
-      const chevron = chevronRefs.current.get(item.key);
-      const isOpen = item.key === "size";
-      if (panel && !isOpen) gsap.set(panel, { height: 0, opacity: 0 });
-      if (chevron && isOpen) gsap.set(chevron, { rotation: 180 });
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Animate panels + chevrons whenever open state changes
-  useEffect(() => {
-    items.forEach((item) => {
-      const panel = panelRefs.current.get(item.key);
-      const chevron = chevronRefs.current.get(item.key);
-      const isOpen = open === item.key;
-
-      if (panel) {
-        if (isOpen) {
-          gsap.fromTo(
-            panel,
-            { height: 0, opacity: 0 },
-            { height: "auto", opacity: 1, duration: 0.32, ease: ease.sharp, overwrite: true }
-          );
-        } else {
-          gsap.to(panel, { height: 0, opacity: 0, duration: 0.26, ease: ease.sharp, overwrite: true });
-        }
-      }
-
-      if (chevron) {
-        gsap.to(chevron, { rotation: isOpen ? 180 : 0, duration: 0.25, ease: ease.sharp, overwrite: true });
-      }
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  // No GSAP needed — CSS grid-rows transition handles open/close with zero layout thrash.
 
   return (
     <>
@@ -206,17 +166,20 @@ export default function ProductAccordion({ product }: { product: Product }) {
                   {item.title}
                 </span>
                 <span
-                  ref={(el) => { chevronRefs.current.set(item.key, el); }}
-                  style={{ display: "flex" }}
+                  className="flex shrink-0 transition-transform duration-250 ease-out"
+                  style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}
                 >
                   <ChevronDown size={18} className="shrink-0 text-[var(--muted)]" />
                 </span>
               </button>
+              {/* grid-rows: 0fr → 1fr animates height with no layout reads */}
               <div
-                ref={(el) => { panelRefs.current.set(item.key, el); }}
-                style={{ overflow: "hidden" }}
+                className="grid transition-all duration-300 ease-out"
+                style={{ gridTemplateRows: isOpen ? "1fr" : "0fr" }}
               >
-                <div className="px-6 pb-6">{item.content}</div>
+                <div className="overflow-hidden">
+                  <div className="px-6 pb-6">{item.content}</div>
+                </div>
               </div>
             </div>
           );

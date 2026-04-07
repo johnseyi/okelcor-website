@@ -66,7 +66,7 @@ export function useParallax<T extends HTMLElement = HTMLDivElement>(
               trigger: container,
               start,
               end,
-              scrub: 1.2,
+              scrub: 0.8,
             },
           }
         );

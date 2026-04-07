@@ -28,12 +28,21 @@ function CategoryCard({
   learnMore: string;
 }) {
   const cardRef = useRef<HTMLElement>(null);
+  // Cached rect — read once on mouseenter, not on every mousemove.
+  const rectCache = useRef<{ left: number; top: number; width: number; height: number } | null>(null);
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLElement>) => {
+  const handleMouseEnter = () => {
     if (typeof window === "undefined" || !window.matchMedia("(pointer: fine)").matches) return;
     const el = cardRef.current;
     if (!el) return;
-    const rect = el.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    rectCache.current = { left: r.left, top: r.top, width: r.width, height: r.height };
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLElement>) => {
+    const el = cardRef.current;
+    const rect = rectCache.current;
+    if (!el || !rect) return;
     const px = (e.clientX - rect.left) / rect.width;
     const py = (e.clientY - rect.top) / rect.height;
     const rotateY = (px - 0.5) * 16;
@@ -43,6 +52,7 @@ function CategoryCard({
   };
 
   const handleMouseLeave = () => {
+    rectCache.current = null;
     const el = cardRef.current;
     if (!el) return;
     el.style.transition = "transform 0.5s ease";
@@ -52,6 +62,7 @@ function CategoryCard({
   return (
     <article
       ref={cardRef}
+      onMouseEnter={handleMouseEnter}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       className="relative h-[360px] min-w-[88%] snap-start overflow-hidden rounded-[22px] bg-black sm:h-[420px] md:h-[580px] md:min-w-[68%] lg:min-w-[62%]"

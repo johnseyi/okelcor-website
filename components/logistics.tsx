@@ -12,7 +12,7 @@ export default function Logistics() {
       <div className="tesla-shell">
         <div className="grid gap-6 md:grid-cols-[1.35fr_0.9fr]">
           {/* Large logistics card */}
-          <Reveal className="relative min-h-[260px] overflow-hidden rounded-[22px] sm:min-h-[340px] md:min-h-[580px]">
+          <Reveal className="relative min-h-[400px] overflow-hidden rounded-[22px] sm:min-h-[400px] md:min-h-[580px]">
             <div
               className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-105"
               style={{

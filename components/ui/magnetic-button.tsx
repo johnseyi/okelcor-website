@@ -37,12 +37,20 @@ export default function MagneticButton({
     const setX = gsap.quickTo(el, "x", { duration: 0.3, ease: "power2.out" });
     const setY = gsap.quickTo(el, "y", { duration: 0.3, ease: "power2.out" });
 
+    // Cache the bounding rect — updated on enter/resize, not on every mousemove.
+    let cx = 0;
+    let cy = 0;
+    const updateRect = () => {
+      const rect = el.getBoundingClientRect();
+      cx = rect.left + rect.width / 2;
+      cy = rect.top + rect.height / 2;
+    };
+    updateRect();
+    window.addEventListener("resize", updateRect, { passive: true });
+
     let isNear = false;
 
     const onMove = (e: MouseEvent) => {
-      const rect = el.getBoundingClientRect();
-      const cx = rect.left + rect.width / 2;
-      const cy = rect.top + rect.height / 2;
       const dx = e.clientX - cx;
       const dy = e.clientY - cy;
       const dist = Math.sqrt(dx * dx + dy * dy);
@@ -61,7 +69,10 @@ export default function MagneticButton({
     };
 
     window.addEventListener("mousemove", onMove);
-    return () => window.removeEventListener("mousemove", onMove);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("resize", updateRect);
+    };
   }, [radius, maxShift]);
 
   return (
