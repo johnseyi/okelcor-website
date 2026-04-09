@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -21,27 +21,46 @@ import { logoutAdmin } from "@/app/admin/actions";
 // ── Navigation items ──────────────────────────────────────────────────────────
 
 const NAV = [
-  { label: "Dashboard",      href: "/admin",             icon: LayoutDashboard },
-  { label: "Products",       href: "/admin/products",    icon: Package },
-  { label: "Articles",       href: "/admin/articles",    icon: FileText },
-  { label: "Orders",         href: "/admin/orders",      icon: ShoppingCart },
-  { label: "Quote Requests", href: "/admin/quotes",      icon: ClipboardList },
-  { label: "Hero Slides",    href: "/admin/hero-slides", icon: Layers },
-  { label: "Brands",         href: "/admin/brands",      icon: Star },
-  { label: "Settings",       href: "/admin/settings",    icon: Settings },
-] as const;
+  { label: "Dashboard",      href: "/admin",             icon: LayoutDashboard, roles: null },
+  { label: "Products",       href: "/admin/products",    icon: Package,         roles: ["super_admin", "admin", "editor"] },
+  { label: "Articles",       href: "/admin/articles",    icon: FileText,        roles: ["super_admin", "admin", "editor"] },
+  { label: "Orders",         href: "/admin/orders",      icon: ShoppingCart,    roles: ["super_admin", "admin", "order_manager"] },
+  { label: "Quote Requests", href: "/admin/quotes",      icon: ClipboardList,   roles: ["super_admin", "admin", "order_manager"] },
+  { label: "Hero Slides",    href: "/admin/hero-slides", icon: Layers,          roles: ["super_admin", "admin", "editor"] },
+  { label: "Brands",         href: "/admin/brands",      icon: Star,            roles: ["super_admin", "admin", "editor"] },
+  { label: "Settings",       href: "/admin/settings",    icon: Settings,        roles: ["super_admin", "admin", "editor"] },
+];
+
+const ROLE_LABELS: Record<string, string> = {
+  super_admin:   "Super Admin",
+  admin:         "Admin",
+  editor:        "Editor",
+  order_manager: "Orders",
+};
+
+function getCookie(name: string): string {
+  if (typeof document === "undefined") return "";
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : "";
+}
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 
 function Sidebar({
   pathname,
+  role,
   onClose,
 }: {
   pathname: string;
+  role: string;
   onClose: () => void;
 }) {
   const isActive = (href: string) =>
     href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
+
+  const visibleNav = NAV.filter(({ roles }) =>
+    roles === null || roles.includes(role) || !role
+  );
 
   return (
     <div className="flex h-full flex-col bg-[#1a1a1a]">
@@ -62,7 +81,7 @@ function Sidebar({
 
       {/* Nav links */}
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-3 py-4">
-        {NAV.map(({ label, href, icon: Icon }) => {
+        {visibleNav.map(({ label, href, icon: Icon }) => {
           const active = isActive(href);
           return (
             <Link
@@ -111,6 +130,11 @@ function Sidebar({
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [role, setRole] = useState("");
+
+  useEffect(() => {
+    setRole(getCookie("admin_role"));
+  }, []);
 
   // Login page — bare layout, no shell
   if (pathname === "/admin/login") {
@@ -142,7 +166,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
         ].join(" ")}
       >
-        <Sidebar pathname={pathname} onClose={() => setSidebarOpen(false)} />
+        <Sidebar pathname={pathname} role={role} onClose={() => setSidebarOpen(false)} />
       </aside>
 
       {/* ── Main column ── */}
@@ -166,11 +190,13 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             </h1>
           </div>
 
-          {/* Right: admin avatar */}
+          {/* Right: role badge + admin avatar */}
           <div className="flex items-center gap-3">
-            <span className="hidden text-[0.82rem] text-[#5c5e62] sm:block">
-              Admin
-            </span>
+            {role && (
+              <span className="hidden rounded-full bg-[#f0f2f5] px-2.5 py-0.5 text-[0.72rem] font-semibold text-[#5c5e62] sm:block">
+                {ROLE_LABELS[role] ?? role}
+              </span>
+            )}
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#E85C1A] text-[0.72rem] font-extrabold text-white">
               A
             </div>

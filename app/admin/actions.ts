@@ -66,6 +66,18 @@ export async function loginAdmin(
     });
   }
 
+  // Store role for nav filtering and middleware route guards (non-httpOnly)
+  const adminRole: string | undefined = json.data?.admin?.role;
+  if (adminRole) {
+    cookieStore.set("admin_role", adminRole, {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24,
+    });
+  }
+
   redirect("/admin");
 }
 
@@ -79,5 +91,6 @@ export async function logoutAdmin(): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.delete("admin_token");
   cookieStore.delete("admin_name");
+  cookieStore.delete("admin_role");
   redirect("/admin/login");
 }

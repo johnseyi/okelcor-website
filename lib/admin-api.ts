@@ -33,6 +33,13 @@ export class AdminApiError extends Error {
   }
 }
 
+export class AdminForbiddenError extends Error {
+  constructor() {
+    super("Access forbidden — your role does not have permission for this resource");
+    this.name = "AdminForbiddenError";
+  }
+}
+
 // ── Response envelope ─────────────────────────────────────────────────────────
 
 export type AdminApiResponse<T> = {
@@ -249,6 +256,10 @@ export async function adminApiFetch<T>(
 
   if (res.status === 401) {
     throw new AdminUnauthorizedError();
+  }
+
+  if (res.status === 403) {
+    throw new AdminForbiddenError();
   }
 
   if (!res.ok) {

@@ -47,6 +47,7 @@ const LANGUAGES: { code: Locale; flag: string }[] = [
   { code: "en", flag: "🇬🇧" },
   { code: "de", flag: "🇩🇪" },
   { code: "fr", flag: "🇫🇷" },
+  { code: "es", flag: "🇪🇸" },
 ];
 
 // ── Component ──────────────────────────────────────────────────────────────────

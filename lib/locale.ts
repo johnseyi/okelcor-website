@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { type Locale } from "./translations";
 
-const VALID_LOCALES = new Set<string>(["en", "de", "fr"]);
+const VALID_LOCALES = new Set<string>(["en", "de", "fr", "es"]);
 
 /**
  * Reads the user's chosen locale from the `okelcor_locale` cookie.

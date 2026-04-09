@@ -1,6 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 
+// Pages each role can access (beyond /admin dashboard which is always allowed)
+const ROLE_ROUTES: Record<string, string[]> = {
+  super_admin: [],       // empty = unrestricted
+  admin:       [],       // empty = unrestricted
+  editor:      ["/admin/products", "/admin/articles", "/admin/hero-slides", "/admin/brands", "/admin/settings"],
+  order_manager: ["/admin/orders", "/admin/quotes"],
+};
+
+function roleCanAccess(role: string, pathname: string): boolean {
+  if (pathname === "/admin" || pathname === "/admin/unauthorized") return true;
+  const allowed = ROLE_ROUTES[role];
+  if (!allowed) return false;               // unknown role — deny
+  if (allowed.length === 0) return true;    // super_admin / admin — allow all
+  return allowed.some((prefix) => pathname.startsWith(prefix));
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
@@ -14,6 +30,12 @@ export async function middleware(request: NextRequest) {
 
     if (!adminToken) {
       return NextResponse.redirect(new URL("/admin/login", request.url));
+    }
+
+    // Role-based access guard
+    const role = request.cookies.get("admin_role")?.value ?? "";
+    if (role && !roleCanAccess(role, pathname)) {
+      return NextResponse.redirect(new URL("/admin/unauthorized", request.url));
     }
 
     return NextResponse.next();
