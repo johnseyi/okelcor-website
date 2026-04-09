@@ -15,6 +15,8 @@ import {
   Menu,
   LogOut,
   ChevronRight,
+  UserCircle,
+  Users,
 } from "lucide-react";
 import { logoutAdmin } from "@/app/admin/actions";
 
@@ -29,6 +31,8 @@ const NAV = [
   { label: "Hero Slides",    href: "/admin/hero-slides", icon: Layers,          roles: ["super_admin", "admin", "editor"] },
   { label: "Brands",         href: "/admin/brands",      icon: Star,            roles: ["super_admin", "admin", "editor"] },
   { label: "Settings",       href: "/admin/settings",    icon: Settings,        roles: ["super_admin", "admin", "editor"] },
+  { label: "Users",          href: "/admin/users",       icon: Users,           roles: ["super_admin"] },
+  { label: "Profile",        href: "/admin/profile",     icon: UserCircle,      roles: null },
 ];
 
 const ROLE_LABELS: Record<string, string> = {
@@ -131,9 +135,11 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [role, setRole] = useState("");
+  const [adminName, setAdminName] = useState("");
 
   useEffect(() => {
     setRole(getCookie("admin_role"));
+    setAdminName(getCookie("admin_name"));
   }, []);
 
   // Login page — bare layout, no shell
@@ -198,7 +204,9 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
               </span>
             )}
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#E85C1A] text-[0.72rem] font-extrabold text-white">
-              A
+              {adminName
+                ? adminName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
+                : "A"}
             </div>
           </div>
         </header>

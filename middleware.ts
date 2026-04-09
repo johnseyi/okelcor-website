@@ -3,10 +3,16 @@ import { getToken } from "next-auth/jwt";
 
 // Pages each role can access (beyond /admin dashboard which is always allowed)
 const ROLE_ROUTES: Record<string, string[]> = {
-  super_admin: [],       // empty = unrestricted
-  admin:       [],       // empty = unrestricted
-  editor:      ["/admin/products", "/admin/articles", "/admin/hero-slides", "/admin/brands", "/admin/settings"],
-  order_manager: ["/admin/orders", "/admin/quotes"],
+  super_admin: [],  // unrestricted — only role that can access /admin/users
+  admin: [
+    "/admin/products", "/admin/articles", "/admin/orders", "/admin/quotes",
+    "/admin/hero-slides", "/admin/brands", "/admin/settings", "/admin/profile",
+  ],
+  editor: [
+    "/admin/products", "/admin/articles", "/admin/hero-slides",
+    "/admin/brands", "/admin/settings", "/admin/profile",
+  ],
+  order_manager: ["/admin/orders", "/admin/quotes", "/admin/profile"],
 };
 
 function roleCanAccess(role: string, pathname: string): boolean {

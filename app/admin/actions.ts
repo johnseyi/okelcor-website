@@ -78,7 +78,8 @@ export async function loginAdmin(
     });
   }
 
-  redirect("/admin");
+  const isFirstLogin = !json.data?.admin?.last_login_at;
+  redirect(isFirstLogin ? "/admin/profile?first_login=1" : "/admin");
 }
 
 // ── Logout ────────────────────────────────────────────────────────────────────

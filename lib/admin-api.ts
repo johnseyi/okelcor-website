@@ -207,6 +207,23 @@ export type AdminSetting = {
   group?: string;
 };
 
+export type AdminUser = {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  last_login_at: string | null;
+  created_at?: string;
+};
+
+export type AdminProfile = {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  last_login_at: string | null;
+};
+
 // ── Options ───────────────────────────────────────────────────────────────────
 
 export type AdminFetchOptions = {
