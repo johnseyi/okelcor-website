@@ -24,7 +24,7 @@ export default function NewArticlePage() {
           New Article
         </p>
         <p className="mt-0.5 text-[0.875rem] text-[#5c5e62]">
-          Fill in the content below. EN translation is required; DE and FR are optional.
+          Fill in the content below. EN translation is required; DE, FR and ES are optional.
         </p>
       </div>
 

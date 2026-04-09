@@ -121,6 +121,7 @@ export type AdminArticleFull = {
     en?: ArticleTranslation;
     de?: ArticleTranslation;
     fr?: ArticleTranslation;
+    es?: ArticleTranslation;
   };
   created_at?: string;
 };

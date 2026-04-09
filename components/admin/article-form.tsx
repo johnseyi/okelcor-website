@@ -8,7 +8,7 @@ import type { AdminArticleFull, ArticleTranslation } from "@/lib/admin-api";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type Locale = "en" | "de" | "fr";
+type Locale = "en" | "de" | "fr" | "es";
 
 type LocaleData = {
   category: string;
@@ -210,6 +210,7 @@ export default function ArticleForm(props: Props) {
     en: fromTranslation(article?.translations?.en),
     de: fromTranslation(article?.translations?.de),
     fr: fromTranslation(article?.translations?.fr),
+    es: fromTranslation(article?.translations?.es),
   });
 
   // ── UI state ────────────────────────────────────────────────────────────────
@@ -286,6 +287,7 @@ export default function ArticleForm(props: Props) {
           en: buildLocale(localeData.en),
           ...(hasContent(localeData.de) ? { de: buildLocale(localeData.de) } : {}),
           ...(hasContent(localeData.fr) ? { fr: buildLocale(localeData.fr) } : {}),
+          ...(hasContent(localeData.es) ? { es: buildLocale(localeData.es) } : {}),
         },
       };
 
@@ -328,6 +330,7 @@ export default function ArticleForm(props: Props) {
     { locale: "en", label: "EN", required: true },
     { locale: "de", label: "DE" },
     { locale: "fr", label: "FR" },
+    { locale: "es", label: "ES" },
   ];
 
   // ── Render ──────────────────────────────────────────────────────────────────
