@@ -1,9 +1,14 @@
+import { unstable_noStore as noStore } from "next/cache";
 import Hero from "@/components/hero";
 import { apiFetch, type HeroSlide, type ApiResponse } from "@/lib/api";
 import { getServerLocale } from "@/lib/locale";
 
 /** Async server component — fetches hero slides then renders the Hero client component. */
 export default async function HeroSection() {
+  // Opt out of the Full Route Cache so slides always reflect the latest
+  // content from the admin panel without needing a full re-deploy.
+  noStore();
+
   const locale = await getServerLocale();
   try {
     const res: ApiResponse<HeroSlide[]> = await apiFetch<HeroSlide[]>(

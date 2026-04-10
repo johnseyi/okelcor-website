@@ -8,6 +8,7 @@
  */
 
 import { cookies } from "next/headers";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 
 const API_URL =
@@ -57,5 +58,12 @@ export async function POST(request: NextRequest) {
   }
 
   const json = await res.json().catch(() => ({}));
+
+  if (res.ok) {
+    // Bust the hero slides data cache and the homepage Full Route Cache
+    revalidateTag("hero-slides");
+    revalidatePath("/", "page");
+  }
+
   return NextResponse.json(json, { status: res.status });
 }
