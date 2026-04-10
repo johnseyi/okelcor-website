@@ -30,9 +30,9 @@ export type HeroSlide = {
   label?: string;
   title: string;
   subtitle: string;
-  image_url: string;
-  video_url?: string | null;
-  media_type?: "image" | "video";
+  media_type: "image" | "video";
+  image_url: string | null;
+  video_url: string | null;
   /** Optional per-slide CTA overrides; fall back to global i18n labels when absent */
   cta_primary_label?: string;
   cta_primary_href?: string;
