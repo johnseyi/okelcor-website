@@ -7,39 +7,28 @@ import {
   Film, Image as ImageIcon, ChevronDown, ChevronUp,
 } from "lucide-react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
-
 async function uploadSlideMedia(slideId: number | string, file: File, mediaType: "image" | "video"): Promise<{ error?: string }> {
-  // Fetch the token from the httpOnly cookie via the relay endpoint
-  let token: string | null = null;
-  try {
-    const tokenRes = await fetch("/api/admin/token");
-    if (!tokenRes.ok) return { error: "Not authenticated." };
-    const tokenJson = await tokenRes.json();
-    token = tokenJson.token ?? null;
-  } catch {
-    return { error: "Could not retrieve auth token." };
-  }
-  if (!token) return { error: "Not authenticated." };
-
   const fd = new FormData();
   fd.append("media", file);
   fd.append("media_type", mediaType);
 
+  // Route through the Next.js server-side proxy:
+  // - No CORS issues (browser → Next.js → Laravel is server-to-server)
+  // - Token is read from the httpOnly cookie server-side
+  // - Body is streamed to avoid Vercel body-size buffering limits
   let res: Response;
   try {
-    res = await fetch(`${API_URL}/admin/hero-slides/${slideId}/media`, {
+    res = await fetch(`/api/admin/hero-slides-upload?slideId=${slideId}`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
       body: fd,
     });
   } catch {
-    return { error: "Network error. Could not reach the server." };
+    return { error: "Network error. Could not reach the upload service." };
   }
 
   if (!res.ok) {
     const json = await res.json().catch(() => ({}));
-    return { error: json.message || json.error || `Upload failed (HTTP ${res.status}).` };
+    return { error: json.error || json.message || `Upload failed (HTTP ${res.status}).` };
   }
   return {};
 }
