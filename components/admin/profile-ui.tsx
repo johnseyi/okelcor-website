@@ -313,7 +313,7 @@ export default function ProfileUI({
                       ROLE_COLORS[profile.role] ?? "bg-gray-100 text-gray-700"
                     }`}
                   >
-                    {ROLE_LABELS[profile.role] ?? profile.role || "—"}
+                    {(ROLE_LABELS[profile.role] ?? profile.role) || "—"}
                   </span>
                 }
               />
