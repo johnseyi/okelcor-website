@@ -62,7 +62,7 @@ export async function changePassword(
 
   let res: Response;
   try {
-    res = await fetch(`${API_URL}/admin/password`, {
+    res = await fetch(`${API_URL}/admin/profile/password`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
