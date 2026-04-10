@@ -8,7 +8,7 @@ export default async function HeroSection() {
   try {
     const res: ApiResponse<HeroSlide[]> = await apiFetch<HeroSlide[]>(
       "/hero-slides",
-      { locale, revalidate: 60, tags: ["hero-slides", `hero-slides-${locale}`] }
+      { locale, revalidate: 0, tags: ["hero-slides", `hero-slides-${locale}`] }
     );
     return <Hero slides={res.data?.length ? res.data : undefined} />;
   } catch {

@@ -196,7 +196,9 @@ export default function Hero({ slides: apiSlides }: HeroProps) {
   ): { type: "image" | "video" | "none"; src: string } => {
     const slide = apiSlides?.[i];
     if (!slide) return { type: "none", src: "" };
-    if (slide.media_type === "video" && slide.video_url && !videoErrors.has(i)) {
+    // Prefer video_url when present — don't require media_type field
+    // because the public API endpoint may omit it.
+    if (slide.video_url && !videoErrors.has(i)) {
       return { type: "video", src: slide.video_url };
     }
     if (slide.image_url) return { type: "image", src: slide.image_url };
