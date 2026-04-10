@@ -8,19 +8,15 @@ import { useLanguage } from "@/context/language-context";
 import type { HeroSlide } from "@/lib/api";
 import MagneticButton from "@/components/ui/magnetic-button";
 
-const FALLBACK_IMAGES = [
-  "/sections/tyre-bg-light.png",
-  "/sections/used-tyres.jpg",
-  "/images/tyre-primary.jpg",
-];
-
 type HeroProps = {
   slides?: HeroSlide[];
 };
 
 export default function Hero({ slides: apiSlides }: HeroProps) {
   const { t } = useLanguage();
-  const slideCount = apiSlides?.length ?? FALLBACK_IMAGES.length;
+  // When API has no slides, render 1 slot so the layout/animations don't break.
+  // The slot shows a branded gradient background with no image.
+  const slideCount = apiSlides?.length ?? 1;
 
   const [index, setIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -188,21 +184,23 @@ export default function Hero({ slides: apiSlides }: HeroProps) {
     };
   }, [index]);
 
+  // Slide text comes entirely from the API/admin panel.
   const slideText = {
-    label: t.hero.slides[index]?.label ?? apiSlides?.[index]?.label ?? "",
-    title: t.hero.slides[index]?.title ?? apiSlides?.[index]?.title ?? "",
-    subtitle: t.hero.slides[index]?.subtitle ?? apiSlides?.[index]?.subtitle ?? "",
+    label:    apiSlides?.[index]?.label    ?? "",
+    title:    apiSlides?.[index]?.title    ?? "",
+    subtitle: apiSlides?.[index]?.subtitle ?? "",
   };
 
   const getSlideMedia = (
     i: number
-  ): { type: "image" | "video"; src: string; fallbackSrc: string } => {
+  ): { type: "image" | "video" | "none"; src: string } => {
     const slide = apiSlides?.[i];
-    const fallbackSrc = slide?.image_url ?? FALLBACK_IMAGES[i] ?? FALLBACK_IMAGES[0];
-    if (slide?.media_type === "video" && slide?.video_url && !videoErrors.has(i)) {
-      return { type: "video", src: slide.video_url, fallbackSrc };
+    if (!slide) return { type: "none", src: "" };
+    if (slide.media_type === "video" && slide.video_url && !videoErrors.has(i)) {
+      return { type: "video", src: slide.video_url };
     }
-    return { type: "image", src: fallbackSrc, fallbackSrc };
+    if (slide.image_url) return { type: "image", src: slide.image_url };
+    return { type: "none", src: "" };
   };
 
   const currentIsVideo = getSlideMedia(index).type === "video";
@@ -216,9 +214,7 @@ export default function Hero({ slides: apiSlides }: HeroProps) {
             return (
               <div
                 key={i}
-                ref={(el) => {
-                  bgRefs.current[i] = el;
-                }}
+                ref={(el) => { bgRefs.current[i] = el; }}
                 className="absolute inset-0 scale-[1.06] overflow-hidden"
                 style={{ opacity: 0 }}
               >
@@ -232,11 +228,14 @@ export default function Hero({ slides: apiSlides }: HeroProps) {
                     onError={() => handleVideoError(i)}
                     className="absolute inset-0 h-full w-full object-cover"
                   />
-                ) : (
+                ) : media.type === "image" ? (
                   <div
                     className="absolute inset-0 bg-cover bg-center"
                     style={{ backgroundImage: `url("${media.src}")` }}
                   />
+                ) : (
+                  /* API unavailable — branded dark gradient placeholder */
+                  <div className="absolute inset-0 bg-[#0f0f0f]" />
                 )}
               </div>
             );
@@ -245,7 +244,7 @@ export default function Hero({ slides: apiSlides }: HeroProps) {
 
         <div
           className="absolute inset-0 transition-colors duration-700"
-          style={{ backgroundColor: currentIsVideo ? "rgba(0,0,0,0.50)" : "rgba(0,0,0,0.24)" }}
+          style={{ backgroundColor: currentIsVideo ? "rgba(0,0,0,0.50)" : "rgba(0,0,0,0.35)" }}
           aria-hidden="true"
         />
         <div

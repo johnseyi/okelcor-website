@@ -10,7 +10,6 @@ export type Translations = {
   };
   lang: { panelTitle: string; en: string; de: string; fr: string; es: string };
   hero: {
-    slides: Array<{ title: string; subtitle: string; label: string }>;
     ctaPrimary: string;
     ctaSecondary: string;
   };
@@ -265,14 +264,6 @@ const en: Translations = {
   },
   lang: { panelTitle: "Select Language", en: "English", de: "Deutsch", fr: "Français", es: "Español" },
   hero: {
-    slides: [
-      { label: "Global Tyre Supply", title: "PREMIUM TYRE SOURCING", subtitle: "High-quality tyres for distributors, wholesalers, fleets, and individual drivers" },
-      { label: "Used Tyre Range", title: "USED TYRES YOU CAN TRUST", subtitle: "Reliable, cost-effective supply for multiple international markets" },
-      { label: "Commercial & Logistics", title: "TBR TYRES FOR LOGISTICS", subtitle: "Built for transport, durability, and dependable commercial performance" },
-      { label: "Quality Assured", title: "QUALITY USED TYRES, GLOBALLY SOURCED", subtitle: "Rigorously graded used tyres for markets that demand value without compromising safety." },
-      { label: "Quality Assured", title: "QUALITY USED TYRES, GLOBALLY SOURCED", subtitle: "Rigorously graded used tyres for markets that demand value without compromising safety." },
-      { label: "Quality Assured", title: "QUALITY USED TYRES, GLOBALLY SOURCED", subtitle: "Rigorously graded used tyres for markets that demand value without compromising safety." },
-    ],
     ctaPrimary: "Request a Quote",
     ctaSecondary: "Browse Catalogue",
   },
@@ -686,14 +677,6 @@ const de: Translations = {
   },
   lang: { panelTitle: "Sprache wählen", en: "English", de: "Deutsch", fr: "Français", es: "Español" },
   hero: {
-    slides: [
-      { label: "Globale Reifenversorgung", title: "PREMIUM-REIFENBESCHAFFUNG", subtitle: "Hochwertige Reifen für Händler, Großhändler und globale Käufer" },
-      { label: "Gebrauchtreifen Sortiment", title: "GEBRAUCHTREIFEN MIT GARANTIE", subtitle: "Zuverlässige, kostengünstige Versorgung für internationale Märkte" },
-      { label: "Nutzfahrzeuge & Logistik", title: "LKW-REIFEN FÜR DIE LOGISTIK", subtitle: "Konzipiert für Transport, Haltbarkeit und kommerzielle Leistung" },
-      { label: "Qualitätsgarantie", title: "QUALITÄTS-GEBRAUCHTREIFEN, WELTWEIT BEZOGEN", subtitle: "Streng klassifizierte Gebrauchtreifen für Märkte, die Wert ohne Kompromisse bei der Sicherheit fordern." },
-      { label: "Qualitätsgarantie", title: "QUALITÄTS-GEBRAUCHTREIFEN, WELTWEIT BEZOGEN", subtitle: "Streng klassifizierte Gebrauchtreifen für Märkte, die Wert ohne Kompromisse bei der Sicherheit fordern." },
-      { label: "Qualitätsgarantie", title: "QUALITÄTS-GEBRAUCHTREIFEN, WELTWEIT BEZOGEN", subtitle: "Streng klassifizierte Gebrauchtreifen für Märkte, die Wert ohne Kompromisse bei der Sicherheit fordern." },
-    ],
     ctaPrimary: "Anfrage stellen",
     ctaSecondary: "Katalog ansehen",
   },
@@ -1107,14 +1090,6 @@ const fr: Translations = {
   },
   lang: { panelTitle: "Choisir la langue", en: "English", de: "Deutsch", fr: "Français", es: "Español" },
   hero: {
-    slides: [
-      { label: "Approvisionnement Mondial", title: "APPROVISIONNEMENT EN PNEUS PREMIUM", subtitle: "Pneus de haute qualité pour distributeurs, grossistes et acheteurs mondiaux" },
-      { label: "Gamme Pneus Usagés", title: "PNEUS USAGÉS DE CONFIANCE", subtitle: "Approvisionnement fiable et rentable pour les marchés internationaux" },
-      { label: "Commercial & Logistique", title: "PNEUS POIDS LOURD POUR LA LOGISTIQUE", subtitle: "Conçus pour le transport, la durabilité et les performances commerciales" },
-      { label: "Qualité Garantie", title: "PNEUS USAGÉS DE QUALITÉ, SOURCÉS MONDIALEMENT", subtitle: "Pneus usagés rigoureusement classés pour les marchés exigeant de la valeur sans compromis sur la sécurité." },
-      { label: "Qualité Garantie", title: "PNEUS USAGÉS DE QUALITÉ, SOURCÉS MONDIALEMENT", subtitle: "Pneus usagés rigoureusement classés pour les marchés exigeant de la valeur sans compromis sur la sécurité." },
-      { label: "Qualité Garantie", title: "PNEUS USAGÉS DE QUALITÉ, SOURCÉS MONDIALEMENT", subtitle: "Pneus usagés rigoureusement classés pour les marchés exigeant de la valeur sans compromis sur la sécurité." },
-    ],
     ctaPrimary: "Nous envoyer votre demande",
     ctaSecondary: "Voir notre catalogue",
   },
@@ -1528,14 +1503,6 @@ const es: Translations = {
   },
   lang: { panelTitle: "Seleccionar idioma", en: "English", de: "Deutsch", fr: "Français", es: "Español" },
   hero: {
-    slides: [
-      { label: "Suministro Global de Neumáticos", title: "SUMINISTRO PREMIUM DE NEUMÁTICOS", subtitle: "Neumáticos de alta calidad para distribuidores, mayoristas, flotas y conductores particulares" },
-      { label: "Gama de Neumáticos Usados", title: "NEUMÁTICOS USADOS DE CONFIANZA", subtitle: "Suministro fiable y rentable para múltiples mercados internacionales" },
-      { label: "Comercial y Logística", title: "NEUMÁTICOS TBR PARA LOGÍSTICA", subtitle: "Diseñados para el transporte, la durabilidad y el rendimiento comercial" },
-      { label: "Calidad Garantizada", title: "NEUMÁTICOS USADOS DE CALIDAD, FUENTE GLOBAL", subtitle: "Neumáticos usados rigurosamente clasificados para mercados que exigen valor sin comprometer la seguridad." },
-      { label: "Calidad Garantizada", title: "NEUMÁTICOS USADOS DE CALIDAD, FUENTE GLOBAL", subtitle: "Neumáticos usados rigurosamente clasificados para mercados que exigen valor sin comprometer la seguridad." },
-      { label: "Calidad Garantizada", title: "NEUMÁTICOS USADOS DE CALIDAD, FUENTE GLOBAL", subtitle: "Neumáticos usados rigurosamente clasificados para mercados que exigen valor sin comprometer la seguridad." },
-    ],
     ctaPrimary: "Solicitar Cotización",
     ctaSecondary: "Ver Catálogo",
   },
