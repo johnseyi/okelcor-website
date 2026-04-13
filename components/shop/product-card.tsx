@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import type { Product } from "./data";
 export type { Product } from "./data";
@@ -24,12 +23,12 @@ export default function ProductCard({ product }: { product: Product }) {
 
       <div className="relative aspect-[4/3] overflow-hidden bg-[#e0e0e0]">
         {product.image ? (
-          <Image
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src={product.image}
             alt={`${product.brand} ${product.name}`}
-            fill
-            className="object-cover transition-transform duration-700 ease-in-out group-hover:scale-[1.08] lg:group-hover:scale-[1.1]"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+            loading="lazy"
+            className="h-full w-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-[1.08] lg:group-hover:scale-[1.1]"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-[#d8d8d8] text-[0.65rem] font-bold uppercase tracking-widest text-[#aaa]">
