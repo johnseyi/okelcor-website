@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import type { Article } from "./data";
@@ -61,11 +62,12 @@ export default function NewsCard({ article, featured = false }: Props) {
         {/* Image */}
         <div className="relative aspect-[16/10] overflow-hidden md:aspect-auto md:min-h-[380px]">
           {article.image ? (
-            <img
+            <Image
               src={article.image}
               alt={article.title}
-              loading="lazy"
-              className="h-full w-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-[1.08]"
+              fill
+              className="object-cover transition-transform duration-700 ease-in-out group-hover:scale-[1.08]"
+              sizes="(max-width: 768px) 100vw, 58vw"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-[#e0e0e0] text-[0.65rem] font-bold uppercase tracking-widest text-[#aaa]">
@@ -110,11 +112,12 @@ export default function NewsCard({ article, featured = false }: Props) {
       {/* Image */}
       <div className="relative aspect-[16/10] overflow-hidden">
         {article.image ? (
-          <img
+          <Image
             src={article.image}
             alt={article.title}
-            loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-[1.08]"
+            fill
+            className="object-cover transition-transform duration-700 ease-in-out group-hover:scale-[1.08]"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-[#e0e0e0] text-[0.65rem] font-bold uppercase tracking-widest text-[#aaa]">

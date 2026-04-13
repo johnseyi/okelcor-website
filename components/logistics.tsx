@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import Reveal from "@/components/motion/reveal";
 import { useLanguage } from "@/context/language-context";
@@ -13,12 +14,12 @@ export default function Logistics() {
         <div className="grid gap-6 md:grid-cols-[1.35fr_0.9fr]">
           {/* Large logistics card */}
           <Reveal className="relative min-h-[400px] overflow-hidden rounded-[22px] sm:min-h-[400px] md:min-h-[580px]">
-            <div
-              className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-105"
-              style={{
-                backgroundImage:
-                  "url('/images/pexels-einfoto-2091159.jpg')",
-              }}
+            <Image
+              src="/images/pexels-einfoto-2091159.jpg"
+              alt=""
+              fill
+              className="object-cover transition-transform duration-700 hover:scale-105"
+              sizes="(max-width: 768px) 100vw, 57vw"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/12 to-black/55" />
 
@@ -56,9 +57,12 @@ export default function Logistics() {
           {/* Side support card */}
           <Reveal delay={0.15} className="grid gap-6">
             <div className="relative overflow-hidden rounded-[22px] min-h-[300px]">
-              <div
-                className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-105"
-                style={{ backgroundImage: "url('/images/pexels-stockphotoartist-8305319.jpg')" }}
+              <Image
+                src="/images/pexels-stockphotoartist-8305319.jpg"
+                alt=""
+                fill
+                className="object-cover transition-transform duration-700 hover:scale-105"
+                sizes="(max-width: 768px) 100vw, 43vw"
               />
               <div className="absolute inset-0 bg-gradient-to-b from-black/8 to-black/45" />
 

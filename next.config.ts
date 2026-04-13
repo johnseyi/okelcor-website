@@ -28,7 +28,13 @@ const nextConfig: NextConfig = {
         hostname: "api.okelcor.de",
         pathname: "/storage/**",
       },
+      {
+        // Pinterest CDN — used by static article fallback images in data.ts
+        protocol: "https",
+        hostname: "i.pinimg.com",
+      },
     ],
+    formats: ["image/avif", "image/webp"],
   },
   async headers() {
     return [

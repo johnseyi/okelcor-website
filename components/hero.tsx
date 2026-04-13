@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
 import Link from "next/link";
 import { gsap, useGSAP, ease, prefersReducedMotion } from "@/lib/gsap";
@@ -231,9 +232,13 @@ export default function Hero({ slides: apiSlides }: HeroProps) {
                     className="absolute inset-0 h-full w-full object-cover"
                   />
                 ) : media.type === "image" ? (
-                  <div
-                    className="absolute inset-0 bg-cover bg-center"
-                    style={{ backgroundImage: `url("${media.src}")` }}
+                  <Image
+                    src={media.src}
+                    alt=""
+                    fill
+                    priority={i === 0}
+                    className="object-cover"
+                    sizes="100vw"
                   />
                 ) : (
                   /* API unavailable — branded dark gradient placeholder */

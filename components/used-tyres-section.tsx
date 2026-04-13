@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import Reveal from "@/components/motion/reveal";
 import { useLanguage } from "@/context/language-context";
@@ -45,9 +46,12 @@ export default function UsedTyresSection() {
             </div>
 
             <div className="relative min-h-[320px] md:min-h-[420px]">
-              <div
-                className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-[1.02]"
-                style={{ backgroundImage: "url('/images/pexels-jonathanborba-18372024.jpg')" }}
+              <Image
+                src="/images/pexels-jonathanborba-18372024.jpg"
+                alt=""
+                fill
+                className="object-cover transition-transform duration-700 hover:scale-[1.02]"
+                sizes="(max-width: 768px) 100vw, 50vw"
               />
               <div className="absolute inset-0 bg-gradient-to-r from-black/8 via-transparent to-transparent" />
             </div>

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Reveal from "@/components/motion/reveal";
 
 type PageHeroProps = {
@@ -16,9 +17,13 @@ export default function PageHero({
   return (
     <section className="w-full pt-[76px] lg:pt-20">
       <div className="relative min-h-[62vh] overflow-hidden">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url('${image}')` }}
+        <Image
+          src={image}
+          alt=""
+          fill
+          priority
+          className="object-cover"
+          sizes="100vw"
         />
         <div className="absolute inset-0 bg-black/25" />
 

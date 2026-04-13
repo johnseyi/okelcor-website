@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { gsap, ScrollTrigger, useGSAP, ease, scrollDefaults, prefersReducedMotion } from "@/lib/gsap";
@@ -67,9 +68,12 @@ function CategoryCard({
       onMouseLeave={handleMouseLeave}
       className="relative h-[360px] min-w-[88%] snap-start overflow-hidden rounded-[22px] bg-black sm:h-[420px] md:h-[580px] md:min-w-[68%] lg:min-w-[62%]"
     >
-      <div
-        className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-[1.03]"
-        style={{ backgroundImage: `url('${image}')` }}
+      <Image
+        src={image}
+        alt={card.label}
+        fill
+        className="object-cover transition-transform duration-700 hover:scale-[1.03]"
+        sizes="(max-width: 768px) 88vw, (max-width: 1200px) 68vw, 62vw"
       />
 
       <div className="absolute inset-0 bg-gradient-to-b from-black/18 via-black/10 to-black/58" />
