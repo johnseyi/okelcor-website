@@ -37,8 +37,41 @@ import {
   updateHeroSlide,
   deleteHeroSlide,
   type SlideInput,
+  type SlideTranslation,
 } from "@/app/admin/hero-slides/actions";
 import type { AdminHeroSlide } from "@/lib/admin-api";
+
+// ── Translation helpers ────────────────────────────────────────────────────────
+
+type TransLocale = "de" | "fr" | "es";
+type TransFields = { title: string; subtitle: string; cta_primary: string; cta_secondary: string };
+
+const EMPTY_TRANS: TransFields = { title: "", subtitle: "", cta_primary: "", cta_secondary: "" };
+const TRANS_LOCALES: { locale: TransLocale; label: string }[] = [
+  { locale: "de", label: "DE" },
+  { locale: "fr", label: "FR" },
+  { locale: "es", label: "ES" },
+];
+
+function hasTransContent(t: TransFields): boolean {
+  return t.title.trim() !== "" || t.subtitle.trim() !== "";
+}
+
+function initTranslations(initial?: AdminHeroSlide): Record<TransLocale, TransFields> {
+  const base: Record<TransLocale, TransFields> = { de: { ...EMPTY_TRANS }, fr: { ...EMPTY_TRANS }, es: { ...EMPTY_TRANS } };
+  if (!initial?.translations) return base;
+  for (const t of initial.translations) {
+    if (t.locale === "de" || t.locale === "fr" || t.locale === "es") {
+      base[t.locale] = {
+        title: t.title ?? "",
+        subtitle: t.subtitle ?? "",
+        cta_primary: t.cta_primary ?? "",
+        cta_secondary: t.cta_secondary ?? "",
+      };
+    }
+  }
+  return base;
+}
 
 // ── Slide form (create & edit) ─────────────────────────────────────────────────
 
@@ -71,9 +104,15 @@ function SlideForm({
   const [ctaPrimaryHref, setCtaPrimaryHref]         = useState(initial?.cta_primary_href ?? "");
   const [ctaSecondaryLabel, setCtaSecondaryLabel]   = useState(initial?.cta_secondary_label ?? "");
   const [ctaSecondaryHref, setCtaSecondaryHref]     = useState(initial?.cta_secondary_href ?? "");
+  const [transTab, setTransTab]         = useState<TransLocale>("de");
+  const [trans, setTrans]               = useState<Record<TransLocale, TransFields>>(() => initTranslations(initial));
   const [error, setError]               = useState<string | null>(null);
   const [isPending, startTransition]    = useTransition();
   const fileInputRef                    = useRef<HTMLInputElement>(null);
+
+  const patchTrans = (locale: TransLocale, patch: Partial<TransFields>) => {
+    setTrans((prev) => ({ ...prev, [locale]: { ...prev[locale], ...patch } }));
+  };
 
   const handleMediaTypeChange = (type: "image" | "video") => {
     setMediaType(type);
@@ -100,6 +139,19 @@ function SlideForm({
     if (!isEdit && !mediaFile) { setError("Please select a media file."); return; }
     setError(null);
 
+    const builtTranslations: SlideTranslation[] = (["de", "fr", "es"] as TransLocale[])
+      .filter((locale) => hasTransContent(trans[locale]))
+      .map((locale) => {
+        const t = trans[locale];
+        return {
+          locale,
+          ...(t.title.trim()         && { title: t.title.trim() }),
+          ...(t.subtitle.trim()      && { subtitle: t.subtitle.trim() }),
+          ...(t.cta_primary.trim()   && { cta_primary: t.cta_primary.trim() }),
+          ...(t.cta_secondary.trim() && { cta_secondary: t.cta_secondary.trim() }),
+        };
+      });
+
     const input: SlideInput = {
       title:    title.trim(),
       subtitle: subtitle.trim(),
@@ -108,6 +160,7 @@ function SlideForm({
       ...(ctaPrimaryHref.trim()    && { cta_primary_href:    ctaPrimaryHref.trim() }),
       ...(ctaSecondaryLabel.trim() && { cta_secondary_label: ctaSecondaryLabel.trim() }),
       ...(ctaSecondaryHref.trim()  && { cta_secondary_href:  ctaSecondaryHref.trim() }),
+      ...(builtTranslations.length > 0 && { translations: builtTranslations }),
     };
 
     startTransition(async () => {
@@ -307,6 +360,79 @@ function SlideForm({
           )}
         </div>
       </div>
+
+        {/* Translations (DE / FR / ES) */}
+        <div className="mt-4">
+          <p className="mb-2 text-[0.72rem] font-bold uppercase tracking-[0.1em] text-[#5c5e62]">
+            Translations (optional)
+          </p>
+
+          {/* Locale tabs */}
+          <div className="flex gap-1.5 border-b border-black/[0.06] pb-0 mb-3">
+            {TRANS_LOCALES.map(({ locale, label }) => {
+              const filled = hasTransContent(trans[locale]);
+              return (
+                <button
+                  key={locale}
+                  type="button"
+                  onClick={() => setTransTab(locale)}
+                  className={`relative -mb-px flex items-center gap-1.5 rounded-t-lg px-4 py-2 text-[0.78rem] font-bold transition ${
+                    transTab === locale
+                      ? "border border-b-white border-black/[0.08] bg-white text-[#1a1a1a]"
+                      : "text-[#5c5e62] hover:text-[#1a1a1a]"
+                  }`}
+                >
+                  {label}
+                  {filled && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Tab fields */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="flex flex-col gap-1">
+              <label className="text-[0.68rem] font-semibold text-[#5c5e62]">Title ({transTab.toUpperCase()})</label>
+              <input
+                type="text"
+                value={trans[transTab].title}
+                onChange={(e) => patchTrans(transTab, { title: e.target.value })}
+                placeholder="Translated title"
+                className="h-9 rounded-xl border border-black/[0.09] bg-white px-3 text-[0.875rem] text-[#1a1a1a] outline-none placeholder:text-[#bbb] transition focus:border-[#E85C1A] focus:ring-2 focus:ring-[#E85C1A]/10"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[0.68rem] font-semibold text-[#5c5e62]">CTA Primary ({transTab.toUpperCase()})</label>
+              <input
+                type="text"
+                value={trans[transTab].cta_primary}
+                onChange={(e) => patchTrans(transTab, { cta_primary: e.target.value })}
+                placeholder="e.g. Katalog ansehen"
+                className="h-9 rounded-xl border border-black/[0.09] bg-white px-3 text-[0.875rem] text-[#1a1a1a] outline-none placeholder:text-[#bbb] transition focus:border-[#E85C1A] focus:ring-2 focus:ring-[#E85C1A]/10"
+              />
+            </div>
+            <div className="flex flex-col gap-1 sm:col-span-2">
+              <label className="text-[0.68rem] font-semibold text-[#5c5e62]">Subtitle ({transTab.toUpperCase()})</label>
+              <textarea
+                value={trans[transTab].subtitle}
+                onChange={(e) => patchTrans(transTab, { subtitle: e.target.value })}
+                placeholder="Translated subtitle"
+                rows={2}
+                className="resize-none rounded-xl border border-black/[0.09] bg-white px-3 py-2 text-[0.875rem] text-[#1a1a1a] outline-none placeholder:text-[#bbb] transition focus:border-[#E85C1A] focus:ring-2 focus:ring-[#E85C1A]/10"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[0.68rem] font-semibold text-[#5c5e62]">CTA Secondary ({transTab.toUpperCase()})</label>
+              <input
+                type="text"
+                value={trans[transTab].cta_secondary}
+                onChange={(e) => patchTrans(transTab, { cta_secondary: e.target.value })}
+                placeholder="e.g. Angebot anfordern"
+                className="h-9 rounded-xl border border-black/[0.09] bg-white px-3 text-[0.875rem] text-[#1a1a1a] outline-none placeholder:text-[#bbb] transition focus:border-[#E85C1A] focus:ring-2 focus:ring-[#E85C1A]/10"
+              />
+            </div>
+          </div>
+        </div>
 
       {/* Form actions */}
       <div className="mt-5 flex gap-2">

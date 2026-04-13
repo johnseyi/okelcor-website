@@ -20,6 +20,16 @@ function revalidateSlides() {
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
+export type SlideTranslation = {
+  locale: "de" | "fr" | "es";
+  title?: string;
+  subtitle?: string;
+  /** CTA primary button label for this locale */
+  cta_primary?: string;
+  /** CTA secondary button label for this locale */
+  cta_secondary?: string;
+};
+
 export type SlideInput = {
   title: string;
   subtitle: string;
@@ -28,6 +38,8 @@ export type SlideInput = {
   cta_primary_href?: string;
   cta_secondary_label?: string;
   cta_secondary_href?: string;
+  /** DE / FR / ES translations — only locales with content are included */
+  translations?: SlideTranslation[];
 };
 
 // ── Create ─────────────────────────────────────────────────────────────────────

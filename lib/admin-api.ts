@@ -179,6 +179,14 @@ export type AdminQuoteFull = AdminQuote & {
   updated_at?: string;
 };
 
+export type AdminHeroSlideTranslation = {
+  locale: "de" | "fr" | "es";
+  title?: string;
+  subtitle?: string;
+  cta_primary?: string;
+  cta_secondary?: string;
+};
+
 export type AdminHeroSlide = {
   id: number;
   title: string;
@@ -191,6 +199,7 @@ export type AdminHeroSlide = {
   cta_primary_href?: string;
   cta_secondary_label?: string;
   cta_secondary_href?: string;
+  translations?: AdminHeroSlideTranslation[];
 };
 
 export type AdminBrand = {
