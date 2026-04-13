@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -69,18 +70,18 @@ function Sidebar({
   return (
     <div className="flex h-full flex-col bg-[#1a1a1a]">
       {/* Logo */}
-      <div className="flex h-16 shrink-0 items-center gap-3 border-b border-white/[0.08] px-5">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#E85C1A]">
-          <span className="text-[11px] font-extrabold tracking-tight text-white">OK</span>
-        </div>
-        <div className="min-w-0">
-          <p className="truncate text-[0.9rem] font-bold leading-tight text-white">
-            Okelcor
-          </p>
-          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-[#E85C1A]">
-            Admin
-          </p>
-        </div>
+      <div className="flex h-16 shrink-0 items-center justify-between border-b border-white/[0.08] px-5">
+        <Image
+          src="/logo/okelcor-logo.png"
+          alt="Okelcor"
+          width={120}
+          height={32}
+          className="h-8 w-auto object-contain brightness-0 invert"
+          priority
+        />
+        <span className="rounded-full bg-[#E85C1A]/15 px-2.5 py-0.5 text-[0.65rem] font-bold uppercase tracking-[0.18em] text-[#E85C1A]">
+          Admin
+        </span>
       </div>
 
       {/* Nav links */}
