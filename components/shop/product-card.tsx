@@ -23,7 +23,6 @@ export default function ProductCard({ product }: { product: Product }) {
 
       <div className="relative aspect-[4/3] overflow-hidden bg-[#e0e0e0]">
         {product.image ? (
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={product.image}
             alt={`${product.brand} ${product.name}`}
