@@ -22,8 +22,8 @@ export async function updateQuoteStatus(
   const token = await getToken();
   let res: Response;
   try {
-    res = await fetch(`${API_URL}/admin/quote-requests/${id}`, {
-      method: "PUT",
+    res = await fetch(`${API_URL}/admin/quote-requests/${id}/status`, {
+      method: "PATCH",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
