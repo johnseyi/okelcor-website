@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   User,
   Mail,
@@ -152,6 +153,7 @@ export default function ProfileUI({
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
   const [, startPasswordTransition] = useTransition();
+  const router = useRouter();
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
@@ -197,6 +199,9 @@ export default function ProfileUI({
         setCurrentPassword("");
         setNewPassword("");
         setConfirmPassword("");
+        // Remove ?first_login=1 from the URL so the warning banner
+        // doesn't reappear if the user refreshes the page.
+        router.replace("/admin/profile");
         setTimeout(() => setPasswordSuccess(false), 7000);
       }
     });
