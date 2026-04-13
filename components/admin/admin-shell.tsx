@@ -74,9 +74,9 @@ function Sidebar({
         <Image
           src="/logo/okelcor-logo.png"
           alt="Okelcor"
-          width={120}
-          height={32}
-          className="h-8 w-auto object-contain brightness-0 invert"
+          width={80}
+          height={22}
+          className="h-[22px] w-auto object-contain brightness-0 invert"
           priority
         />
         <span className="rounded-full bg-[#E85C1A]/15 px-2.5 py-0.5 text-[0.65rem] font-bold uppercase tracking-[0.18em] text-[#E85C1A]">
