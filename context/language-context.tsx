@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   type Locale,
   type Translations,
@@ -30,6 +31,7 @@ function persistLocale(value: Locale) {
 }
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const [locale, setLocaleState] = useState<Locale>(defaultLocale);
 
   // Restore saved locale on mount and sync cookie so server components see it
@@ -49,6 +51,9 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const setLocale = (next: Locale) => {
     setLocaleState(next);
     persistLocale(next);
+    // Re-run server components (e.g. HeroSection) so they re-fetch the API
+    // with the new locale cookie. router.refresh() does not cause a full reload.
+    router.refresh();
   };
 
   return (
