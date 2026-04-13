@@ -3,7 +3,8 @@ import type { Metadata } from "next";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import ArticleUI from "@/components/news/article-ui";
-import { ALL_ARTICLES, getArticleBySlug, type Article } from "@/components/news/data";
+import { ALL_ARTICLES, getArticleBySlug, getLocalizedArticle, type Article } from "@/components/news/data";
+import type { Locale } from "@/lib/translations";
 import { SITE_URL } from "@/lib/constants";
 import { apiFetch, type ApiArticle } from "@/lib/api";
 import { getServerLocale } from "@/lib/locale";
@@ -55,11 +56,17 @@ async function fetchArticle(slug: string, locale: string): Promise<Article | und
       revalidate: 60,
       tags: ["articles", `article-${slug}`, `articles-${locale}`],
     });
-    return res.data ? toArticle(res.data) : undefined;
+    if (res.data) {
+      const article = toArticle(res.data);
+      // API returned the record but has no translation for this locale yet —
+      // fall through to the static locale-aware fallback below.
+      if (article.title.trim()) return article;
+    }
   } catch {
-    // API unavailable — fall back to static data
-    return getArticleBySlug(slug) ?? undefined;
+    // API unreachable — fall through
   }
+  // Static fallback: locale-aware first, then English-only as last resort
+  return getLocalizedArticle(slug, locale as Locale) ?? getArticleBySlug(slug);
 }
 
 async function fetchRelatedArticles(
@@ -74,18 +81,21 @@ async function fetchRelatedArticles(
       revalidate: 60,
       tags: ["articles", `articles-${locale}`],
     });
-    if (!res.data?.length) throw new Error("empty");
-    return res.data
-      .filter((a) => a.slug !== slug && a.category === category)
-      .slice(0, count)
-      .map(toArticle);
+    if (res.data?.length) {
+      const mapped = res.data.map(toArticle);
+      // Only use API results if they carry translated content
+      if (mapped.some((a) => a.title.trim())) {
+        return mapped
+          .filter((a) => a.slug !== slug && a.category === category)
+          .slice(0, count);
+      }
+    }
   } catch {
-    // Fall back to static related articles
-    const all = ALL_ARTICLES as unknown as Article[];
-    return all
-      .filter((a) => a.slug !== slug)
-      .slice(0, count);
+    // fall through
   }
+  // Static locale-aware fallback
+  const { getLocalizedRelatedArticles } = await import("@/components/news/data");
+  return getLocalizedRelatedArticles(slug, locale as Locale, count);
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

@@ -3,8 +3,9 @@ import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import NewsPageUI from "@/components/news/news-page-ui";
 import { apiFetch, type ApiArticle } from "@/lib/api";
-import type { Article } from "@/components/news/data";
+import { getLocalizedArticles, type Article } from "@/components/news/data";
 import { getServerLocale } from "@/lib/locale";
+import type { Locale } from "@/lib/translations";
 
 export const metadata: Metadata = {
   title: "News & Insights",
@@ -38,17 +39,23 @@ function toArticle(a: ApiArticle): Article {
   };
 }
 
-async function getArticles(locale: string): Promise<Article[] | undefined> {
+async function getArticles(locale: string): Promise<Article[]> {
   try {
     const res = await apiFetch<ApiArticle[]>("/articles", {
       locale,
       revalidate: 60,
       tags: ["articles", `articles-${locale}`],
     });
-    return res.data?.length ? res.data.map(toArticle) : undefined;
+    if (res.data?.length) {
+      const articles = res.data.map(toArticle);
+      // If every article came back with an empty title the API has no
+      // translations for this locale yet — use the static fallback instead.
+      if (articles.some((a) => a.title.trim())) return articles;
+    }
   } catch {
-    return undefined;
+    // API unreachable — fall through to static data
   }
+  return getLocalizedArticles(locale as Locale);
 }
 
 export default async function NewsPage() {
@@ -58,7 +65,7 @@ export default async function NewsPage() {
   return (
     <main>
       <Navbar />
-      <NewsPageUI articles={articles} />
+      <NewsPageUI articles={articles} locale={locale} />
       <Footer />
     </main>
   );

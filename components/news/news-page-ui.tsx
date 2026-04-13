@@ -6,16 +6,17 @@ import Reveal from "@/components/motion/reveal";
 import { StaggerParent, StaggerChild } from "@/components/motion/stagger";
 import FadeUp from "@/components/motion/fade-up";
 import { useLanguage } from "@/context/language-context";
-import { getLocalizedArticles, type Article } from "./data";
+import type { Article } from "./data";
 
 type NewsPageUIProps = {
-  /** Live articles from the API (locale pre-resolved). Falls back to static when undefined. */
-  articles?: Article[];
+  /** Articles already resolved for the correct locale by the server component. */
+  articles: Article[];
+  locale: string;
 };
 
-export default function NewsPageUI({ articles: apiArticles }: NewsPageUIProps) {
-  const { locale, t } = useLanguage();
-  const [featured, ...rest] = apiArticles ?? getLocalizedArticles(locale);
+export default function NewsPageUI({ articles }: NewsPageUIProps) {
+  const { t } = useLanguage();
+  const [featured, ...rest] = articles;
 
   return (
     <>
