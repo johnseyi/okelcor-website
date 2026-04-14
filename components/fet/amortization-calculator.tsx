@@ -26,9 +26,9 @@ const VEHICLES: Vehicle[] = [
 // ─── Input styles ─────────────────────────────────────────────────────────────
 
 const inputCls =
-  "w-full rounded-[10px] border border-white/[0.12] bg-white/[0.07] px-4 py-3 text-[0.93rem] text-white outline-none placeholder:text-white/30 transition focus:border-[#10b981] focus:ring-2 focus:ring-[#10b981]/20";
+  "w-full rounded-[10px] border border-[#e2e8e2] bg-white px-4 py-3 text-[0.93rem] text-[#111111] outline-none placeholder:text-[#9ca3af] transition focus:border-[#22c55e] focus:ring-2 focus:ring-[#22c55e]/20";
 
-const labelCls = "mb-1.5 block text-[0.78rem] font-semibold uppercase tracking-wider text-white/50";
+const labelCls = "mb-1.5 block text-[0.78rem] font-semibold uppercase tracking-wider text-[#6b7280]";
 
 // ─── Calculator ───────────────────────────────────────────────────────────────
 
@@ -56,11 +56,10 @@ export default function AmortizationCalculator() {
     const price  = parseFloat(fuelPrice)   || 0;
     const pct    = savingsPct / 100;
 
-    // Annual fuel litres
     const annualLitres =
       vehicle.mode === "km"
-        ? (cons / 100) * dist   // l/100km × km
-        : cons * dist;          // l/h × hours
+        ? (cons / 100) * dist
+        : cons * dist;
 
     const annualFuelCost   = annualLitres * price;
     const annualSavings    = annualFuelCost * pct;
@@ -74,7 +73,7 @@ export default function AmortizationCalculator() {
     n.toLocaleString("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
   return (
-    <div className="rounded-[22px] bg-white/[0.04] p-6 ring-1 ring-white/[0.08] sm:p-8">
+    <div className="rounded-[22px] border border-[#e2e8e2] bg-white p-6 shadow-sm sm:p-8">
 
       {/* Vehicle selector */}
       <div className="mb-6">
@@ -88,8 +87,8 @@ export default function AmortizationCalculator() {
               className={[
                 "rounded-[10px] border px-3 py-2.5 text-left text-[0.78rem] font-semibold transition",
                 vehicleIdx === i
-                  ? "border-[#10b981] bg-[#10b981]/10 text-[#10b981]"
-                  : "border-white/10 bg-white/[0.04] text-white/60 hover:border-white/20 hover:text-white/80",
+                  ? "border-[#22c55e] bg-[#dcfce7] text-[#166534]"
+                  : "border-[#e2e8e2] bg-white text-[#6b7280] hover:border-[#22c55e]/40 hover:text-[#111111]",
               ].join(" ")}
             >
               {v.label}
@@ -155,7 +154,7 @@ export default function AmortizationCalculator() {
       <div className="mt-5">
         <div className="mb-2 flex items-center justify-between">
           <label className={labelCls + " mb-0"}>Expected Fuel Savings</label>
-          <span className="text-[1rem] font-extrabold text-[#10b981]">{savingsPct}%</span>
+          <span className="text-[1rem] font-extrabold text-[#22c55e]">{savingsPct}%</span>
         </div>
         <input
           type="range"
@@ -164,9 +163,9 @@ export default function AmortizationCalculator() {
           step="1"
           value={savingsPct}
           onChange={(e) => setSavingsPct(Number(e.target.value))}
-          className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-white/10 accent-[#10b981]"
+          className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-[#e2e8e2] accent-[#22c55e]"
         />
-        <div className="mt-1 flex justify-between text-[0.72rem] text-white/30">
+        <div className="mt-1 flex justify-between text-[0.72rem] text-[#9ca3af]">
           <span>Conservative 8%</span>
           <span>Optimistic 15%</span>
         </div>
@@ -174,36 +173,36 @@ export default function AmortizationCalculator() {
 
       {/* Results */}
       <div className="mt-6 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-[14px] bg-white/[0.06] p-4 text-center">
-          <p className="text-[0.72rem] font-bold uppercase tracking-wider text-white/40">Annual Fuel Cost</p>
-          <p className="mt-1.5 text-[1.4rem] font-extrabold text-white">
+        <div className="rounded-[14px] border border-[#e2e8e2] bg-[#f9fafb] p-4 text-center">
+          <p className="text-[0.72rem] font-bold uppercase tracking-wider text-[#6b7280]">Annual Fuel Cost</p>
+          <p className="mt-1.5 text-[1.4rem] font-extrabold text-[#111111]">
             €{fmt(results.annualFuelCost)}
           </p>
-          <p className="mt-0.5 text-[0.72rem] text-white/40">Without FET</p>
+          <p className="mt-0.5 text-[0.72rem] text-[#9ca3af]">Without FET</p>
         </div>
 
-        <div className="rounded-[14px] bg-[#10b981]/10 p-4 text-center ring-1 ring-[#10b981]/30">
-          <p className="text-[0.72rem] font-bold uppercase tracking-wider text-[#10b981]/70">Annual Savings</p>
-          <p className="mt-1.5 text-[1.4rem] font-extrabold text-[#10b981]">
+        <div className="rounded-[14px] border border-[#22c55e]/30 bg-[#dcfce7] p-4 text-center">
+          <p className="text-[0.72rem] font-bold uppercase tracking-wider text-[#166534]">Annual Savings</p>
+          <p className="mt-1.5 text-[1.4rem] font-extrabold text-[#16a34a]">
             €{fmt(results.annualSavings)}
           </p>
-          <p className="mt-0.5 text-[0.72rem] text-[#10b981]/60">Per year with FET</p>
+          <p className="mt-0.5 text-[0.72rem] text-[#166534]/70">Per year with FET</p>
         </div>
 
-        <div className="rounded-[14px] bg-white/[0.06] p-4 text-center">
-          <p className="text-[0.72rem] font-bold uppercase tracking-wider text-white/40">Payback Period</p>
-          <p className="mt-1.5 text-[1.4rem] font-extrabold text-white">
+        <div className="rounded-[14px] border border-[#e2e8e2] bg-[#f9fafb] p-4 text-center">
+          <p className="text-[0.72rem] font-bold uppercase tracking-wider text-[#6b7280]">Payback Period</p>
+          <p className="mt-1.5 text-[1.4rem] font-extrabold text-[#111111]">
             {results.paybackMonths !== null
               ? results.paybackMonths < 12
                 ? `${Math.ceil(results.paybackMonths)} mo`
                 : `${(results.paybackMonths / 12).toFixed(1)} yr`
               : "—"}
           </p>
-          <p className="mt-0.5 text-[0.72rem] text-white/40">Time to break even</p>
+          <p className="mt-0.5 text-[0.72rem] text-[#9ca3af]">Time to break even</p>
         </div>
       </div>
 
-      <p className="mt-4 text-center text-[0.72rem] leading-5 text-white/25">
+      <p className="mt-4 text-center text-[0.72rem] leading-5 text-[#9ca3af]">
         Estimates based on field and lab test data. Actual savings vary by vehicle condition, driving pattern, and fuel quality.
       </p>
     </div>

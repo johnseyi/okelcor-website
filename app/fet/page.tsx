@@ -18,7 +18,15 @@ export const metadata: Metadata = {
 
 // ─── Section wrapper ──────────────────────────────────────────────────────────
 
-function Section({ children, className = "", id }: { children: React.ReactNode; className?: string; id?: string }) {
+function Section({
+  children,
+  className = "",
+  id,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  id?: string;
+}) {
   return (
     <section id={id} className={`w-full py-16 md:py-20 ${className}`}>
       <div className="tesla-shell">{children}</div>
@@ -28,7 +36,7 @@ function Section({ children, className = "", id }: { children: React.ReactNode; 
 
 function SectionEyebrow({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.28em] text-[#10b981]">
+    <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.28em] text-[#22c55e]">
       {children}
     </p>
   );
@@ -38,41 +46,42 @@ function SectionEyebrow({ children }: { children: React.ReactNode }) {
 
 export default function FetPage() {
   return (
-    <main className="min-h-screen bg-[#0d1b2e]">
+    <main className="min-h-screen bg-[#f0f4f0]">
       <Navbar />
 
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
-      <section className="relative flex min-h-[88vh] flex-col items-center justify-center overflow-hidden bg-[#060e1a] px-5 pt-[76px] text-center lg:pt-20">
+      <section className="relative flex min-h-[88vh] flex-col items-center justify-center overflow-hidden bg-[#f0f4f0] px-5 pt-[76px] text-center lg:pt-20">
         {/* Subtle radial glow */}
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_40%,rgba(16,185,129,0.08),transparent)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_40%,rgba(34,197,94,0.07),transparent)]" />
 
         <div className="relative z-10 max-w-[760px]">
-          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#10b981]/20 bg-[#10b981]/10 px-4 py-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#10b981]" />
-            <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#10b981]">
+          {/* Badge */}
+          <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-[#dcfce7] px-4 py-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#22c55e]" />
+            <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#166534]">
               Fuel Efficiency Technology
             </span>
           </div>
 
-          <h1 className="text-4xl font-extrabold leading-[1.04] tracking-tight text-white sm:text-5xl md:text-6xl">
+          <h1 className="text-4xl font-extrabold leading-[1.04] tracking-tight text-[#111111] sm:text-5xl md:text-6xl">
             FET Engine Treatment
           </h1>
-          <p className="mt-5 text-[1.1rem] leading-7 text-white/60 sm:text-[1.2rem]">
+          <p className="mt-5 text-[1.1rem] leading-7 text-[#6b7280] sm:text-[1.2rem]">
             Save Fuel. Improve Performance. Reduce Emissions.
           </p>
 
           {/* Benefit pills */}
           <div className="mt-8 flex flex-wrap justify-center gap-2.5">
             {[
-              { icon: Zap,     label: "Save Fuel"                  },
-              { icon: BarChart3, label: "Improve Engine Performance" },
-              { icon: Leaf,    label: "Reduce Emissions"            },
+              { icon: Zap,       label: "Save Fuel"                  },
+              { icon: BarChart3, label: "Improve Engine Performance"  },
+              { icon: Leaf,      label: "Reduce Emissions"            },
             ].map(({ icon: Icon, label }) => (
               <span
                 key={label}
-                className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-[0.85rem] font-semibold text-white/80"
+                className="flex items-center gap-2 rounded-full border border-[#e2e8e2] bg-white px-4 py-2 text-[0.85rem] font-semibold text-[#111111] shadow-sm"
               >
-                <Icon size={14} strokeWidth={2} className="text-[#10b981]" />
+                <Icon size={14} strokeWidth={2} className="text-[#22c55e]" />
                 {label}
               </span>
             ))}
@@ -81,13 +90,13 @@ export default function FetPage() {
           <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <Link
               href="/quote"
-              className="flex h-[52px] items-center gap-2 rounded-full bg-[#10b981] px-8 text-[0.95rem] font-semibold text-white shadow-[0_16px_40px_rgba(16,185,129,0.25)] transition hover:bg-[#0ea271]"
+              className="flex h-[52px] items-center gap-2 rounded-full bg-[#22c55e] px-8 text-[0.95rem] font-semibold text-white shadow-[0_16px_40px_rgba(34,197,94,0.28)] transition hover:bg-[#16a34a]"
             >
               Request a Quote <ArrowRight size={16} strokeWidth={2} />
             </Link>
             <a
               href="#how-it-works"
-              className="flex h-[52px] items-center gap-2 rounded-full border border-white/15 px-8 text-[0.95rem] font-semibold text-white/70 transition hover:border-white/30 hover:text-white"
+              className="flex h-[52px] items-center gap-2 rounded-full border border-[#e2e8e2] bg-white px-8 text-[0.95rem] font-semibold text-[#111111] shadow-sm transition hover:border-[#22c55e]/40 hover:text-[#22c55e]"
             >
               How it works <ChevronRight size={15} />
             </a>
@@ -95,14 +104,14 @@ export default function FetPage() {
         </div>
 
         {/* Bottom fade */}
-        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#0d1b2e] to-transparent" />
+        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#f0f4f0] to-transparent" />
       </section>
 
       {/* ── How It Works ─────────────────────────────────────────────────── */}
-      <Section id="how-it-works" className="bg-[#0d1b2e]">
+      <Section id="how-it-works" className="bg-white">
         <FadeUp>
           <SectionEyebrow>How It Works</SectionEyebrow>
-          <h2 className="mb-12 text-3xl font-extrabold tracking-tight text-white md:text-4xl">
+          <h2 className="mb-12 text-3xl font-extrabold tracking-tight text-[#111111] md:text-4xl">
             Simple install. Immediate impact.
           </h2>
         </FadeUp>
@@ -126,22 +135,24 @@ export default function FetPage() {
             },
           ].map(({ step, title, body }, i) => (
             <FadeUp key={step} delay={i * 110}>
-              <div className="relative h-full rounded-[18px] bg-white/[0.04] p-6 ring-1 ring-white/[0.07] transition-all duration-300 hover:-translate-y-1 hover:bg-white/[0.07] hover:ring-[#10b981]/30 hover:shadow-[0_8px_28px_rgba(16,185,129,0.08)]">
-                <span className="mb-4 block font-mono text-[2.5rem] font-extrabold leading-none text-[#10b981]/20">
+              <div className="relative h-full rounded-[18px] border border-[#e2e8e2] bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#22c55e]/30 hover:shadow-[0_8px_28px_rgba(34,197,94,0.1)]">
+                <span className="mb-4 block font-mono text-[2.5rem] font-extrabold leading-none text-[#22c55e]/20">
                   {step}
                 </span>
-                <h3 className="text-[1rem] font-extrabold text-white">{title}</h3>
-                <p className="mt-2 text-[0.88rem] leading-6 text-white/50">{body}</p>
+                <h3 className="text-[1rem] font-extrabold text-[#111111]">{title}</h3>
+                <p className="mt-2 text-[0.88rem] leading-6 text-[#6b7280]">{body}</p>
               </div>
             </FadeUp>
           ))}
         </div>
       </Section>
 
-      {/* ── Proven Results ───────────────────────────────────────────────── */}
-      <Section className="bg-[#091422]">
+      {/* ── Proven Results ── dark green band ────────────────────────────── */}
+      <Section className="bg-[#0d2b1a]">
         <FadeUp>
-          <SectionEyebrow>Proven Results</SectionEyebrow>
+          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.28em] text-[#22c55e]">
+            Proven Results
+          </p>
           <h2 className="mb-10 text-3xl font-extrabold tracking-tight text-white md:text-4xl">
             Documented in real-world conditions.
           </h2>
@@ -153,25 +164,27 @@ export default function FetPage() {
               stat: "~10.9%",
               label: "Fuel Savings",
               context: "Field test — Unimog winter operation",
-              detail: "Measured over an extended field test in cold-weather conditions with a Mercedes-Benz Unimog. Consistent savings across the test period.",
+              detail:
+                "Measured over an extended field test in cold-weather conditions with a Mercedes-Benz Unimog. Consistent savings across the test period.",
             },
             {
               stat: "Up to 15%",
               label: "Fuel Savings",
               context: "Lab test — constant-speed runs",
-              detail: "Controlled laboratory testing at constant speed showed up to 15% improvement in fuel consumption versus an untreated baseline vehicle.",
+              detail:
+                "Controlled laboratory testing at constant speed showed up to 15% improvement in fuel consumption versus an untreated baseline vehicle.",
             },
           ].map(({ stat, label, context, detail }, i) => (
             <FadeUp key={context} delay={i * 130}>
-              <div className="h-full rounded-[18px] bg-[#10b981]/[0.06] p-8 ring-1 ring-[#10b981]/20 transition-all duration-300 hover:-translate-y-1 hover:ring-[#10b981]/40 hover:shadow-[0_10px_32px_rgba(16,185,129,0.12)]">
-                <p className="text-[3rem] font-extrabold leading-none tracking-tight text-[#10b981]">
+              <div className="h-full rounded-[18px] border border-[#22c55e]/20 bg-[#22c55e]/[0.06] p-8 transition-all duration-300 hover:-translate-y-1 hover:border-[#22c55e]/40 hover:shadow-[0_10px_32px_rgba(34,197,94,0.15)]">
+                <p className="text-[3.2rem] font-extrabold leading-none tracking-tight text-white">
                   {stat}
                 </p>
                 <p className="mt-1.5 text-[1rem] font-bold text-white">{label}</p>
-                <p className="mt-0.5 text-[0.8rem] font-semibold uppercase tracking-wider text-[#10b981]/60">
+                <p className="mt-0.5 text-[0.8rem] font-semibold uppercase tracking-wider text-[#22c55e]/70">
                   {context}
                 </p>
-                <p className="mt-4 text-[0.88rem] leading-6 text-white/50">{detail}</p>
+                <p className="mt-4 text-[0.88rem] leading-6 text-white/60">{detail}</p>
               </div>
             </FadeUp>
           ))}
@@ -179,10 +192,10 @@ export default function FetPage() {
       </Section>
 
       {/* ── Key Benefits ─────────────────────────────────────────────────── */}
-      <Section className="bg-[#0d1b2e]">
+      <Section className="bg-[#f0f4f0]">
         <FadeUp>
           <SectionEyebrow>Key Benefits</SectionEyebrow>
-          <h2 className="mb-10 text-3xl font-extrabold tracking-tight text-white md:text-4xl">
+          <h2 className="mb-10 text-3xl font-extrabold tracking-tight text-[#111111] md:text-4xl">
             Built for operational realities.
           </h2>
         </FadeUp>
@@ -221,12 +234,12 @@ export default function FetPage() {
             },
           ].map(({ icon: Icon, title, body }, i) => (
             <FadeUp key={title} delay={i * 75}>
-              <div className="h-full rounded-[18px] bg-white/[0.03] p-6 ring-1 ring-white/[0.06] transition-all duration-300 hover:-translate-y-1 hover:bg-white/[0.06] hover:ring-[#f4511e]/25 hover:shadow-[0_8px_24px_rgba(244,81,30,0.08)]">
-                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-[#10b981]/10 transition-colors duration-300 group-hover:bg-[#10b981]/20">
-                  <Icon size={18} strokeWidth={1.8} className="text-[#10b981]" />
+              <div className="h-full rounded-[18px] border border-[#e2e8e2] bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#22c55e]/30 hover:shadow-[0_8px_24px_rgba(34,197,94,0.1)]">
+                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-[#dcfce7]">
+                  <Icon size={18} strokeWidth={1.8} className="text-[#16a34a]" />
                 </div>
-                <h3 className="text-[0.95rem] font-extrabold text-white">{title}</h3>
-                <p className="mt-2 text-[0.85rem] leading-6 text-white/50">{body}</p>
+                <h3 className="text-[0.95rem] font-extrabold text-[#111111]">{title}</h3>
+                <p className="mt-2 text-[0.85rem] leading-6 text-[#6b7280]">{body}</p>
               </div>
             </FadeUp>
           ))}
@@ -234,10 +247,10 @@ export default function FetPage() {
       </Section>
 
       {/* ── Applications ─────────────────────────────────────────────────── */}
-      <Section className="bg-[#091422]">
+      <Section className="bg-white">
         <FadeUp>
           <SectionEyebrow>Applications</SectionEyebrow>
-          <h2 className="mb-10 text-3xl font-extrabold tracking-tight text-white md:text-4xl">
+          <h2 className="mb-10 text-3xl font-extrabold tracking-tight text-[#111111] md:text-4xl">
             Who it&apos;s for.
           </h2>
         </FadeUp>
@@ -252,11 +265,11 @@ export default function FetPage() {
             { icon: Anchor,  label: "Marine"                   },
           ].map(({ icon: Icon, label }, i) => (
             <FadeUp key={label} delay={i * 60}>
-              <div className="flex h-full flex-col items-center gap-3 rounded-[16px] bg-white/[0.04] p-5 text-center ring-1 ring-white/[0.06] transition-all duration-300 hover:-translate-y-1 hover:bg-white/[0.07] hover:ring-[#10b981]/30 hover:shadow-[0_6px_20px_rgba(16,185,129,0.1)]">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#10b981]/10 transition-colors duration-300 hover:bg-[#10b981]/20">
-                  <Icon size={22} strokeWidth={1.7} className="text-[#10b981]" />
+              <div className="flex h-full flex-col items-center gap-3 rounded-[16px] border border-[#e2e8e2] bg-white p-5 text-center shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#22c55e]/30 hover:shadow-[0_6px_20px_rgba(34,197,94,0.1)]">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#dcfce7]">
+                  <Icon size={22} strokeWidth={1.7} className="text-[#16a34a]" />
                 </div>
-                <p className="text-[0.8rem] font-semibold leading-tight text-white/70">{label}</p>
+                <p className="text-[0.8rem] font-semibold leading-tight text-[#6b7280]">{label}</p>
               </div>
             </FadeUp>
           ))}
@@ -264,32 +277,34 @@ export default function FetPage() {
       </Section>
 
       {/* ── Amortization Calculator ───────────────────────────────────────── */}
-      <Section className="bg-[#0d1b2e]">
-        <SectionEyebrow>ROI Calculator</SectionEyebrow>
-        <h2 className="mb-3 text-3xl font-extrabold tracking-tight text-white md:text-4xl">
-          Calculate your savings.
-        </h2>
-        <p className="mb-10 max-w-[520px] text-[0.95rem] leading-7 text-white/50">
-          Enter your vehicle details and see how quickly FET pays for itself.
-        </p>
+      <Section className="bg-[#f0f4f0]">
+        <FadeUp>
+          <SectionEyebrow>ROI Calculator</SectionEyebrow>
+          <h2 className="mb-3 text-3xl font-extrabold tracking-tight text-[#111111] md:text-4xl">
+            Calculate your savings.
+          </h2>
+          <p className="mb-10 max-w-[520px] text-[0.95rem] leading-7 text-[#6b7280]">
+            Enter your vehicle details and see how quickly FET pays for itself.
+          </p>
+        </FadeUp>
         <AmortizationCalculator />
       </Section>
 
       {/* ── Bottom CTA ───────────────────────────────────────────────────── */}
-      <section className="w-full bg-[#091422] py-20">
+      <section className="w-full bg-[#0d2b1a] py-20">
         <div className="tesla-shell flex flex-col items-center text-center">
-          <div className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#10b981]/10">
-            <Zap size={24} strokeWidth={1.8} className="text-[#10b981]" />
+          <div className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#22c55e]/15">
+            <Zap size={24} strokeWidth={1.8} className="text-[#22c55e]" />
           </div>
           <h2 className="text-3xl font-extrabold tracking-tight text-white md:text-4xl">
             Get non-binding advice
           </h2>
-          <p className="mt-3 max-w-[420px] text-[0.95rem] leading-7 text-white/55">
+          <p className="mt-3 max-w-[420px] text-[0.95rem] leading-7 text-white/60">
             Not sure if FET is right for your fleet or vehicle? Our team will answer your questions and provide a tailored recommendation — no commitment required.
           </p>
           <Link
             href="/quote"
-            className="mt-8 flex h-[54px] items-center gap-2 rounded-full bg-[#10b981] px-10 text-[1rem] font-semibold text-white shadow-[0_16px_40px_rgba(16,185,129,0.22)] transition hover:bg-[#0ea271]"
+            className="mt-8 flex h-[54px] items-center gap-2 rounded-full bg-[#22c55e] px-10 text-[1rem] font-semibold text-white shadow-[0_16px_40px_rgba(34,197,94,0.3)] transition hover:bg-[#16a34a]"
           >
             Request a Quote <ArrowRight size={16} strokeWidth={2} />
           </Link>
