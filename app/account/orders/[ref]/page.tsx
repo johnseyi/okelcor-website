@@ -107,7 +107,7 @@ function StatusTimeline({ status }: { status: OrderStatus }) {
                       : "border-black/10 bg-white text-[var(--muted)]",
                   ].join(" ")}
                 >
-                  {isDone ? "✓" : i + 1}
+                  {isDone || isCurrent ? "✓" : i + 1}
                 </div>
 
                 {/* Connector right */}
