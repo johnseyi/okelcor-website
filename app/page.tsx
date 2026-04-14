@@ -13,6 +13,7 @@ import FloatingBar from "@/components/floating-bar";
 import HeroSection from "@/components/home/hero-section";
 import CategoriesSection from "@/components/home/categories-section";
 import BrandsSection from "@/components/home/brands-section";
+import FetTeaser from "@/components/fet-teaser";
 import {
   HeroSkeleton,
   CategoriesSkeleton,
@@ -56,6 +57,8 @@ export default function Home() {
       <Suspense fallback={<BrandsSkeleton />}>
         <BrandsSection />
       </Suspense>
+
+      <FetTeaser />
 
       <Logistics />
       <TyreHighlightsSection />

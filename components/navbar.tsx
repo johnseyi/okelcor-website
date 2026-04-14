@@ -30,6 +30,7 @@ import {
   X,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
   ShoppingCart,
   Search,
   Package,
@@ -61,9 +62,15 @@ export default function Navbar() {
   const { data: session, status } = useSession();
   const isAuthed = status === "authenticated";
 
-  const navItems = [
+  type NavChild = { label: string; href: string; accent: string };
+  type NavItem  = { label: string; href: string; children?: NavChild[] };
+
+  const navItems: NavItem[] = [
     { label: t.nav.home,    href: "/" },
-    { label: t.nav.shop,    href: "/shop" },
+    { label: t.nav.shop,    href: "/shop", children: [
+      { label: "Tyres",                href: "/shop", accent: "#f4511e" },
+      { label: "FET Engine Treatment", href: "/fet",  accent: "#10b981" },
+    ]},
     { label: t.nav.news,    href: "/news" },
     { label: t.nav.about,   href: "/about" },
     { label: t.nav.contact, href: "/contact" },
@@ -326,6 +333,35 @@ export default function Navbar() {
             <nav className="hidden items-center justify-center lg:flex">
               <div className="flex items-center rounded-2xl px-2 py-1">
                 {navItems.map((item) => {
+                  if (item.children) {
+                    const isActive = item.children.some((c) => pathname === c.href || pathname.startsWith(c.href + "/"));
+                    return (
+                      <div key={item.label} className="group relative">
+                        <button
+                          type="button"
+                          className={`tesla-nav-link flex items-center gap-0.5 ${isActive ? "tesla-nav-link-active" : ""}`}
+                        >
+                          {item.label}
+                          <ChevronDown size={12} strokeWidth={2.2} className="transition-transform duration-200 group-hover:rotate-180" />
+                        </button>
+                        {/* Dropdown panel — CSS hover, no extra JS state */}
+                        <div className="pointer-events-none absolute left-1/2 top-[calc(100%+6px)] z-50 w-[210px] -translate-x-1/2 opacity-0 transition-all duration-200 group-hover:pointer-events-auto group-hover:opacity-100">
+                          <div className="overflow-hidden rounded-[14px] border border-black/[0.07] bg-white/95 p-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.1)] backdrop-blur-xl">
+                            {item.children.map((child) => (
+                              <Link
+                                key={child.href}
+                                href={child.href}
+                                className="flex items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-[0.875rem] font-semibold text-black/70 transition hover:bg-black/[0.04] hover:text-black"
+                              >
+                                <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: child.accent }} />
+                                {child.label}
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
                   const isActive = pathname === item.href;
                   return (
                     <Link
@@ -585,6 +621,31 @@ export default function Navbar() {
               {/* Nav links */}
               <div className="flex flex-col gap-1">
                 {navItems.map((item) => {
+                  if (item.children) {
+                    return (
+                      <div key={item.label}>
+                        <p className="mb-1 px-4 pt-1 text-[0.7rem] font-bold uppercase tracking-[0.22em] text-black/35">
+                          {item.label}
+                        </p>
+                        {item.children.map((child) => {
+                          const isChildActive = pathname === child.href || pathname.startsWith(child.href + "/");
+                          return (
+                            <Link
+                              key={child.href}
+                              href={child.href}
+                              onClick={closeAll}
+                              className={`tesla-mobile-link pl-7 ${isChildActive ? "tesla-mobile-link-active" : ""}`}
+                            >
+                              <span className="flex items-center gap-2.5">
+                                <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: child.accent }} />
+                                {child.label}
+                              </span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    );
+                  }
                   const isActive = pathname === item.href;
                   return (
                     <Link
