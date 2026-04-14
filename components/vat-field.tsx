@@ -32,7 +32,7 @@ export default function VatField({
         return;
       }
       const data = await res.json();
-      setStatus(data.valid === true ? "valid" : "invalid");
+      setStatus(data.data?.valid === true ? "valid" : "invalid");
     } catch {
       setStatus("unavailable");
     }
