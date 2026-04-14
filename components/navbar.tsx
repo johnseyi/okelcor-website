@@ -32,6 +32,7 @@ import {
   ChevronLeft,
   ShoppingCart,
   Search,
+  Package,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
@@ -401,8 +402,16 @@ export default function Navbar() {
 
                       <div className="mx-4 border-t border-black/[0.06]" />
 
-                      {/* Sign out */}
+                      {/* Account links */}
                       <div className="p-2">
+                        <Link
+                          href="/account/orders"
+                          onClick={() => setOpenProfile(false)}
+                          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[0.875rem] font-semibold text-black/70 transition hover:bg-black/[0.04] hover:text-black"
+                        >
+                          <Package size={16} strokeWidth={1.9} />
+                          My Orders
+                        </Link>
                         <button
                           type="button"
                           onClick={() => { setOpenProfile(false); signOut({ callbackUrl: "/" }); }}
@@ -640,6 +649,16 @@ export default function Navbar() {
                         </div>
                       </div>
                     </div>
+                    <Link
+                      href="/account/orders"
+                      onClick={closeAll}
+                      className="tesla-mobile-meta-link"
+                    >
+                      <div className="flex items-center gap-4">
+                        <Package size={22} strokeWidth={1.9} />
+                        <span className="text-[1rem] font-semibold text-black">My Orders</span>
+                      </div>
+                    </Link>
                     <button
                       type="button"
                       onClick={() => { closeAll(); signOut({ callbackUrl: "/" }); }}
