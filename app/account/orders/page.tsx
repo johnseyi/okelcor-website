@@ -49,16 +49,31 @@ export const STATUS_CONFIG: Record<OrderStatus, { label: string; cls: string }> 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 async function fetchOrders(email: string): Promise<Order[]> {
-  const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+  const API_URL =
+    process.env.API_URL ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    "http://localhost:8000/api/v1";
+
+  const url = `${API_URL}/orders?email=${encodeURIComponent(email)}`;
+  console.log("[orders] fetching:", url);
+
   try {
-    const res = await fetch(
-      `${API_URL}/orders?email=${encodeURIComponent(email)}`,
-      { cache: "no-store", headers: { Accept: "application/json" } }
-    );
-    if (!res.ok) return [];
+    const res = await fetch(url, {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+
     const json = await res.json();
+    console.log("[orders] status:", res.status, "data length:", Array.isArray(json.data) ? json.data.length : json);
+
+    if (!res.ok) {
+      console.error("[orders] API error:", res.status, json);
+      return [];
+    }
+
     return json.data ?? [];
-  } catch {
+  } catch (err) {
+    console.error("[orders] fetch failed:", err);
     return [];
   }
 }
