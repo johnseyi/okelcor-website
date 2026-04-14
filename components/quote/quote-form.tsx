@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Paperclip, CheckCircle2 } from "lucide-react";
 import { useLanguage } from "@/context/language-context";
 import { trackQuoteSubmit } from "@/lib/analytics";
+import VatField from "@/components/vat-field";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -99,6 +100,7 @@ export default function QuoteForm() {
     quantity: "", budgetRange: "", deliveryLocation: "",
     deliveryTimeline: "", notes: "",
   });
+  const [vatNumber, setVatNumber] = useState("");
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -167,6 +169,7 @@ export default function QuoteForm() {
           delivery_location: form.deliveryLocation,
           delivery_timeline: form.deliveryTimeline,
           notes:             form.notes,
+          vat_number:        vatNumber.trim() || undefined,
         }),
       });
 
@@ -190,6 +193,7 @@ export default function QuoteForm() {
 
   const handleReset = () => {
     setSubmitted(false);
+    setVatNumber("");
     setForm({
       fullName: "", companyName: "", email: "", phone: "",
       country: "", businessType: "",
@@ -321,6 +325,10 @@ export default function QuoteForm() {
               {t.quote.form.businessTypes.map((v) => <option key={v} value={v}>{v}</option>)}
             </select>
           </Field>
+
+          <div className="col-span-full">
+            <VatField value={vatNumber} onChange={setVatNumber} />
+          </div>
 
           {/* ── Product Request ── */}
           <SectionLabel>{t.quote.form.sectionProduct}</SectionLabel>

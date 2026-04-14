@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, ChevronRight } from "lucide-react";
+import VatField from "@/components/vat-field";
 import { useCart } from "@/context/cart-context";
 import { useLanguage } from "@/context/language-context";
 import ExpressCheckout from "./express-checkout";
@@ -189,6 +190,7 @@ export default function CheckoutFlow() {
   });
   const [cardErrors, setCardErrors] = useState<CardErrors>({});
 
+  const [vatNumber, setVatNumber] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [orderRef, setOrderRef] = useState("");
@@ -249,6 +251,7 @@ export default function CheckoutFlow() {
         body: JSON.stringify({
           delivery,
           paymentMethod,
+          vat_number: vatNumber.trim() || undefined,
           items: items.map((item) => ({
             product: {
               id:    item.product.id,
@@ -429,6 +432,11 @@ export default function CheckoutFlow() {
               </div>
             </SectionCard>
           </div>
+
+          {/* VAT number */}
+          <SectionCard title="Business Details">
+            <VatField value={vatNumber} onChange={setVatNumber} />
+          </SectionCard>
 
           {/* Delivery method */}
           <SectionCard title={c.sectionDeliveryMethod}>
