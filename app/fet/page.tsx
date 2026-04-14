@@ -17,9 +17,9 @@ export const metadata: Metadata = {
 
 // ─── Section wrapper ──────────────────────────────────────────────────────────
 
-function Section({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+function Section({ children, className = "", id }: { children: React.ReactNode; className?: string; id?: string }) {
   return (
-    <section className={`w-full py-16 md:py-20 ${className}`}>
+    <section id={id} className={`w-full py-16 md:py-20 ${className}`}>
       <div className="tesla-shell">{children}</div>
     </section>
   );
