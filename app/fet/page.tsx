@@ -61,7 +61,7 @@ export default function FetPage() {
           className="absolute inset-0 h-full w-full object-cover"
           aria-hidden="true"
         >
-          <source src="/videos/fet-hero.mp4" type="video/mp4" />
+          <source src="public/videos/fet-hero.mp4" type="video/mp4" />
         </video>
 
         {/* Fallback gradient (visible before video loads or if file is missing) */}
