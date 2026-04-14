@@ -1,7 +1,29 @@
 {
   "permissions": {
     "allow": [
-      "Bash(powershell -Command \"Rename-Item 'C:\\\\Users\\\\user\\\\Desktop\\\\Projects\\\\okelcor-tesla-clone' 'okelcor-website'\")"
+      "Bash(powershell -Command \"Rename-Item 'C:\\\\Users\\\\user\\\\Desktop\\\\Projects\\\\okelcor-tesla-clone' 'okelcor-website'\")",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx next:*)",
+      "Bash(curl -s http://localhost:3000/)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:3000/ http://localhost:3000/shop http://localhost:3000/about)",
+      "Bash(curl:*)",
+      "Bash(netstat -ano)",
+      "Bash(findstr \":3000\")",
+      "Bash(findstr LISTENING)",
+      "Bash(taskkill:*)",
+      "Bash(cmd /c \"taskkill /PID 28724 /F\")",
+      "Bash(cmd /c \"taskkill /PID 28724 /F 2>&1\")",
+      "Bash(cmd /c \"taskkill /F /PID 28724\")",
+      "Bash(cmd /c \"npx kill-port 3000 2>&1 || powershell -Command \\\\\"Stop-Process -Id 28724 -Force\\\\\" 2>&1\")",
+      "Bash(powershell -Command \"Stop-Process -Id 28724 -Force; Write-Host 'done'\")",
+      "Bash(ls:*)",
+      "Bash(node -e ':*)",
+      "Bash(grep -r \"gsap\\\\|framer-motion\\\\|lenis\\\\|ScrollTrigger\\\\|useGSAP\\\\|useEffect.*scroll\" /c/Users/user/Desktop/Projects/okelcor-website --include=\"*.tsx\" --include=\"*.ts\" --include=\"*.css\" ! -path \"*/node_modules/*\" ! -path \"*/.next/*\" ! -path \"*/.claude/*\" -l)",
+      "Bash(grep -r \"addEventListener.*scroll\\\\|window\\\\.scrollY\\\\|will-change\\\\|transform\\\\|translate\\\\|scale\" /c/Users/user/Desktop/Projects/okelcor-website/components --include=\"*.tsx\" ! -path \"*/node_modules/*\" -l)",
+      "Bash(find /c/Users/user/Desktop/Projects/okelcor-website -type f -name \"*.tsx\" ! -path \"*/node_modules/*\" ! -path \"*/.next/*\" ! -path \"*/.claude/*\" -exec wc -l {} +)",
+      "Bash(rm \"C:/Users/user/Desktop/Projects/okelcor-website/components/smooth-scroll.tsx\")",
+      "Bash(npm uninstall:*)"
     ]
   }
 }

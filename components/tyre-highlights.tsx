@@ -18,7 +18,7 @@ export default function TyreHighlightsSection() {
               <div
                 className="relative min-h-[220px] overflow-hidden transition-transform duration-700 hover:scale-[1.02] sm:min-h-[260px]"
                 style={{
-                  backgroundImage: "url('/images/pexels-jonathanborba-18372024.jpg')",
+                  backgroundImage: "url('/images/pexels-jonathanborba-18372024.png')",
                   backgroundSize: "cover",
                   backgroundPosition: "center",
                 }}
@@ -57,7 +57,7 @@ export default function TyreHighlightsSection() {
               <div
                 className="relative min-h-[220px] overflow-hidden transition-transform duration-700 hover:scale-[1.02] sm:min-h-[260px]"
                 style={{
-                  backgroundImage: "url('/images/pexels-biplabsau-5359359.jpg')",
+                  backgroundImage: "url('/images/pexels-biplabsau-5359359.png')",
                   backgroundSize: "cover",
                   backgroundPosition: "center",
                 }}

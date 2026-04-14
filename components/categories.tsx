@@ -9,10 +9,10 @@ import { useReveal } from "@/hooks/useReveal";
 import { useLanguage } from "@/context/language-context";
 
 const CARD_IMAGES = [
-  "/images/pexels-piotr-arnoldes-7862031-6063163.jpg",
-  "/images/pexels-furkanakt-29235902.jpg",
-  "/sections/tbr-tyres.jpg",
-  "/images/pexels-mikebirdy-250307.jpg",
+  "/images/pexels-piotr-arnoldes-7862031-6063163.png",
+  "/images/pexels-furkanakt-29235902.png",
+  "/images/Used tyres.png",
+  "/images/OTR tyres.png",
 ];
 
 type CardData = { label: string; title: string; subtitle: string };

@@ -10,7 +10,7 @@ export default function QuoteHero() {
       eyebrow={t.quote.hero.eyebrow}
       title={t.quote.hero.title}
       subtitle={t.quote.hero.subtitle}
-      image="/images/tyre-primary.jpg"
+      image="/images/tyre-primary.png"
     />
   );
 }

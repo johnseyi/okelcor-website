@@ -14,7 +14,7 @@ export default function AboutPageUI() {
         eyebrow={t.about.hero.eyebrow}
         title={t.about.hero.title}
         subtitle={t.about.hero.subtitle}
-        image="/images/tyre-primary.jpg"
+        image="/images/tyre-primary.png"
       />
       <CompanyStory />
       <Services />

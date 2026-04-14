@@ -24,7 +24,7 @@ export default function NewsPageUI({ articles }: NewsPageUIProps) {
         eyebrow={t.news.hero.eyebrow}
         title={t.news.hero.title}
         subtitle={t.news.hero.subtitle}
-        image="/images/pexels-muhammedtarikkahraman-16706765.jpg"
+        image="/images/pexels-muhammedtarikkahraman-16706765.png"
       />
 
       <FadeUp>

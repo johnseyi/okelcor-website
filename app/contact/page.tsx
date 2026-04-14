@@ -130,7 +130,7 @@ export default function ContactPage() {
         eyebrow={t.contact.hero.eyebrow}
         title={t.contact.hero.title}
         subtitle={t.contact.hero.subtitle}
-        image="/images/pexels-albinberlin-919073.jpg"
+        image="/images/pexels-albinberlin-919073.png"
       />
 
       {/* ── Contact grid ── */}

@@ -63,7 +63,7 @@ export default function WhyOkelcor() {
             style={{
               minHeight: "280px",
               backgroundImage:
-                "url('/images/pexels-mavickty-16520868.jpg')",
+                "url('/images/pexels-mavickty-16520868.png')",
             }}
           />
 

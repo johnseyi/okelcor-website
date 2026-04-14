@@ -27,7 +27,7 @@ export default function WhoWeServeSection() {
             <div className="group relative min-h-[420px] overflow-hidden rounded-[22px]">
               <div
                 className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-[1.03]"
-                style={{ backgroundImage: "url('/images/pexels-andris-ivanovs-296481283-19891668.jpg')" }}
+                style={{ backgroundImage: "url('/images/pexels-andris-ivanovs-296481283-19891668.png')" }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/10" />
               <div className="absolute bottom-0 left-0 right-0 p-7 md:p-8">
