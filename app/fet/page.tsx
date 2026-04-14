@@ -8,6 +8,7 @@ import {
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import AmortizationCalculator from "@/components/fet/amortization-calculator";
+import FadeUp from "@/components/motion/fade-up";
 
 export const metadata: Metadata = {
   title: "FET Engine Treatment",
@@ -99,10 +100,12 @@ export default function FetPage() {
 
       {/* ── How It Works ─────────────────────────────────────────────────── */}
       <Section id="how-it-works" className="bg-[#0d1b2e]">
-        <SectionEyebrow>How It Works</SectionEyebrow>
-        <h2 className="mb-12 text-3xl font-extrabold tracking-tight text-white md:text-4xl">
-          Simple install. Immediate impact.
-        </h2>
+        <FadeUp>
+          <SectionEyebrow>How It Works</SectionEyebrow>
+          <h2 className="mb-12 text-3xl font-extrabold tracking-tight text-white md:text-4xl">
+            Simple install. Immediate impact.
+          </h2>
+        </FadeUp>
 
         <div className="grid gap-5 sm:grid-cols-3">
           {[
@@ -121,27 +124,28 @@ export default function FetPage() {
               title: "Improves Combustion Efficiency",
               body: "Better-structured fuel burns more completely, extracting more energy per litre — translating directly into fuel savings and lower emissions.",
             },
-          ].map(({ step, title, body }) => (
-            <div
-              key={step}
-              className="relative rounded-[18px] bg-white/[0.04] p-6 ring-1 ring-white/[0.07]"
-            >
-              <span className="mb-4 block font-mono text-[2.5rem] font-extrabold leading-none text-[#10b981]/20">
-                {step}
-              </span>
-              <h3 className="text-[1rem] font-extrabold text-white">{title}</h3>
-              <p className="mt-2 text-[0.88rem] leading-6 text-white/50">{body}</p>
-            </div>
+          ].map(({ step, title, body }, i) => (
+            <FadeUp key={step} delay={i * 110}>
+              <div className="relative h-full rounded-[18px] bg-white/[0.04] p-6 ring-1 ring-white/[0.07] transition-all duration-300 hover:-translate-y-1 hover:bg-white/[0.07] hover:ring-[#10b981]/30 hover:shadow-[0_8px_28px_rgba(16,185,129,0.08)]">
+                <span className="mb-4 block font-mono text-[2.5rem] font-extrabold leading-none text-[#10b981]/20">
+                  {step}
+                </span>
+                <h3 className="text-[1rem] font-extrabold text-white">{title}</h3>
+                <p className="mt-2 text-[0.88rem] leading-6 text-white/50">{body}</p>
+              </div>
+            </FadeUp>
           ))}
         </div>
       </Section>
 
       {/* ── Proven Results ───────────────────────────────────────────────── */}
       <Section className="bg-[#091422]">
-        <SectionEyebrow>Proven Results</SectionEyebrow>
-        <h2 className="mb-10 text-3xl font-extrabold tracking-tight text-white md:text-4xl">
-          Documented in real-world conditions.
-        </h2>
+        <FadeUp>
+          <SectionEyebrow>Proven Results</SectionEyebrow>
+          <h2 className="mb-10 text-3xl font-extrabold tracking-tight text-white md:text-4xl">
+            Documented in real-world conditions.
+          </h2>
+        </FadeUp>
 
         <div className="grid gap-5 sm:grid-cols-2">
           {[
@@ -157,30 +161,31 @@ export default function FetPage() {
               context: "Lab test — constant-speed runs",
               detail: "Controlled laboratory testing at constant speed showed up to 15% improvement in fuel consumption versus an untreated baseline vehicle.",
             },
-          ].map(({ stat, label, context, detail }) => (
-            <div
-              key={context}
-              className="rounded-[18px] bg-[#10b981]/[0.06] p-8 ring-1 ring-[#10b981]/20"
-            >
-              <p className="text-[3rem] font-extrabold leading-none tracking-tight text-[#10b981]">
-                {stat}
-              </p>
-              <p className="mt-1.5 text-[1rem] font-bold text-white">{label}</p>
-              <p className="mt-0.5 text-[0.8rem] font-semibold uppercase tracking-wider text-[#10b981]/60">
-                {context}
-              </p>
-              <p className="mt-4 text-[0.88rem] leading-6 text-white/50">{detail}</p>
-            </div>
+          ].map(({ stat, label, context, detail }, i) => (
+            <FadeUp key={context} delay={i * 130}>
+              <div className="h-full rounded-[18px] bg-[#10b981]/[0.06] p-8 ring-1 ring-[#10b981]/20 transition-all duration-300 hover:-translate-y-1 hover:ring-[#10b981]/40 hover:shadow-[0_10px_32px_rgba(16,185,129,0.12)]">
+                <p className="text-[3rem] font-extrabold leading-none tracking-tight text-[#10b981]">
+                  {stat}
+                </p>
+                <p className="mt-1.5 text-[1rem] font-bold text-white">{label}</p>
+                <p className="mt-0.5 text-[0.8rem] font-semibold uppercase tracking-wider text-[#10b981]/60">
+                  {context}
+                </p>
+                <p className="mt-4 text-[0.88rem] leading-6 text-white/50">{detail}</p>
+              </div>
+            </FadeUp>
           ))}
         </div>
       </Section>
 
       {/* ── Key Benefits ─────────────────────────────────────────────────── */}
       <Section className="bg-[#0d1b2e]">
-        <SectionEyebrow>Key Benefits</SectionEyebrow>
-        <h2 className="mb-10 text-3xl font-extrabold tracking-tight text-white md:text-4xl">
-          Built for operational realities.
-        </h2>
+        <FadeUp>
+          <SectionEyebrow>Key Benefits</SectionEyebrow>
+          <h2 className="mb-10 text-3xl font-extrabold tracking-tight text-white md:text-4xl">
+            Built for operational realities.
+          </h2>
+        </FadeUp>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[
@@ -214,27 +219,28 @@ export default function FetPage() {
               title: "Ready for Real-World Operation",
               body: "Proven across passenger cars, trucks, agricultural machinery, marine, and construction equipment.",
             },
-          ].map(({ icon: Icon, title, body }) => (
-            <div
-              key={title}
-              className="rounded-[18px] bg-white/[0.03] p-6 ring-1 ring-white/[0.06] transition hover:bg-white/[0.05]"
-            >
-              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-[#10b981]/10">
-                <Icon size={18} strokeWidth={1.8} className="text-[#10b981]" />
+          ].map(({ icon: Icon, title, body }, i) => (
+            <FadeUp key={title} delay={i * 75}>
+              <div className="h-full rounded-[18px] bg-white/[0.03] p-6 ring-1 ring-white/[0.06] transition-all duration-300 hover:-translate-y-1 hover:bg-white/[0.06] hover:ring-[#f4511e]/25 hover:shadow-[0_8px_24px_rgba(244,81,30,0.08)]">
+                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-[#10b981]/10 transition-colors duration-300 group-hover:bg-[#10b981]/20">
+                  <Icon size={18} strokeWidth={1.8} className="text-[#10b981]" />
+                </div>
+                <h3 className="text-[0.95rem] font-extrabold text-white">{title}</h3>
+                <p className="mt-2 text-[0.85rem] leading-6 text-white/50">{body}</p>
               </div>
-              <h3 className="text-[0.95rem] font-extrabold text-white">{title}</h3>
-              <p className="mt-2 text-[0.85rem] leading-6 text-white/50">{body}</p>
-            </div>
+            </FadeUp>
           ))}
         </div>
       </Section>
 
       {/* ── Applications ─────────────────────────────────────────────────── */}
       <Section className="bg-[#091422]">
-        <SectionEyebrow>Applications</SectionEyebrow>
-        <h2 className="mb-10 text-3xl font-extrabold tracking-tight text-white md:text-4xl">
-          Who it's for.
-        </h2>
+        <FadeUp>
+          <SectionEyebrow>Applications</SectionEyebrow>
+          <h2 className="mb-10 text-3xl font-extrabold tracking-tight text-white md:text-4xl">
+            Who it&apos;s for.
+          </h2>
+        </FadeUp>
 
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
           {[
@@ -244,16 +250,15 @@ export default function FetPage() {
             { icon: Factory, label: "Construction Machinery"   },
             { icon: Bus,     label: "Public Transport"         },
             { icon: Anchor,  label: "Marine"                   },
-          ].map(({ icon: Icon, label }) => (
-            <div
-              key={label}
-              className="flex flex-col items-center gap-3 rounded-[16px] bg-white/[0.04] p-5 text-center ring-1 ring-white/[0.06]"
-            >
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#10b981]/10">
-                <Icon size={22} strokeWidth={1.7} className="text-[#10b981]" />
+          ].map(({ icon: Icon, label }, i) => (
+            <FadeUp key={label} delay={i * 60}>
+              <div className="flex h-full flex-col items-center gap-3 rounded-[16px] bg-white/[0.04] p-5 text-center ring-1 ring-white/[0.06] transition-all duration-300 hover:-translate-y-1 hover:bg-white/[0.07] hover:ring-[#10b981]/30 hover:shadow-[0_6px_20px_rgba(16,185,129,0.1)]">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#10b981]/10 transition-colors duration-300 hover:bg-[#10b981]/20">
+                  <Icon size={22} strokeWidth={1.7} className="text-[#10b981]" />
+                </div>
+                <p className="text-[0.8rem] font-semibold leading-tight text-white/70">{label}</p>
               </div>
-              <p className="text-[0.8rem] font-semibold leading-tight text-white/70">{label}</p>
-            </div>
+            </FadeUp>
           ))}
         </div>
       </Section>
