@@ -52,22 +52,20 @@ export default function FetPage() {
       {/* ── Hero — fullscreen video background ───────────────────────────── */}
       <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-5 pt-[76px] text-center lg:pt-20">
 
-        {/* Video — fallback gradient shows until the file is present */}
+        {/* Video — poster attribute handles the fallback natively */}
         <video
           autoPlay
           muted
           loop
           playsInline
+          poster="/images/fet-hero-poster.jpg"
           className="absolute inset-0 h-full w-full object-cover"
           aria-hidden="true"
         >
-          <source src="public/videos/fet-hero.mp4" type="video/mp4" />
+          <source src="/videos/fet-hero.mp4" type="video/mp4" />
         </video>
 
-        {/* Fallback gradient (visible before video loads or if file is missing) */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#0d2b1a] to-[#166534]" />
-
-        {/* Dark overlay for text legibility */}
+        {/* Dark overlay for text legibility — sits above video */}
         <div className="absolute inset-0 bg-black/50" />
 
         {/* Content */}

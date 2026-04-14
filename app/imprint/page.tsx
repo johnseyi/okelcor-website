@@ -23,7 +23,7 @@ export default function ImprintPage() {
         eyebrow="Legal"
         title="Imprint"
         subtitle="Legal disclosure in accordance with §5 TMG (German Telemedia Act)."
-        image="/images/logistics.jpg"
+        image="/images/pexels-einfoto-2091159.jpg"
       />
 
       <section className="w-full bg-[#f5f5f5] py-14 md:py-20">
