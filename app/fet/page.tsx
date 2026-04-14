@@ -3,7 +3,7 @@ import Link from "next/link";
 import {
   Zap, BarChart3, Leaf, Wrench, CheckCircle2,
   Truck, Tractor, Bus, Anchor, Car, Factory,
-  ArrowRight, ChevronRight,
+  ArrowRight, ChevronDown,
 } from "lucide-react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
@@ -49,24 +49,41 @@ export default function FetPage() {
     <main className="min-h-screen bg-[#f0f4f0]">
       <Navbar />
 
-      {/* ── Hero ──────────────────────────────────────────────────────────── */}
-      <section className="relative flex min-h-[88vh] flex-col items-center justify-center overflow-hidden bg-[#f0f4f0] px-5 pt-[76px] text-center lg:pt-20">
-        {/* Subtle radial glow */}
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_40%,rgba(34,197,94,0.07),transparent)]" />
+      {/* ── Hero — fullscreen video background ───────────────────────────── */}
+      <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-5 pt-[76px] text-center lg:pt-20">
 
+        {/* Video — fallback gradient shows until the file is present */}
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="absolute inset-0 h-full w-full object-cover"
+          aria-hidden="true"
+        >
+          <source src="/videos/fet-hero.mp4" type="video/mp4" />
+        </video>
+
+        {/* Fallback gradient (visible before video loads or if file is missing) */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0d2b1a] to-[#166534]" />
+
+        {/* Dark overlay for text legibility */}
+        <div className="absolute inset-0 bg-black/50" />
+
+        {/* Content */}
         <div className="relative z-10 max-w-[760px]">
           {/* Badge */}
-          <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-[#dcfce7] px-4 py-1.5">
+          <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-[#22c55e]/20 px-4 py-1.5 ring-1 ring-[#22c55e]/30 backdrop-blur-sm">
             <span className="h-1.5 w-1.5 rounded-full bg-[#22c55e]" />
-            <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#166534]">
+            <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#22c55e]">
               Fuel Efficiency Technology
             </span>
           </div>
 
-          <h1 className="text-4xl font-extrabold leading-[1.04] tracking-tight text-[#111111] sm:text-5xl md:text-6xl">
+          <h1 className="text-4xl font-extrabold leading-[1.04] tracking-tight text-white sm:text-5xl md:text-6xl">
             FET Engine Treatment
           </h1>
-          <p className="mt-5 text-[1.1rem] leading-7 text-[#6b7280] sm:text-[1.2rem]">
+          <p className="mt-5 text-[1.1rem] leading-7 text-white/70 sm:text-[1.2rem]">
             Save Fuel. Improve Performance. Reduce Emissions.
           </p>
 
@@ -79,7 +96,7 @@ export default function FetPage() {
             ].map(({ icon: Icon, label }) => (
               <span
                 key={label}
-                className="flex items-center gap-2 rounded-full border border-[#e2e8e2] bg-white px-4 py-2 text-[0.85rem] font-semibold text-[#111111] shadow-sm"
+                className="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-[0.85rem] font-semibold text-white backdrop-blur-sm"
               >
                 <Icon size={14} strokeWidth={2} className="text-[#22c55e]" />
                 {label}
@@ -90,21 +107,31 @@ export default function FetPage() {
           <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <Link
               href="/quote"
-              className="flex h-[52px] items-center gap-2 rounded-full bg-[#22c55e] px-8 text-[0.95rem] font-semibold text-white shadow-[0_16px_40px_rgba(34,197,94,0.28)] transition hover:bg-[#16a34a]"
+              className="flex h-[52px] items-center gap-2 rounded-full bg-[#22c55e] px-8 text-[0.95rem] font-semibold text-white shadow-[0_16px_40px_rgba(34,197,94,0.35)] transition hover:bg-[#16a34a]"
             >
               Request a Quote <ArrowRight size={16} strokeWidth={2} />
             </Link>
             <a
               href="#how-it-works"
-              className="flex h-[52px] items-center gap-2 rounded-full border border-[#e2e8e2] bg-white px-8 text-[0.95rem] font-semibold text-[#111111] shadow-sm transition hover:border-[#22c55e]/40 hover:text-[#22c55e]"
+              className="flex h-[52px] items-center gap-2 rounded-full border border-white/25 bg-white/10 px-8 text-[0.95rem] font-semibold text-white backdrop-blur-sm transition hover:border-white/50 hover:bg-white/20"
             >
-              How it works <ChevronRight size={15} />
+              Learn More <ChevronDown size={15} />
             </a>
           </div>
         </div>
 
-        {/* Bottom fade */}
-        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#f0f4f0] to-transparent" />
+        {/* Scroll indicator */}
+        <div className="absolute bottom-10 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-[0.28em] text-white/40">
+            Scroll
+          </span>
+          <div className="animate-bounce">
+            <ChevronDown size={20} strokeWidth={2} className="text-white/40" />
+          </div>
+        </div>
+
+        {/* Bottom fade into page */}
+        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-[#f0f4f0] to-transparent" />
       </section>
 
       {/* ── How It Works ─────────────────────────────────────────────────── */}
