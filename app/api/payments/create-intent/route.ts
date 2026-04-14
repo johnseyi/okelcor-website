@@ -14,34 +14,67 @@ import { NextResponse } from "next/server";
  * Request body: { delivery, items, vat_number? }
  * Response:     { client_secret: string }
  */
-export async function GET() {
-  return NextResponse.json({
-    api_url: process.env.API_URL ?? 'NOT SET',
-    stripe_key: process.env.STRIPE_SECRET_KEY ? 'SET' : 'NOT SET',
-    next_public_api: process.env.NEXT_PUBLIC_API_URL ?? 'NOT SET'
-  })
-}
+export async function POST(request: Request) {
+  // API_URL is a server-only var (no NEXT_PUBLIC_ prefix) so it is
+  // available in API routes and server components but never bundled
+  // into the client. Falls back to NEXT_PUBLIC_API_URL for local dev.
+  const API_URL =
+    process.env.API_URL ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    "https://api.takeovercreatives.com/api/v1";
 
-export async function POST(req: Request) {
   try {
-    const body = await req.json()
-    console.log('1. Request body:', body)
-    console.log('2. API_URL:', process.env.API_URL)
-    console.log('3. STRIPE_KEY exists:', !!process.env.STRIPE_SECRET_KEY)
+    const body = await request.json();
 
-    const response = await fetch(`${process.env.API_URL}/payments/create-intent`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    })
+    console.log("[create-intent] API_URL:", API_URL);
+    console.log("[create-intent] request body:", JSON.stringify(body));
 
-    console.log('4. Laravel response status:', response.status)
-    const data = await response.json()
-    console.log('5. Laravel response data:', data)
+    const res = await fetch(`${API_URL}/payments/create-intent`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(body),
+    });
 
-    return NextResponse.json(data, { status: response.status })
-  } catch (error: any) {
-    console.error('FULL ERROR:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    let data: unknown;
+    try {
+      data = await res.json();
+    } catch (parseError) {
+      console.error("[create-intent] Failed to parse backend response:", parseError);
+      return NextResponse.json(
+        { error: "Invalid response from payment service." },
+        { status: 502 }
+      );
+    }
+
+    console.log("[create-intent] backend status:", res.status, "body:", JSON.stringify(data));
+
+    if (!res.ok) {
+      const errMsg = (data as Record<string, string>)?.message ?? "Failed to create payment intent.";
+      console.error("[create-intent] backend error:", res.status, errMsg);
+      return NextResponse.json({ error: errMsg }, { status: res.status });
+    }
+
+    const client_secret =
+      (data as Record<string, Record<string, string>>)?.data?.client_secret ??
+      (data as Record<string, string>)?.client_secret;
+
+    if (!client_secret) {
+      console.error("[create-intent] No client_secret in response:", JSON.stringify(data));
+      return NextResponse.json(
+        { error: "No client secret returned from payment service." },
+        { status: 502 }
+      );
+    }
+
+    return NextResponse.json({ client_secret });
+  } catch (error) {
+    console.error("[create-intent] Unhandled error:", error);
+    return NextResponse.json(
+      { error: (error as Error).message || "Payment service unavailable. Please try again." },
+      { status: 500 }
+    );
   }
 }
