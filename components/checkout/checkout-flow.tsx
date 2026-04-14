@@ -3,15 +3,14 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, ChevronRight } from "lucide-react";
-import VatField from "@/components/vat-field";
+import { Elements, useStripe, useElements, CardElement } from "@stripe/react-stripe-js";
 import { useCart } from "@/context/cart-context";
 import { useLanguage } from "@/context/language-context";
+import { stripePromise } from "@/lib/stripe-client";
 import ExpressCheckout from "./express-checkout";
-import PaymentSelector, {
-  type PaymentMethod,
-  type CardData,
-} from "./payment-selector";
+import PaymentSelector, { type PaymentMethod } from "./payment-selector";
 import OrderSummary from "./order-summary";
+import VatField from "@/components/vat-field";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -26,11 +25,10 @@ type DeliveryData = {
 };
 
 type DeliveryErrors = Partial<DeliveryData>;
-type CardErrors = Partial<CardData>;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const DELIVERY_COST = 0; // free
+const DELIVERY_COST = 0;
 
 const COUNTRIES = [
   "Germany", "United Kingdom", "Netherlands", "Belgium", "France",
@@ -72,18 +70,10 @@ function Field({
   );
 }
 
-function SectionCard({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
+function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="rounded-[22px] bg-[#efefef] p-6">
-      <p className="mb-4 text-[1rem] font-extrabold text-[var(--foreground)]">
-        {title}
-      </p>
+      <p className="mb-4 text-[1rem] font-extrabold text-[var(--foreground)]">{title}</p>
       {children}
     </div>
   );
@@ -98,11 +88,7 @@ function SuccessState({ orderRef, mode }: { orderRef: string; mode: "live" | "ma
     <div className="flex min-h-[60vh] items-center justify-center px-4 py-16">
       <div className="mx-auto max-w-[480px] rounded-[22px] bg-[#efefef] p-10 text-center">
         <div className="flex justify-center">
-          <CheckCircle2
-            size={56}
-            strokeWidth={1.5}
-            className="text-green-500"
-          />
+          <CheckCircle2 size={56} strokeWidth={1.5} className="text-green-500" />
         </div>
         <h2 className="mt-5 text-2xl font-extrabold tracking-tight text-[var(--foreground)]">
           {c.successTitle}
@@ -153,12 +139,8 @@ function EmptyCartState() {
   return (
     <div className="flex min-h-[50vh] items-center justify-center px-4 py-16 text-center">
       <div>
-        <p className="text-2xl font-extrabold text-[var(--foreground)]">
-          {c.emptyTitle}
-        </p>
-        <p className="mt-2 text-[0.95rem] text-[var(--muted)]">
-          {c.emptyBody}
-        </p>
+        <p className="text-2xl font-extrabold text-[var(--foreground)]">{c.emptyTitle}</p>
+        <p className="mt-2 text-[0.95rem] text-[var(--muted)]">{c.emptyBody}</p>
         <Link
           href="/shop"
           className="mt-5 inline-flex h-[46px] items-center gap-2 rounded-full bg-[var(--primary)] px-6 text-[0.9rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
@@ -170,12 +152,14 @@ function EmptyCartState() {
   );
 }
 
-// ─── Main checkout flow ───────────────────────────────────────────────────────
+// ─── Inner checkout (needs to be inside <Elements>) ───────────────────────────
 
-export default function CheckoutFlow() {
+function CheckoutInner() {
   const { items, clearCart } = useCart();
   const { t } = useLanguage();
   const c = t.checkout;
+  const stripe = useStripe();
+  const elements = useElements();
   const deliveryRef = useRef<HTMLDivElement>(null);
 
   const [delivery, setDelivery] = useState<DeliveryData>({
@@ -183,14 +167,8 @@ export default function CheckoutFlow() {
     city: "", postalCode: "", country: "", phone: "",
   });
   const [deliveryErrors, setDeliveryErrors] = useState<DeliveryErrors>({});
-
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
-  const [cardData, setCardData] = useState<CardData>({
-    number: "", expiry: "", cvv: "", holder: "",
-  });
-  const [cardErrors, setCardErrors] = useState<CardErrors>({});
-
   const [vatNumber, setVatNumber] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [orderRef, setOrderRef] = useState("");
@@ -206,8 +184,7 @@ export default function CheckoutFlow() {
     const errs: DeliveryErrors = {};
     if (!delivery.name.trim()) errs.name = c.errName;
     if (!delivery.email.trim()) errs.email = c.errEmail;
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(delivery.email))
-      errs.email = c.errEmailInvalid;
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(delivery.email)) errs.email = c.errEmailInvalid;
     if (!delivery.address.trim()) errs.address = c.errAddress;
     if (!delivery.city.trim()) errs.city = c.errCity;
     if (!delivery.postalCode.trim()) errs.postalCode = c.errPostalCode;
@@ -217,24 +194,28 @@ export default function CheckoutFlow() {
     return Object.keys(errs).length === 0;
   };
 
-  const validateCard = (): boolean => {
-    if (paymentMethod !== "card") return true;
-    const errs: CardErrors = {};
-    const rawNumber = cardData.number.replace(/\s/g, "");
-    if (rawNumber.length < 13) errs.number = c.errCardNumber;
-    if (!cardData.expiry || cardData.expiry.length < 5) errs.expiry = c.errCardExpiry;
-    if (!cardData.cvv || cardData.cvv.length < 3) errs.cvv = c.errCardCvv;
-    if (!cardData.holder.trim()) errs.holder = c.errCardHolder;
-    setCardErrors(errs);
-    return Object.keys(errs).length === 0;
-  };
+  // ── Order payload (shared between Stripe and manual flows) ──────────────────
+
+  const orderPayload = () => ({
+    delivery,
+    paymentMethod,
+    vat_number: vatNumber.trim() || undefined,
+    items: items.map((item) => ({
+      product: {
+        id:    item.product.id,
+        brand: item.product.brand,
+        name:  item.product.name,
+        size:  item.product.size,
+        price: item.product.price,
+      },
+      quantity: item.quantity,
+    })),
+  });
 
   // ── Submit ──────────────────────────────────────────────────────────────────
 
   const handleSubmit = async () => {
-    const deliveryOk = validateDelivery();
-    const cardOk = validateCard();
-    if (!deliveryOk || !cardOk) {
+    if (!validateDelivery()) {
       deliveryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
@@ -242,29 +223,83 @@ export default function CheckoutFlow() {
     setSubmitting(true);
     setSubmitError(null);
 
-    const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+    // ── Stripe card payment ─────────────────────────────────────────────────
+    if (paymentMethod === "card") {
+      if (!stripe || !elements) {
+        setSubmitError("Payment system not ready. Please refresh and try again.");
+        setSubmitting(false);
+        return;
+      }
 
+      const cardElement = elements.getElement(CardElement);
+      if (!cardElement) {
+        setSubmitError("Card element not found. Please refresh and try again.");
+        setSubmitting(false);
+        return;
+      }
+
+      // Step 1 — create payment intent via Next.js API route (keeps secret key server-side)
+      let clientSecret: string;
+      try {
+        const intentRes = await fetch("/api/payments/create-intent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(orderPayload()),
+        });
+        const intentData = await intentRes.json();
+
+        if (!intentRes.ok || intentData.error) {
+          setSubmitError(intentData.error ?? "Failed to initialise payment. Please try again.");
+          setSubmitting(false);
+          return;
+        }
+
+        clientSecret = intentData.client_secret;
+      } catch {
+        setSubmitError("Network error. Could not reach the payment service.");
+        setSubmitting(false);
+        return;
+      }
+
+      // Step 2 — confirm card payment with Stripe
+      const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: {
+          card: cardElement,
+          billing_details: {
+            name:  delivery.name,
+            email: delivery.email,
+          },
+        },
+      });
+
+      if (error) {
+        // Stripe provides user-friendly messages (e.g. "Your card was declined.")
+        setSubmitError(error.message ?? "Payment failed. Please try again.");
+        setSubmitting(false);
+        return;
+      }
+
+      if (paymentIntent?.status === "succeeded") {
+        clearCart();
+        setOrderRef(paymentIntent.id);
+        setOrderMode("live");
+        setSubmitted(true);
+      } else {
+        setSubmitError("Payment did not complete. Please try again.");
+      }
+
+      setSubmitting(false);
+      return;
+    }
+
+    // ── Manual / non-card fallback (PayPal, Apple Pay, etc.) ───────────────
+    const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
     try {
       const res = await fetch(`${API_URL}/orders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          delivery,
-          paymentMethod,
-          vat_number: vatNumber.trim() || undefined,
-          items: items.map((item) => ({
-            product: {
-              id:    item.product.id,
-              brand: item.product.brand,
-              name:  item.product.name,
-              size:  item.product.size,
-              price: item.product.price,
-            },
-            quantity: item.quantity,
-          })),
-        }),
+        body: JSON.stringify(orderPayload()),
       });
-
       const data = await res.json();
 
       if (!res.ok) {
@@ -298,8 +333,7 @@ export default function CheckoutFlow() {
     setDeliveryErrors((prev) => ({ ...prev, [key]: undefined }));
   };
 
-  const ic = (key: keyof DeliveryData) =>
-    deliveryErrors[key] ? inputErrCls : inputCls;
+  const ic = (key: keyof DeliveryData) => deliveryErrors[key] ? inputErrCls : inputCls;
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
@@ -319,10 +353,8 @@ export default function CheckoutFlow() {
         {/* ── Left column ── */}
         <div className="flex flex-col gap-5">
 
-          {/* Express checkout */}
           <ExpressCheckout onSelect={handleExpressSelect} />
 
-          {/* Divider */}
           <div className="flex items-center gap-4">
             <div className="h-px flex-1 bg-black/[0.08]" />
             <span className="text-[0.8rem] text-[var(--muted)]">{c.orContinueWith}</span>
@@ -335,98 +367,35 @@ export default function CheckoutFlow() {
               <div className="flex flex-col gap-4">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label={c.labelName} htmlFor="checkout-name" error={deliveryErrors.name}>
-                    <input
-                      id="checkout-name"
-                      type="text"
-                      placeholder={c.placeholderName}
-                      value={delivery.name}
-                      onChange={set("name")}
-                      aria-describedby={deliveryErrors.name ? "checkout-name-error" : undefined}
-                      aria-invalid={!!deliveryErrors.name}
-                      className={ic("name")}
-                    />
+                    <input id="checkout-name" type="text" placeholder={c.placeholderName} value={delivery.name} onChange={set("name")} aria-describedby={deliveryErrors.name ? "checkout-name-error" : undefined} aria-invalid={!!deliveryErrors.name} className={ic("name")} />
                   </Field>
                   <Field label={c.labelEmail} htmlFor="checkout-email" error={deliveryErrors.email}>
-                    <input
-                      id="checkout-email"
-                      type="email"
-                      placeholder={c.placeholderEmail}
-                      value={delivery.email}
-                      onChange={set("email")}
-                      aria-describedby={deliveryErrors.email ? "checkout-email-error" : undefined}
-                      aria-invalid={!!deliveryErrors.email}
-                      className={ic("email")}
-                    />
+                    <input id="checkout-email" type="email" placeholder={c.placeholderEmail} value={delivery.email} onChange={set("email")} aria-describedby={deliveryErrors.email ? "checkout-email-error" : undefined} aria-invalid={!!deliveryErrors.email} className={ic("email")} />
                   </Field>
                 </div>
 
                 <Field label={c.labelAddress} htmlFor="checkout-address" error={deliveryErrors.address}>
-                  <input
-                    id="checkout-address"
-                    type="text"
-                    placeholder={c.placeholderAddress}
-                    value={delivery.address}
-                    onChange={set("address")}
-                    aria-describedby={deliveryErrors.address ? "checkout-address-error" : undefined}
-                    aria-invalid={!!deliveryErrors.address}
-                    className={ic("address")}
-                  />
+                  <input id="checkout-address" type="text" placeholder={c.placeholderAddress} value={delivery.address} onChange={set("address")} aria-describedby={deliveryErrors.address ? "checkout-address-error" : undefined} aria-invalid={!!deliveryErrors.address} className={ic("address")} />
                 </Field>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label={c.labelCity} htmlFor="checkout-city" error={deliveryErrors.city}>
-                    <input
-                      id="checkout-city"
-                      type="text"
-                      placeholder={c.placeholderCity}
-                      value={delivery.city}
-                      onChange={set("city")}
-                      aria-describedby={deliveryErrors.city ? "checkout-city-error" : undefined}
-                      aria-invalid={!!deliveryErrors.city}
-                      className={ic("city")}
-                    />
+                    <input id="checkout-city" type="text" placeholder={c.placeholderCity} value={delivery.city} onChange={set("city")} aria-describedby={deliveryErrors.city ? "checkout-city-error" : undefined} aria-invalid={!!deliveryErrors.city} className={ic("city")} />
                   </Field>
                   <Field label={c.labelPostalCode} htmlFor="checkout-postalCode" error={deliveryErrors.postalCode}>
-                    <input
-                      id="checkout-postalCode"
-                      type="text"
-                      placeholder={c.placeholderPostalCode}
-                      value={delivery.postalCode}
-                      onChange={set("postalCode")}
-                      aria-describedby={deliveryErrors.postalCode ? "checkout-postalCode-error" : undefined}
-                      aria-invalid={!!deliveryErrors.postalCode}
-                      className={ic("postalCode")}
-                    />
+                    <input id="checkout-postalCode" type="text" placeholder={c.placeholderPostalCode} value={delivery.postalCode} onChange={set("postalCode")} aria-describedby={deliveryErrors.postalCode ? "checkout-postalCode-error" : undefined} aria-invalid={!!deliveryErrors.postalCode} className={ic("postalCode")} />
                   </Field>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label={c.labelCountry} htmlFor="checkout-country" error={deliveryErrors.country}>
-                    <select
-                      id="checkout-country"
-                      value={delivery.country}
-                      onChange={set("country")}
-                      aria-describedby={deliveryErrors.country ? "checkout-country-error" : undefined}
-                      aria-invalid={!!deliveryErrors.country}
-                      className={ic("country")}
-                    >
+                    <select id="checkout-country" value={delivery.country} onChange={set("country")} aria-describedby={deliveryErrors.country ? "checkout-country-error" : undefined} aria-invalid={!!deliveryErrors.country} className={ic("country")}>
                       <option value="">{c.placeholderCountry}</option>
-                      {COUNTRIES.map((c) => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
+                      {COUNTRIES.map((ctry) => <option key={ctry} value={ctry}>{ctry}</option>)}
                     </select>
                   </Field>
                   <Field label={c.labelPhone} htmlFor="checkout-phone" error={deliveryErrors.phone}>
-                    <input
-                      id="checkout-phone"
-                      type="tel"
-                      placeholder={c.placeholderPhone}
-                      value={delivery.phone}
-                      onChange={set("phone")}
-                      aria-describedby={deliveryErrors.phone ? "checkout-phone-error" : undefined}
-                      aria-invalid={!!deliveryErrors.phone}
-                      className={ic("phone")}
-                    />
+                    <input id="checkout-phone" type="tel" placeholder={c.placeholderPhone} value={delivery.phone} onChange={set("phone")} aria-describedby={deliveryErrors.phone ? "checkout-phone-error" : undefined} aria-invalid={!!deliveryErrors.phone} className={ic("phone")} />
                   </Field>
                 </div>
               </div>
@@ -442,29 +411,20 @@ export default function CheckoutFlow() {
           <SectionCard title={c.sectionDeliveryMethod}>
             <div className="flex items-center justify-between rounded-[14px] border-2 border-[var(--primary)] bg-white p-4">
               <div>
-                <p className="text-[0.9rem] font-semibold text-[var(--foreground)]">
-                  {c.shippingName}
-                </p>
-                <p className="mt-0.5 text-[0.82rem] text-[var(--muted)]">
-                  {c.shippingDetail}
-                </p>
+                <p className="text-[0.9rem] font-semibold text-[var(--foreground)]">{c.shippingName}</p>
+                <p className="mt-0.5 text-[0.82rem] text-[var(--muted)]">{c.shippingDetail}</p>
               </div>
-              <p className="text-[0.95rem] font-extrabold text-[var(--primary)]">
-                {c.shippingFree}
-              </p>
+              <p className="text-[0.95rem] font-extrabold text-[var(--primary)]">{c.shippingFree}</p>
             </div>
           </SectionCard>
 
-          {/* Payment method */}
+          {/* Payment method — CardElement lives inside here */}
           <PaymentSelector
             method={paymentMethod}
             onChange={(m) => {
               setPaymentMethod(m);
-              setCardErrors({});
+              setSubmitError(null);
             }}
-            cardData={cardData}
-            onCardChange={setCardData}
-            cardErrors={cardErrors}
           />
 
           {/* Submit error */}
@@ -496,14 +456,9 @@ export default function CheckoutFlow() {
 
           <p className="text-center text-[0.78rem] text-[var(--muted)]">
             {c.placeOrderNote}{" "}
-            <Link href="/terms" className="underline hover:text-[var(--foreground)]">
-              {c.termsLabel}
-            </Link>{" "}
+            <Link href="/terms" className="underline hover:text-[var(--foreground)]">{c.termsLabel}</Link>{" "}
             {c.placeOrderNoteAnd}{" "}
-            <Link href="/contact" className="underline hover:text-[var(--foreground)]">
-              {c.returnPolicyLabel}
-            </Link>
-            .
+            <Link href="/contact" className="underline hover:text-[var(--foreground)]">{c.returnPolicyLabel}</Link>.
           </p>
         </div>
 
@@ -514,5 +469,15 @@ export default function CheckoutFlow() {
 
       </div>
     </div>
+  );
+}
+
+// ─── Outer wrapper — provides Stripe context ──────────────────────────────────
+
+export default function CheckoutFlow() {
+  return (
+    <Elements stripe={stripePromise}>
+      <CheckoutInner />
+    </Elements>
   );
 }
