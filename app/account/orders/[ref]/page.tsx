@@ -25,17 +25,32 @@ const STEP_ORDER: Record<OrderStatus, number> = {
 // ─── Data fetching ────────────────────────────────────────────────────────────
 
 async function fetchOrder(ref: string): Promise<Order | null> {
-  const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+  const API_URL =
+    process.env.API_URL ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    "http://localhost:8000/api/v1";
+
+  const url = `${API_URL}/orders/${ref}`;
+  console.log("[order-detail] fetching:", url);
+
   try {
-    const res = await fetch(`${API_URL}/orders/${ref}`, {
+    const res = await fetch(url, {
       cache: "no-store",
       headers: { Accept: "application/json" },
     });
-    if (res.status === 404) return null;
-    if (!res.ok) return null;
+
     const json = await res.json();
+    console.log("[order-detail] status:", res.status, "data:", JSON.stringify(json).slice(0, 200));
+
+    if (res.status === 404) return null;
+    if (!res.ok) {
+      console.error("[order-detail] API error:", res.status, json);
+      return null;
+    }
+
     return json.data ?? null;
-  } catch {
+  } catch (err) {
+    console.error("[order-detail] fetch failed:", err);
     return null;
   }
 }
