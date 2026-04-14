@@ -14,6 +14,14 @@ import { NextResponse } from "next/server";
  * Request body: { delivery, items, vat_number? }
  * Response:     { client_secret: string }
  */
+export async function GET() {
+  return NextResponse.json({
+    api_url: process.env.API_URL ?? 'NOT SET',
+    stripe_key: process.env.STRIPE_SECRET_KEY ? 'SET' : 'NOT SET',
+    next_public_api: process.env.NEXT_PUBLIC_API_URL ?? 'NOT SET'
+  })
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json()
