@@ -22,7 +22,7 @@ export default function CompanyStory() {
               className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-[1.03]"
               style={{
                 backgroundImage:
-                  "url('/images/pexels-baljinder-singh-112079620-34106714.jpg')",
+                  "url('/images/pexels-baljinder-singh-112079620-34106714.png')",
               }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/15 to-transparent" />
