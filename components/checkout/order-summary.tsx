@@ -3,8 +3,15 @@
 import { useCart } from "@/context/cart-context";
 import { useLanguage } from "@/context/language-context";
 
+type FetAddon = {
+  name: string;
+  unitPrice: number;
+  qty: number;
+};
+
 type Props = {
   deliveryCost: number;
+  fetAddon?: FetAddon | null;
 };
 
 function SummaryRow({
@@ -38,12 +45,13 @@ function SummaryRow({
   );
 }
 
-export default function OrderSummary({ deliveryCost }: Props) {
+export default function OrderSummary({ deliveryCost, fetAddon }: Props) {
   const { items, subtotal, totalItems } = useCart();
   const { t } = useLanguage();
   const c = t.checkout;
 
-  const total = subtotal + deliveryCost;
+  const fetLineTotal = fetAddon ? fetAddon.unitPrice * fetAddon.qty : 0;
+  const total = subtotal + deliveryCost + fetLineTotal;
 
   return (
     <div className="rounded-[22px] bg-[#efefef] overflow-hidden">
@@ -100,6 +108,36 @@ export default function OrderSummary({ deliveryCost }: Props) {
             </div>
           );
         })}
+
+        {/* FET add-on line item */}
+        {fetAddon && (
+          <div className="flex gap-3 py-4">
+            <div className="flex h-[56px] w-[56px] shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-[#dcfce7]">
+              <span className="text-[10px] font-extrabold leading-tight text-[#166534] text-center">FET</span>
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col justify-between">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-[0.88rem] font-semibold text-[var(--foreground)]">
+                    {fetAddon.name}
+                  </p>
+                  <p className="text-[0.78rem] text-[var(--muted)]">SKU: FET-001</p>
+                </div>
+                <p className="shrink-0 text-[0.88rem] font-semibold text-[var(--foreground)]">
+                  €{(fetAddon.unitPrice * fetAddon.qty).toFixed(2)}
+                </p>
+              </div>
+              <div className="mt-1 flex items-center gap-1.5">
+                <span className="rounded-full bg-[#dcfce7] px-2 py-0.5 text-[10px] font-semibold text-[#166534]">
+                  {c.qty} {fetAddon.qty}
+                </span>
+                <span className="text-[0.75rem] text-[var(--muted)]">
+                  €{fetAddon.unitPrice.toFixed(2)} {c.each}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Totals */}

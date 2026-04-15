@@ -44,6 +44,110 @@ const inputCls =
 const inputErrCls =
   "w-full rounded-[12px] border border-red-400 bg-red-50/50 px-4 py-3.5 text-[0.93rem] text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] transition focus:border-red-500";
 
+// ─── FET upsell ───────────────────────────────────────────────────────────────
+
+const FET_PRODUCT = {
+  product_name: "FET Engine Treatment",
+  sku:          "FET-001",
+  unit_price:   249.00,
+} as const;
+
+function FetUpsellCard({
+  added,
+  qty,
+  onAdd,
+  onChangeQty,
+  onRemove,
+  onDismiss,
+}: {
+  added:        boolean;
+  qty:          number;
+  onAdd:        () => void;
+  onChangeQty:  (q: number) => void;
+  onRemove:     () => void;
+  onDismiss:    () => void;
+}) {
+  return (
+    <div className="relative overflow-hidden rounded-[22px] border border-[#d1fae5] bg-[#f0fdf4]">
+      {/* Green left accent bar */}
+      <div className="absolute inset-y-0 left-0 w-1 bg-[#10b981]" aria-hidden="true" />
+
+      <div className="px-5 py-5 pl-7 sm:px-6 sm:pl-8">
+        {/* Top row: copy + price */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <span className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-[#dcfce7] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[#166534]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#22c55e]" aria-hidden="true" />
+              Add-on
+            </span>
+            <h3 className="text-[1rem] font-extrabold leading-snug text-[#111111]">
+              Add FET Engine Treatment to your order?
+            </h3>
+            <p className="mt-1.5 max-w-[460px] text-[0.85rem] leading-6 text-[#6b7280]">
+              Improve fuel efficiency by up to 15% and protect your engine. Trusted by fleet operators across Europe.
+            </p>
+          </div>
+
+          <div className="shrink-0 sm:text-right">
+            <p className="text-[0.72rem] font-semibold uppercase tracking-wide text-[#9ca3af]">From</p>
+            <p className="text-[1.4rem] font-extrabold leading-none text-[#10b981]">€249.00</p>
+            <p className="mt-0.5 text-[0.72rem] text-[#9ca3af]">per unit</p>
+          </div>
+        </div>
+
+        {/* Action row */}
+        {!added ? (
+          <div className="mt-4 flex w-full flex-col gap-2 sm:flex-row sm:items-center">
+            <button
+              type="button"
+              onClick={onAdd}
+              className="flex h-[44px] w-full items-center justify-center rounded-full bg-[#10b981] px-6 text-[0.88rem] font-semibold text-white transition hover:bg-[#0d9e6e] sm:w-auto"
+            >
+              Add to Order
+            </button>
+            <button
+              type="button"
+              onClick={onDismiss}
+              className="flex h-[44px] w-full items-center justify-center rounded-full px-4 text-[0.88rem] font-semibold text-[#6b7280] transition hover:text-[#111111] sm:w-auto"
+            >
+              No thanks
+            </button>
+          </div>
+        ) : (
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-1.5 rounded-full bg-[#dcfce7] px-3 py-1.5">
+              <CheckCircle2 size={14} className="shrink-0 text-[#22c55e]" />
+              <span className="text-[0.82rem] font-semibold text-[#166534]">Added to order</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-[0.82rem] font-semibold text-[#6b7280]" htmlFor="fet-qty">
+                Qty:
+              </label>
+              <select
+                id="fet-qty"
+                value={qty}
+                onChange={(e) => onChangeQty(Number(e.target.value))}
+                className="rounded-[8px] border border-[#d1fae5] bg-white px-3 py-1.5 text-[0.88rem] font-semibold text-[#111111] outline-none focus:border-[#10b981] focus:ring-1 focus:ring-[#10b981]/20"
+              >
+                {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+            </div>
+            <button
+              type="button"
+              onClick={onRemove}
+              className="text-[0.82rem] font-semibold text-[#9ca3af] underline transition hover:text-[#111111]"
+            >
+              Remove
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Small helpers ────────────────────────────────────────────────────────────
 
 function Field({
@@ -175,6 +279,11 @@ function CheckoutInner() {
   const [orderMode, setOrderMode] = useState<"live" | "manual">("manual");
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  // FET upsell state — dismissed once "No thanks" is clicked (session-scoped)
+  const [fetAdded, setFetAdded]       = useState(false);
+  const [fetQty, setFetQty]           = useState(1);
+  const [fetDismissed, setFetDismissed] = useState(false);
+
   if (items.length === 0 && !submitted) return <EmptyCartState />;
   if (submitted) return <SuccessState orderRef={orderRef} mode={orderMode} />;
 
@@ -210,6 +319,14 @@ function CheckoutInner() {
       },
       quantity: item.quantity,
     })),
+    ...(fetAdded && {
+      fet_addon: {
+        product_name: FET_PRODUCT.product_name,
+        sku:          FET_PRODUCT.sku,
+        unit_price:   FET_PRODUCT.unit_price,
+        quantity:     fetQty,
+      },
+    }),
   });
 
   // ── Submit ──────────────────────────────────────────────────────────────────
@@ -418,6 +535,18 @@ function CheckoutInner() {
             </div>
           </SectionCard>
 
+          {/* FET upsell — shown between delivery method and payment */}
+          {!fetDismissed && (
+            <FetUpsellCard
+              added={fetAdded}
+              qty={fetQty}
+              onAdd={() => setFetAdded(true)}
+              onChangeQty={setFetQty}
+              onRemove={() => setFetAdded(false)}
+              onDismiss={() => { setFetDismissed(true); setFetAdded(false); }}
+            />
+          )}
+
           {/* Payment method — CardElement lives inside here */}
           <PaymentSelector
             method={paymentMethod}
@@ -464,7 +593,14 @@ function CheckoutInner() {
 
         {/* ── Right column: order summary (sticky) ── */}
         <div className="lg:sticky lg:top-[96px]">
-          <OrderSummary deliveryCost={DELIVERY_COST} />
+          <OrderSummary
+            deliveryCost={DELIVERY_COST}
+            fetAddon={fetAdded ? {
+              name:      FET_PRODUCT.product_name,
+              unitPrice: FET_PRODUCT.unit_price,
+              qty:       fetQty,
+            } : null}
+          />
         </div>
 
       </div>
