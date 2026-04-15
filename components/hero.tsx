@@ -13,7 +13,6 @@ type HeroProps = {
   slides?: HeroSlide[];
 };
 
-// Hardcoded FET slide — always appended as the last slide.
 const FET_SLIDE = {
   label:    "Also Available",
   title:    "FET Engine Treatment",
@@ -21,13 +20,31 @@ const FET_SLIDE = {
   videoSrc: "/videos/fet-hero.mp4",
 } as const;
 
+type DisplaySlot = { type: "fet" } | { type: "api"; apiIndex: number };
+
+/**
+ * Builds the ordered display sequence:
+ *   0 API slides → [FET]
+ *   1 API slide  → [api[0], FET]
+ *   2+ API slides → [api[0], FET, api[1], …, api[n-1], FET]
+ *
+ * FET appears at position 1 (after the first API slide) and again at the end
+ * so users see it early and once more before the loop restarts.
+ */
+function buildDisplaySlots(apiCount: number): DisplaySlot[] {
+  if (apiCount === 0) return [{ type: "fet" }];
+  if (apiCount === 1) return [{ type: "api", apiIndex: 0 }, { type: "fet" }];
+  const slots: DisplaySlot[] = [{ type: "api", apiIndex: 0 }, { type: "fet" }];
+  for (let i = 1; i < apiCount; i++) slots.push({ type: "api", apiIndex: i });
+  slots.push({ type: "fet" });
+  return slots;
+}
+
 export default function Hero({ slides: apiSlides }: HeroProps) {
   const { t } = useLanguage();
-  // API slides + 1 hardcoded FET slide at the end.
-  // When API has no slides, apiCount is 0; slideCount is still 1 (the FET slide).
-  const apiCount  = apiSlides?.length ?? 0;
-  const slideCount = apiCount + 1;
-  const FET_INDEX  = apiCount; // 0-based last position
+  const apiCount     = apiSlides?.length ?? 0;
+  const displaySlots = buildDisplaySlots(apiCount);
+  const slideCount   = displaySlots.length;
 
   const [index, setIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -50,18 +67,22 @@ export default function Hero({ slides: apiSlides }: HeroProps) {
     setVideoErrors((prev) => new Set(prev).add(i));
   };
 
+  // Per-slide duration: 8 s for FET (more text to read), 6 s for all others.
+  // setTimeout re-fires on every index change so each slide gets its own timer.
+  const slideDuration = displaySlots[index]?.type === "fet" ? 8000 : 6000;
+
   useEffect(() => {
     if (isPaused) return;
 
-    const timer = window.setInterval(() => {
+    const timer = window.setTimeout(() => {
       setIndex((prev) => {
         prevIndexRef.current = prev;
         return prev === slideCount - 1 ? 0 : prev + 1;
       });
-    }, 5000);
+    }, slideDuration);
 
-    return () => window.clearInterval(timer);
-  }, [isPaused, slideCount]);
+    return () => window.clearTimeout(timer);
+  }, [isPaused, index, slideCount, slideDuration]);
 
   const goTo = (next: number) => {
     prevIndexRef.current = index;
@@ -195,21 +216,26 @@ export default function Hero({ slides: apiSlides }: HeroProps) {
     };
   }, [index]);
 
-  const isFetSlide = index === FET_INDEX;
+  const isFetSlide = displaySlots[index]?.type === "fet";
+  const currentApiIndex = !isFetSlide && displaySlots[index]?.type === "api"
+    ? (displaySlots[index] as { type: "api"; apiIndex: number }).apiIndex
+    : -1;
 
   const slideText = isFetSlide
     ? { label: FET_SLIDE.label, title: FET_SLIDE.title, subtitle: FET_SLIDE.subtitle }
     : {
-        label:    apiSlides?.[index]?.label    ?? "",
-        title:    apiSlides?.[index]?.title    ?? "",
-        subtitle: apiSlides?.[index]?.subtitle ?? "",
+        label:    apiSlides?.[currentApiIndex]?.label    ?? "",
+        title:    apiSlides?.[currentApiIndex]?.title    ?? "",
+        subtitle: apiSlides?.[currentApiIndex]?.subtitle ?? "",
       };
 
   const getSlideMedia = (
     i: number
   ): { type: "image" | "video" | "none"; src: string } => {
-    if (i === FET_INDEX) return { type: "video", src: FET_SLIDE.videoSrc };
-    const slide = apiSlides?.[i];
+    const slot = displaySlots[i];
+    if (!slot || slot.type === "fet") return { type: "video", src: FET_SLIDE.videoSrc };
+    const { apiIndex } = slot;
+    const slide = apiSlides?.[apiIndex];
     if (!slide) return { type: "none", src: "" };
     if (slide.media_type === "video" && slide.video_url && !videoErrors.has(i)) {
       return { type: "video", src: slide.video_url };

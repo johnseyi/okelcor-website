@@ -223,7 +223,8 @@ a {
 
 /* Hero buttons */
 .tesla-hero-btn-primary,
-.tesla-hero-btn-secondary {
+.tesla-hero-btn-secondary,
+.tesla-hero-btn-fet {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -244,7 +245,8 @@ a {
 
 @media (min-width: 640px) {
   .tesla-hero-btn-primary,
-  .tesla-hero-btn-secondary {
+  .tesla-hero-btn-secondary,
+  .tesla-hero-btn-fet {
     min-width: 160px;
     height: 46px;
     padding: 0 28px;
@@ -389,7 +391,8 @@ a {
   }
 
   .tesla-hero-btn-primary,
-  .tesla-hero-btn-secondary {
+  .tesla-hero-btn-secondary,
+  .tesla-hero-btn-fet {
     height: 50px;
     min-width: 140px;
     padding: 0 20px;
@@ -442,6 +445,7 @@ select:focus-visible {
 /* Hero elements sit on dark image backgrounds — use white ring for contrast */
 .tesla-hero-btn-primary:focus-visible,
 .tesla-hero-btn-secondary:focus-visible,
+.tesla-hero-btn-fet:focus-visible,
 .hero-nav-btn:focus-visible,
 .hero-control-btn:focus-visible,
 .hero-dot:focus-visible {
