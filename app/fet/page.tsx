@@ -11,7 +11,7 @@ import AmortizationCalculator from "@/components/fet/amortization-calculator";
 import FadeUp from "@/components/motion/fade-up";
 
 export const metadata: Metadata = {
-  title: "FET Engine Treatment",
+  title: "",
   description:
     "FET Engine Treatment — the fuel efficiency device trusted by fleet operators across Europe. Up to 15% fuel savings, reduced emissions, improved engine performance.",
 };
