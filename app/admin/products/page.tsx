@@ -8,6 +8,7 @@ import {
   type AdminProduct,
 } from "@/lib/admin-api";
 import ProductsTable from "@/components/admin/products-table";
+import CsvActions from "@/components/admin/csv-actions";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Products" };
@@ -60,6 +61,7 @@ export default async function AdminProductsPage({
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          <CsvActions />
           <Link
             href="/admin/products/trash"
             className="flex items-center gap-2 rounded-full border border-black/10 bg-white px-4 py-2.5 text-[0.875rem] font-semibold text-[#5c5e62] transition hover:border-red-200 hover:text-red-600"
