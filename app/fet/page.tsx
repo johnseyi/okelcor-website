@@ -62,7 +62,7 @@ export default function FetPage() {
           className="absolute inset-0 h-full w-full object-cover"
           aria-hidden="true"
         >
-          <source src="/videos/fet-hero.mp4" type="video/mp4" />
+          <source src="/videos/video with fx desktop.mp4" type="video/mp4" />
         </video>
 
         {/* Dark overlay for text legibility — sits above video */}
