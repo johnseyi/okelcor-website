@@ -14,6 +14,7 @@ The site presents Okelco’s tyre sourcing business including:
 * Wholesale catalogue access
 * Quote requests
 * Industry certifications (REX)
+* **FET Engine Treatment** — a second product line (fuel efficiency device) at `/fet`
 
 The website must communicate **trust, professionalism, and global logistics capability**.
 
@@ -36,10 +37,11 @@ It is a **corporate B2B supply website**.
 # Tech Stack
 
 * Next.js (App Router)
-* React
-* TypeScript
-* Tailwind CSS
-* Framer Motion (for subtle animations)
+* React 19 / TypeScript 5
+* Tailwind CSS v4
+* **GSAP 3.14 + @gsap/react** (sole animation library — Framer Motion has been fully removed)
+* NextAuth.js v4 (authentication)
+* Resend (transactional email)
 
 Avoid adding new frameworks unless necessary.
 
@@ -82,6 +84,8 @@ This site must **look like a premium tyre supplier**, not a car brand or tech st
 
 # Brand Identity
 
+## Okelcor Main Site
+
 Primary brand color:
 
 ```
@@ -104,6 +108,21 @@ Rules:
 * Avoid overusing orange backgrounds
 * Keep most sections **white or light grey**
 * Maintain strong readability and contrast
+
+## FET Engine Treatment Page (`/fet`) — Separate Design System
+
+The `/fet` page and `components/fet/` use a distinct green-based palette. **Never apply Okelcor orange to FET-specific UI.**
+
+```
+Page background:  #f0f4f0
+Cards:            white, border #e2e8e2
+Text primary:     #111111
+Text secondary:   #6b7280
+Accent / buttons: #22c55e (bright green)
+Badge bg:         #dcfce7, text #166534
+Dark section bg:  #0d2b1a (Proven Results + CTA)
+CTA hover:        #16a34a
+```
 
 ---
 
@@ -152,10 +171,12 @@ Spacing should feel **balanced and premium**, not cramped.
 
 Major components in this project include:
 
-* Navbar
-* Hero Slider
+**Okelcor main site:**
+* Navbar (GSAP-animated, i18n, Shop dropdown with JS state + close-delay)
+* Hero Slider (GSAP parallax, video slide support)
 * Categories Carousel
-* Promo Panels
+* Why Okelcor
+* Trusted Brands
 * Logistics Feature Section
 * Used Tyres Feature Section
 * TBR Tyres Feature Section
@@ -163,8 +184,16 @@ Major components in this project include:
 * CTA Section
 * Floating Utility Bar
 * Footer
+* FET Teaser strip (`components/fet-teaser.tsx`)
 
-Components must stay **consistent with the design system**.
+**FET Engine Treatment (`/fet`):**
+* `app/fet/page.tsx` — full landing page (light green theme)
+* `components/fet/amortization-calculator.tsx` — ROI calculator (light theme)
+
+**Admin CMS (`/admin`):**
+* Products, Articles, Orders, Brands, Hero Slides, Quote Requests, Settings
+
+Components must stay **consistent with the design system**. FET components use the FET green palette, not Okelcor orange.
 
 ---
 
@@ -172,12 +201,18 @@ Components must stay **consistent with the design system**.
 
 Animations should be **subtle and smooth**.
 
-Use Framer Motion for:
+**GSAP is the sole animation library** (Framer Motion has been fully removed). Import from `@/lib/gsap` only — never call `gsap.registerPlugin` elsewhere.
 
-* hero transitions
-* section reveal animations
-* hover effects
-* carousel movement
+Use GSAP for:
+
+* hero transitions and crossfades
+* navbar panel open/close (autoAlpha + y)
+* section scroll-reveal (`useReveal`, `useStagger`, `useParallax` hooks)
+* hover micro-interactions
+
+Use `components/motion/fade-up.tsx` (IntersectionObserver, CSS) for:
+
+* lightweight scroll-reveal on static/server-rendered sections (e.g. FET page cards)
 
 Avoid:
 

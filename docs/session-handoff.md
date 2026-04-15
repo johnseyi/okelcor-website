@@ -11,6 +11,7 @@ Okelco is a **global tyre sourcing and supply company** specializing in:
 * TBR tyres
 * Logistics tyre supply
 * Wholesale tyre distribution
+* **FET Engine Treatment** (fuel efficiency device — second product line)
 
 The design system follows a **Tesla-inspired layout structure**, adapted to the tyre industry.
 No backend currently exists. This is a **frontend-only implementation** with real email via Resend.
@@ -32,6 +33,7 @@ Development environment: Windows 11, VS Code, Node.js / npm
 
 ## Brand Colors (Authoritative)
 
+### Okelcor Main Site
 | Token | Value | CSS Variable |
 |---|---|---|
 | Okelco Orange | `#f4511e` | `--primary` |
@@ -40,6 +42,20 @@ Development environment: Windows 11, VS Code, Node.js / npm
 | Text Secondary | `#5c5e62` | `--muted` |
 | Surface Grey | `#efefef` | — |
 | Page Background | `#f5f5f5` | — |
+
+### FET Engine Treatment Page (`/fet`) — separate design system
+| Role | Value |
+|---|---|
+| Page background | `#f0f4f0` |
+| Cards | `white`, border `#e2e8e2` |
+| Text primary | `#111111` |
+| Text secondary | `#6b7280` |
+| Accent / buttons | `#22c55e` (bright green) |
+| Badge bg | `#dcfce7`, text `#166534` |
+| Results section bg | `#0d2b1a` (dark green) — white text |
+| CTA hover | `#16a34a` |
+
+**Rule:** The FET page uses its own green-based palette. Never apply `var(--primary)` (orange) to FET-specific UI. All other Okelcor pages remain completely unchanged.
 
 ---
 
@@ -95,36 +111,94 @@ ease.sharp     "power2.inOut" — toggles/accordions
 
 ---
 
-### Remaining GSAP tasks (priority order)
+## Completed in Latest Session — FET Engine Treatment Product Line (2026-04-14 → 2026-04-15)
 
-1. ~~**Homepage sections — scroll reveal + stagger**~~ ✓ **COMPLETED**
-   - `components/brands.tsx` — `<Reveal>` + `<StaggerParent>/<StaggerChild>` (GSAP-backed) ✓
-   - `components/logistics.tsx` — `<Reveal delay={0.15}>` on both panels ✓
-   - `components/why-okelcor.tsx` — `<StaggerParent>/<StaggerChild>` on 4-column grid ✓
-   - `components/used-tyres-section.tsx` — `<Reveal>` on split card ✓ (added this session)
-   - `components/tbr-feature-section.tsx` — `<Reveal>` on split card ✓ (added this session)
-   - `components/rex-certified.tsx` — `<Reveal>` card + `useStagger` on 3-column interior ✓ (added this session)
-   - `components/cta-section.tsx` — `useStagger` on card (4 text children cascade) ✓ (added this session)
+### New Product Line: FET Engine Treatment
 
-2. ~~**Categories carousel — card stagger reveal**~~ ✓ **COMPLETED**
-   - `components/categories.tsx` — `useReveal` on heading block + `useGSAP` stagger on `<article>` cards via `sliderRef` ✓
+FET Engine Treatment is a fuel-efficiency device sold alongside tyres. It has its own page (`/fet`), homepage teaser, and a fully separate light-green design system.
 
-3. ~~**Route transition system — fail-safe hardening**~~ ✓ **COMPLETED**
-   - `hooks/useReveal.ts` — wrapped `gsap.fromTo` in try/catch; on error `clearProps: "opacity,y"` snaps element to visible
-   - `hooks/useStagger.ts` — same pattern; children never left at `opacity: 0` on GSAP error
-   - `hooks/useParallax.ts` — same pattern; `clearProps: "yPercent"` resets transform on error
-   - `components/hero.tsx` — entrance `useGSAP` block wrapped in try/catch; catch snaps first bg layer to `opacity: 1` and clears text element inline styles so hero is never a blank box
-   - `components/navbar.tsx` — added `onInterrupt` callbacks (matching `onComplete`) to all close tweens for the mobile drawer and language panel; guarantees `autoAlpha: 0` is set even if a tween is killed mid-flight, preventing the full-screen backdrop from blocking pointer events after navigation
+#### Navbar — Shop Dropdown (Fixed + Rebranded)
 
-4. **Product/News cards — hover micro-interactions** ← NEXT STEP
-   - `components/shop/product-card.tsx` — subtle scale/shadow on hover
-   - `components/news/news-card.tsx` — subtle hover lift
+**File:** `components/navbar.tsx`
 
-5. **Product accordion — GSAP height animation**
-   - `components/shop/product-accordion.tsx` — replace Framer Motion with GSAP `height` tween
+| Change | Detail |
+|---|---|
+| Dropdown gap bug fixed | Replaced CSS `group-hover` (had a 6px gap that broke hover state mid-movement) with JS `openShop` state + 130ms close-delay timer (`shopTimerRef`) so the panel stays open as cursor moves from button to dropdown |
+| Seamless hover bridge | Dropdown wrapper has `pt-3` so the hover area extends over the invisible gap — no gap-flicker |
+| GSAP animation | `useEffect([openShop])` animates `shopPanelRef` with `autoAlpha` + `y` slide — matches the existing lang/profile panel pattern |
+| Brand styling | Orange → green gradient accent bar at top of dropdown; icon circles with per-item accent color (`#f4511e` for Tyres, `#10b981` for FET) |
+| Active state | ChevronDown rotates 180° when open; Shop nav button highlights while dropdown is open |
+| Mobile drawer | Shop renders as a label + two indented sub-links with coloured dots — same as before, no change |
 
-6. **Cart drawer — GSAP slide panel**
-   - Cart drawer component — slide-in from right via `expo.out`
+**New state/refs added to navbar:**
+- `openShop: boolean`
+- `shopPanelRef: useRef<HTMLDivElement>`
+- `shopTimerRef: useRef<ReturnType<typeof setTimeout>>`
+- `isShopFirstRender: useRef<boolean>`
+- `openShopMenu()` / `closeShopMenu()` helpers
+
+---
+
+#### FET Page — `/fet` (`app/fet/page.tsx`)
+
+Full product landing page for FET Engine Treatment. **Uses its own light green design system — not the main Okelcor orange theme.**
+
+**Sections:**
+
+| Section | Notes |
+|---|---|
+| Hero | Fullscreen video (`/videos/fet-hero.mp4`). `autoPlay muted loop playsInline`. Fallback: dark green gradient `from-[#0d2b1a] to-[#166534]` via `poster="/images/fet-hero-poster.jpg"`. `bg-black/50` overlay for legibility. Badge, pills, CTAs all use white/glass style over video. |
+| Scroll indicator | Animated bouncing `ChevronDown` + "SCROLL" label at bottom of hero |
+| How It Works | 3 white cards, stagger `FadeUp` reveal (0/110/220ms delays), green hover glow |
+| Proven Results | **Dark green `#0d2b1a` band** — white stat numbers, green ring cards |
+| Key Benefits | 6 white cards, stagger `FadeUp` (75ms steps), `#dcfce7` icon circles |
+| Applications | 6 white icon tiles, stagger `FadeUp` (60ms steps), green hover |
+| ROI Calculator | `<AmortizationCalculator />` in light theme |
+| Bottom CTA | Dark `#0d2b1a` banner, `#22c55e` CTA button |
+
+**Video fallback chain:**
+1. `poster` attribute on `<video>` = `/images/fet-hero-poster.jpg` — native browser fallback image shown before video plays or if file missing
+2. Gradient `from-[#0d2b1a] to-[#166534]` layer always rendered below the video as additional fallback
+
+**To activate video:** place MP4 at `public/videos/fet-hero.mp4`. Directory already committed to repo. Poster image at `public/images/fet-hero-poster.jpg` also recommended.
+
+---
+
+#### FET Amortization Calculator — Light Theme
+
+**File:** `components/fet/amortization-calculator.tsx`
+
+Fully restyled from dark (`bg-white/[0.04]`, white text) to light:
+- Card: white, `#e2e8e2` border, `shadow-sm`
+- Active vehicle pill: `#dcfce7` bg, `#166534` text, `#22c55e` border
+- Inputs: white bg, `#e2e8e2` border, `#22c55e` focus ring
+- Slider accent: `#22c55e`
+- Savings result tile: `#dcfce7` bg, `#16a34a` number
+- Other result tiles: `#f9fafb` bg
+
+**6 vehicle presets:** Passenger Car (€299), Van (€399), Heavy Truck (€599), Agricultural (€699), Construction (€699), Marine (€599). KM and hours modes.
+
+---
+
+#### FET Teaser (Homepage) — Light Theme
+
+**File:** `components/fet-teaser.tsx`
+
+Changed from dark `#1a1a1a` banner to light `#f0f4f0` with `border-y border-[#e2e8e2]`:
+- Badge: `#dcfce7` pill with green dot, `#166534` text
+- Heading accent: `#22c55e`
+- CTA: solid `#22c55e` pill button with shadow (was outlined dark)
+
+Placed in `app/page.tsx` after `<BrandsSection />`.
+
+---
+
+#### Card Animations (FadeUp stagger)
+
+FET page sections use `components/motion/fade-up.tsx` (IntersectionObserver, CSS transition) for scroll reveal:
+- Section headings: `<FadeUp>` wrapper
+- Card grids: each card individually wrapped with staggered `delay` props
+- All cards have CSS hover effects: `-translate-y-1`, colored ring glow, box shadow
 
 ---
 
@@ -222,19 +296,6 @@ Applied across 20+ components and pages. All fixes categorized below.
 | `components/categories.tsx` | Card `h-[420px]` → `h-[360px] sm:h-[420px] md:h-[580px]` |
 | `app/contact/page.tsx` | Map iframe + consent placeholder — responsive height `h-[300px] sm:h-[380px] md:h-[480px]`; iframe uses `height="100%"` inside sized container |
 
-#### Padding — `sm:` Steps Added
-| File | Change |
-|---|---|
-| `components/tbr-feature-section.tsx` | `px-8 py-10` → `px-6 py-8 sm:px-8 sm:py-10 md:px-12 md:py-12` |
-| `components/used-tyres-section.tsx` | Same pattern |
-| `components/why-okelcor.tsx` | Card `p-6 md:p-10` → `p-6 sm:p-8 md:p-10` |
-| `components/brands.tsx` | Left panel `p-8 md:p-12` → `p-6 sm:p-8 md:p-12` |
-| `components/logistics.tsx` | Detail card `p-8 md:p-10` → `p-6 sm:p-8 md:p-10` |
-| `components/rex-certified.tsx` | `px-8 py-8 md:px-12` → `px-5 py-6 sm:px-8 sm:py-8 md:px-12` |
-| `components/about/services.tsx` | Card `p-8` → `p-6 sm:p-8` |
-| `components/about/company-story.tsx` | Content panel `p-8 md:p-10 lg:p-12` → `p-6 sm:p-8 md:p-10 lg:p-12` |
-| `app/contact/page.tsx` | Info + form cards `p-8 md:p-10` → `p-6 sm:p-8 md:p-10` |
-
 ---
 
 ## Completed in Previous Session — Route Transition Fail-Safe Hardening
@@ -260,7 +321,7 @@ Applied across 20+ components and pages. All fixes categorized below.
 
 ---
 
-## Completed in Previous Session — SEO, Legal Pages, Email API, i18n & UX Polish (now superseded above)
+## Completed in Previous Session — SEO, Legal Pages, Email API, i18n & UX Polish
 
 ### Step 1 — Custom Next.js App Shell pages
 **Files:** `app/not-found.tsx`, `app/error.tsx`, `app/loading.tsx`, `app/template.tsx`
@@ -314,8 +375,6 @@ Specific content:
 ### Step 6 — Real email API routes (Resend)
 **Files:** `app/api/contact/route.ts`, `app/api/quote/route.ts`
 
-This resolves the previous HIGH priority item: "Contact/Quote form email wiring".
-
 **`/api/contact` (POST)**
 - Server-side validation: `name`, `email`, `subject`, `inquiry` all required; email regex checked
 - Builds branded HTML email (dark header, orange accents, field rows, CET timestamp)
@@ -353,82 +412,55 @@ OPENROUTER_API_KEY=sk-or-xxxx      # AI chat widget — get key at openrouter.ai
 ### Step 8 — Cookie consent
 **Files:** `components/cookie-consent.tsx`, `lib/cookie-consent.ts`
 
-- **`lib/cookie-consent.ts`**: `getConsent()` / `setConsent()` helpers; reads/writes `okelcor-cookie-consent` in localStorage; dispatches `cookie-consent-update` event on change
-- **`components/cookie-consent.tsx`**: GDPR banner fixed to bottom of screen
-  - Delayed 600ms to avoid hydration flash
-  - "Reject Non-Essential" (ghost pill) + "Accept All" (orange pill)
-  - Links to `/privacy` policy
-  - Only shown if no prior consent stored
-
 ### Step 9 — Back to top button
 **File:** `components/back-to-top.tsx`
-
-- Appears after scrolling 400px (passive scroll listener)
-- Smooth scroll to top on click
-- Dark circle by default, transitions to orange on hover
-- Fade + slide-up transition for show/hide
 
 ### Step 10 — Newsletter strip
 **File:** `components/newsletter-strip.tsx`
 
-- Email input + submit button, inline validation
-- i18n via `useLanguage()` — copy comes from `t.newsletter.*`
-- Success state replaces form with a green confirmation message (no redirect)
-- Styled to match page background (`#f5f5f5`), rounded-full inputs/buttons
-
 ### Step 11 — Motion primitives
 **Files:** `lib/motion.ts`, `components/motion/reveal.tsx`, `components/motion/stagger.tsx`
-
-- **`lib/motion.ts`**: Shared Framer Motion variant presets — `fadeUp`, `staggerContainer`, `staggerItem`, `viewportOnce`
-- **`components/motion/reveal.tsx`**: `<Reveal>` — scroll-triggered fade+slide wrapper; accepts `delay` prop; safe to import from server components
-- **`components/motion/stagger.tsx`**: `<StaggerParent>` + `<StaggerChild>` — coordinated stagger animation for grids/lists
 
 ### Step 12 — Page UI wrappers (i18n-driven)
 **Files:** `components/about/about-page-ui.tsx`, `components/news/news-page-ui.tsx`, `components/news/article-ui.tsx`
 
-- Each is a `"use client"` wrapper that reads `useLanguage()` and passes translated strings to the underlying server components
-- `about-page-ui.tsx`: Renders `<PageHero>` with translated strings + `<CompanyStory>`, `<Services>`, `<LogisticsPartners>`
-- `news-page-ui.tsx`: Renders `<PageHero>` + featured article + `<StaggerParent>` grid of remaining articles; uses `getLocalizedArticles(locale)` for locale-aware article data
-- `article-ui.tsx`: Article detail page UI wrapper
+---
+
+## Completed in Previous Session — Admin CMS
+
+### Admin CMS sections complete
+
+| Section | Key files |
+|---|---|
+| Products | `app/admin/products/`, `components/admin/products-table.tsx` |
+| Articles | `app/admin/articles/`, `components/admin/articles-table.tsx` |
+| Orders | `app/admin/orders/`, `components/admin/orders-table.tsx`, `order-detail.tsx` |
+| Brands | `app/admin/brands/`, `components/admin/brands-manager.tsx` |
+| Hero Slides | `app/admin/hero-slides/`, `components/admin/hero-slides-manager.tsx`, `app/api/admin/hero-slides-upload/route.ts` |
+| Quote Requests | `app/admin/quotes/`, `components/admin/quotes-table.tsx`, `quote-detail.tsx` |
+| Settings | `app/admin/settings/`, `components/admin/settings-panel.tsx` |
+
+**Video upload architecture note:** Server Action body size limit applies globally. Video uploads (up to 300 MB) use a Route Handler at `/api/admin/hero-slides-upload` — browser POSTs directly to this handler which proxies to Laravel.
+
+### Frontend Settings Reflection
+Settings saved in admin reflect on live site via `lib/site-settings.ts` (ISR, `revalidate: 60`), `context/site-settings-context.tsx`, and `app/layout.tsx`. Footer, contact page, email routes, and payment selector all read from `useSiteSettings()`.
 
 ---
 
-## Completed in Previous Session — Repo Restructure & README
+## Completed in Previous Session — Auth, Payment Config & Checkout API
 
-### Step 1 — Git repo moved to project root
-- Moved `.git` from `Projects/` into `Projects/okelcor-website/`
-- Project files now sit at repo root — `app/`, `components/`, etc. are top-level on GitHub
+See previous handoff entries for full detail. Summary:
 
-### Step 2 — README rewritten
-**File:** `README.md`
-- Full project README with stack, pages, setup, design system summary, status note, and company contact info
+- **NextAuth:** Credentials provider, JWT sessions (30 days), middleware protects `/checkout` + `/account`
+- **Stripe:** `@stripe/react-stripe-js`, `Elements` wrapper, `CardElement`, `stripe.confirmCardPayment(clientSecret)`
+- **Checkout route:** `app/api/checkout/route.ts` — validates, generates `OKL-XXXXX` ref, sends Resend email, returns `{ success, orderRef, mode }`
+- **Order tracking:** `app/account/orders/page.tsx` + `app/account/orders/[ref]/page.tsx` — server components, protected, fetches from `API_URL`
 
----
-
-## Completed in Previous Session — Responsiveness, UI Fixes & GitHub
-
-### Step 1 — Mobile & tablet responsiveness pass
-- Hero buttons: `flex-wrap justify-center gap-3`; removed forced full-width
-- CTA, REX, categories, brands, logistics, why-okelcor buttons: changed to `inline-flex`
-- Footer legal links: `flex-wrap` to prevent narrow-screen overflow
-- `globals.css`: `.tesla-hero-btn-*` min-width `160px`, height `46px`; mobile: only `height: 50px` applied
-
-### Step 2 — GitHub repository setup
-- Repo at `https://github.com/johnseyi/okelcor-website`, branch `main`
-
----
-
-## Completed in Previous Session — Design System Audit & Fixes
-
-- Color tokens normalized to `var(--primary)`, `var(--primary-hover)`, `var(--foreground)`, `var(--muted)` across all components
-- Floating bar: redesigned to orange pill CTA, removed blue icon
-- Navbar active state: `color: var(--primary)` in `.tesla-nav-link-active`
-- Image replacements: tyre-focused imagery throughout (why-okelcor, categories, shop, used-tyres)
-- Brands section copy: real B2B copy replacing scaffold placeholder
-- TBR section: title case, solid background, cleaner subtitle
-- Shop dead buttons: replaced with `<Link href="/contact">Request Supply</Link>`
-- Button border-radius: all → `rounded-full` / `border-radius: 999px`
-- Brand color: `--primary: #f4511e`, `--primary-hover: #df4618`
+**API_URL env var pattern (important):**
+```
+process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1"
+```
+Server-side routes must use `API_URL` (no NEXT_PUBLIC_ prefix). Add `API_URL` to Vercel env vars.
 
 ---
 
@@ -436,8 +468,8 @@ OPENROUTER_API_KEY=sk-or-xxxx      # AI chat widget — get key at openrouter.ai
 
 | Section | Status |
 |---|---|
-| Navbar | Complete — logo, 9px tagline, 44px icon buttons, mobile drawer, language switcher (EN/DE/FR), i18n |
-| Hero slider | Complete — GSAP parallax + crossfade, autoplay, dots; i18n slide content; responsive min-height; video slide support (autoplay/muted/loop, dynamic overlay, error fallback) |
+| Navbar | Complete — logo, tagline, 44px icon buttons, mobile drawer, language switcher (EN/DE/FR), i18n, Shop dropdown with GSAP animation + hover bridge fix |
+| Hero slider | Complete — GSAP parallax + crossfade, autoplay, dots; i18n; responsive min-height; video slide support |
 | Categories carousel | Complete — i18n, 48px buttons, responsive card height + heading scale |
 | Why Okelcor | Complete — orange CTAs, tyre imagery, 48px buttons, sm: padding |
 | Trusted Brands | Complete — real logos, 48px buttons, sm: padding step |
@@ -457,7 +489,10 @@ OPENROUTER_API_KEY=sk-or-xxxx      # AI chat widget — get key at openrouter.ai
 | Auth page | Complete — NextAuth Credentials provider, JWT sessions, callbackUrl redirect, i18n |
 | Quote page | Complete — form wired to `/api/quote` (Resend), reference number shown on success |
 | Cart drawer | Complete — fully i18n'd (all strings via t.cart.*) |
-| Checkout page | Complete — wired to `/api/checkout`; orderRef + live/manual mode; payment provider feature flags |
+| Checkout page | Complete — wired to `/api/checkout`; orderRef + live/manual mode; Stripe CardElement |
+| Order tracking | Complete — `/account/orders` list + `/account/orders/[ref]` detail with timeline |
+| **FET page** | **Complete** — light theme, video hero, ROI calculator, 5 sections, stagger animations |
+| **FET teaser** | **Complete** — light green `#f0f4f0` strip on homepage |
 | 404 page | Complete — on-brand, Navbar + Footer |
 | Error page | Complete — Try Again + Back to Home |
 | Loading state | Complete — orange spinner |
@@ -474,236 +509,19 @@ OPENROUTER_API_KEY=sk-or-xxxx      # AI chat widget — get key at openrouter.ai
 | i18n system | Complete — EN / DE / FR; covers nav, hero, shop, cart, auth, checkout, all pages |
 | Schema.org JSON-LD | Complete — Product schema on /shop/[id], NewsArticle schema on /news/[slug] |
 | Company constants | Complete — `lib/constants.ts` single source of truth; used across 11 files |
-| Self-hosted images | Complete — all Unsplash URLs replaced; 5 images in `public/images/` |
+| Self-hosted images | Complete — all Unsplash URLs replaced; images in `public/images/` |
 | Mobile responsiveness | Complete — all touch targets ≥ 48px, heading scales, responsive padding, map iframe |
-| Motion primitives | Complete — Reveal, StaggerParent/Child (GSAP-backed) |
+| Motion primitives | Complete — Reveal, StaggerParent/Child (GSAP-backed) + FadeUp (IntersectionObserver) |
 | README | Complete |
 | Analytics (GA4) | Complete — consent-aware GA4 loader, typed event tracker, product/quote/contact tracking wired |
 | Search | Complete — site-wide modal, products + articles, GSAP animation, keyboard nav, Cmd/Ctrl+K, i18n |
-| **Admin — Products** | Complete — list, create, edit, delete (soft), deactivate/reactivate, trash/restore, gallery images |
-| **Admin — Articles** | Complete — list, create, edit, delete (soft), publish/unpublish, trash/restore, slug auto-gen |
-| **Admin — Orders** | Complete — list with status filter + search + pagination, detail view, status update |
-| **Admin — Brands** | Complete — grid management, add/edit name inline, logo upload, delete with confirmation overlay |
-| **Admin — Hero Slides** | Complete — list ordered by position, add/edit form, image + video support, Route Handler upload |
-| **Admin — Quote Requests** | Complete — list with status filter + search + pagination, detail view, status update |
-| **Admin — Settings** | Complete — grouped cards, per-group save, toggle fields, empty state, normalises array/map API response |
-
----
-
-## Completed in Latest Session — Admin CMS: Quote Requests (2026-04-01)
-
-### Quote Requests Admin Section (NEW)
-
-| File | Notes |
-|---|---|
-| `app/admin/quotes/actions.ts` | `QUOTE_STATUSES` constant (`new/reviewed/quoted/closed`); `updateQuoteStatus(id, status)` — PUT to `/admin/quote-requests/{id}` |
-| `app/admin/quotes/page.tsx` | Server page — fetches with `?status=`, `?q=`, `?page=` params; renders `QuotesTable` |
-| `app/admin/quotes/[id]/page.tsx` | Server page — fetches full quote detail; renders `QuoteDetail` |
-| `components/admin/quotes-table.tsx` | Status filter tabs (all/new/reviewed/quoted/closed); search by ref, name, or email; pagination; eye icon links to detail |
-| `components/admin/quote-detail.tsx` | Status dropdown + Save button (PUT via `updateQuoteStatus`); after save: `router.push("/admin/quotes")`; requester details card + request details card (2-column); optional notes panel |
-| `lib/admin-api.ts` | Added `AdminQuoteFull` type (extends `AdminQuote` with `phone`, `delivery_location`, `notes`, `updated_at`) |
-
-**API endpoints required from backend:**
-- `GET /admin/quote-requests` — paginated list with `?status=`, `?q=`, `?page=`, `?per_page=` params
-- `GET /admin/quote-requests/{id}` — full quote detail
-- `PUT /admin/quote-requests/{id}` — update status; body: `{ status: string }`
-
----
-
-## Completed in Latest Session — Admin Settings + Frontend Settings Reflection (2026-04-01)
-
-### Admin Settings Section (NEW)
-
-| File | Notes |
-|---|---|
-| `app/admin/settings/actions.ts` | `updateSettingsBulk(updates)` — PUT to `/admin/settings` with `{ settings: [{ key, value }] }`; calls `revalidatePath("/admin/settings")` + `revalidatePath("/", "layout")` |
-| `app/admin/settings/page.tsx` | Server page — fetches settings (normalises both array and map API responses); renders `SettingsPanel`; shows `EmptyState` if no settings returned |
-| `components/admin/settings-panel.tsx` | Static schema approach — 4 groups: Company Information, Payment Methods, Shop & Commerce, Site Configuration. `mergeWithSchema(apiSettings)` seeds defaults then overlays API values. Per-group save with inline success/error feedback. Toggle fields, password fields with show/hide, textarea fields, number fields. |
-
-**Settings schema keys:**
-- Company: `company_name`, `company_email`, `company_phone`, `company_fax`, `company_address`
-- Payment: `stripe_enabled`, `paypal_enabled`, `klarna_enabled`, `stripe_publishable_key`, `paypal_client_id`
-- Shop: `vat_rate`, `default_currency`, `free_shipping_threshold`, `order_prefix`
-- Site: `maintenance_mode`, `site_tagline`, `google_analytics_id`, `contact_email`, `quote_email`
-
-**API endpoints required from backend:**
-- `GET /admin/settings` — returns settings as array `[{ key, value }]` or map `{ key: value }`
-- `PUT /admin/settings` — body: `{ settings: [{ key: string, value: string }] }`
-
----
-
-### Frontend Settings Reflection (NEW)
-
-Settings saved in the admin panel now reflect on the live website via a shared `SiteSettings` context.
-
-| File | Notes |
-|---|---|
-| `lib/site-settings.ts` | `getSiteSettings()` — fetches `GET /api/v1/settings/public`; ISR-cached (`revalidate: 60`); handles array + map responses; returns `{}` on error (graceful degradation) |
-| `context/site-settings-context.tsx` | `SiteSettingsProvider` + `useSiteSettings()` — passes server-fetched settings into the client tree |
-| `app/layout.tsx` | Made `async`; calls `getSiteSettings()`; wraps entire tree with `<SiteSettingsProvider settings={settings}>` |
-| `components/footer.tsx` | Reads `useSiteSettings()` — `company_address`, `company_phone`, `company_email` override constants when set |
-| `app/contact/page.tsx` | Reads `useSiteSettings()` — `INFO_ITEMS` (address, phone, fax, email) use settings with constant fallbacks |
-| `app/api/contact/route.ts` | Calls `getSiteSettings()` inside POST handler; `contact_email` setting overrides `CONTACT_EMAIL` env var (which falls back to `COMPANY_EMAIL`) |
-| `app/api/quote/route.ts` | Same pattern — `quote_email` → `contact_email` → `QUOTE_EMAIL` env var → `CONTACT_EMAIL` env var → `COMPANY_EMAIL` |
-| `components/checkout/payment-selector.tsx` | Reads `useSiteSettings()` — `stripe_enabled`, `paypal_enabled`, `klarna_enabled` settings toggle payment methods on/off, overriding the `NEXT_PUBLIC_` env var flags |
-
-**Priority chain for email routing:**
-```
-contact route: settings.contact_email → CONTACT_EMAIL env → COMPANY_EMAIL constant
-quote route:   settings.quote_email → settings.contact_email → QUOTE_EMAIL env → CONTACT_EMAIL env → COMPANY_EMAIL constant
-```
-
-**Priority chain for payment methods:**
-```
-settings.stripe_enabled === "true" → OR → NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is set
-settings.paypal_enabled === "true" → OR → NEXT_PUBLIC_PAYPAL_CLIENT_ID is set
-settings.klarna_enabled === "true" → OR → (Stripe configured AND NEXT_PUBLIC_KLARNA_ENABLED set)
-```
-
-**Backend endpoint required:**
-- `GET /api/v1/settings/public` — publicly accessible (no auth); returns site settings as array `[{ key, value }]` or map `{ key: value }`. Keys to expose: `company_name`, `company_email`, `company_phone`, `company_fax`, `company_address`, `stripe_enabled`, `paypal_enabled`, `klarna_enabled`, `vat_rate`, `default_currency`, `site_tagline`, `contact_email`, `quote_email`.
-- Do NOT expose: `stripe_publishable_key`, `paypal_client_id`, `google_analytics_id`, `maintenance_mode`, `order_prefix`.
-
-**Caching:** Settings are ISR-cached for 60 seconds. After an admin saves settings, the frontend will reflect them within 60 seconds without a full redeploy.
-
----
-
-## Completed in Previous Session — Admin CMS: Orders, Brands & Hero Slides (2026-04-01)
-
-### Orders Admin Section (NEW)
-
-| File | Notes |
-|---|---|
-| `app/admin/orders/actions.ts` | `ORDER_STATUSES` constant; `updateOrderStatus(id, status)` — PUT to `/admin/orders/{id}` |
-| `app/admin/orders/page.tsx` | Server page — fetches with `?status=`, `?q=`, `?page=` params; renders `OrdersTable` |
-| `app/admin/orders/[id]/page.tsx` | Server page — fetches full order detail; renders `OrderDetail` |
-| `components/admin/orders-table.tsx` | Status filter tabs (all/pending/confirmed/shipped/delivered/cancelled); search by ref or customer name; pagination; eye icon links to detail |
-| `components/admin/order-detail.tsx` | Status dropdown + Save button (PUT via `updateOrderStatus`); after save: `router.push("/admin/orders")`; customer details card + order summary card (2-column); order items table with subtotals + footer total |
-| `lib/admin-api.ts` | Added `AdminOrderItem` and `AdminOrderFull` types |
-
----
-
-### Brands Admin Section (NEW)
-
-| File | Notes |
-|---|---|
-| `app/admin/brands/actions.ts` | `createBrand(name)` POST JSON; `updateBrand(id, name)` PUT JSON; `uploadBrandLogo(id, fd)` POST multipart to `/admin/brands/{id}/logo`; `deleteBrand(id)` DELETE handles 204; all call `revalidatePath("/admin/brands")` + `revalidatePath("/", "page")` |
-| `app/admin/brands/page.tsx` | Server page fetching all brands; renders `BrandsManager` |
-| `components/admin/brands-manager.tsx` | `BrandCard`: logo display area, replace-logo button (top-right upload icon), inline name edit (Enter/Escape), delete confirmation overlay. `AddBrandCard`: logo picker click area, name input, Add Brand button — creates brand then uploads logo. `BrandsManager`: responsive grid `sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5` |
-| `lib/admin-api.ts` | `AdminBrand` updated — added `order?: number` |
-
-**Frontend brands fix:** Homepage was falling back to static logos because `getBrands()` called `GET /api/v1/brands` (public, no auth) but backend had only built `GET /api/v1/admin/brands`. Backend added the public endpoint — logos now display from the API.
-
----
-
-### Hero Slides Admin Section (NEW)
-
-| File | Notes |
-|---|---|
-| `app/admin/hero-slides/actions.ts` | `createHeroSlide(input)` POST JSON; `updateHeroSlide(id, input)` PUT JSON; `deleteHeroSlide(id)` DELETE handles 204; `uploadHeroSlideMedia` kept as reference but upload now uses Route Handler |
-| `app/admin/hero-slides/page.tsx` | Server page fetching all slides; renders `HeroSlidesManager` |
-| `components/admin/hero-slides-manager.tsx` | `SlideForm`: image/video toggle, file drop zone, title/subtitle/order fields, collapsible CTA override section. `SlideRow`: thumbnail or video badge, title + subtitle preview, order number badge, media type badge (Image/Video), edit + inline delete confirmation. `HeroSlidesManager`: `mode` state (`"list"` | `"add"` | `{ editing: AdminHeroSlide }`) drives form vs list view; slides sorted by `order` |
-| `app/api/admin/hero-slides-upload/route.ts` | **Route Handler** (not Server Action) — bypasses Next.js body size limit entirely. Reads `admin_token` cookie, receives multipart FormData, proxies file directly to Laravel. Handles auth, calls `revalidatePath` on success |
-
-**Upload architecture note:** Server Action body size limit (`serverActions.bodySizeLimit`) applies to ALL Server Actions regardless of config value for large files. Video uploads (up to 300 MB) use a Next.js Route Handler instead — browser POSTs to `/api/admin/hero-slides-upload?id={slideId}`, Route Handler proxies to Laravel. Image uploads for other sections still use Server Actions (adequate for typical image sizes).
-
----
-
-### Hero Frontend — Video Slide Support
-
-| File | Changes |
-|---|---|
-| `lib/api.ts` | `HeroSlide` type: added `video_url?: string \| null`, `media_type?: "image" \| "video"` |
-| `lib/admin-api.ts` | `AdminHeroSlide` type: added `video_url?: string \| null`, `media_type?: "image" \| "video"` |
-| `components/hero.tsx` | `videoErrors` state (`Set<number>`) tracks failed video loads. `getSlideMedia(i)` returns `{ type, src, fallbackSrc }` — falls back to `image_url` / static image if video errors. Each bg layer now renders `<video autoPlay muted loop playsInline>` for video slides or `<div style={{ backgroundImage }}>` for image slides. Overlay is dynamic: `rgba(0,0,0,0.50)` for video slides, `rgba(0,0,0,0.24)` for image slides, with `transition-colors duration-700` between them. `onError` on each video triggers fallback to static image — hero never blank. |
-
----
-
-### Config Changes
-
-| File | Change |
-|---|---|
-| `next.config.ts` | `serverActions.bodySizeLimit` bumped `"10mb"` → `"300mb"` (covers product images and other Server Action uploads) |
-
----
-
-### Backend Messages Sent
-
-- **Orders API:** `GET /admin/orders`, `GET /admin/orders/{id}`, `PUT /admin/orders/{id}` — all confirmed working
-- **Brands API:** `GET /brands` (public), `GET /admin/brands`, `POST /admin/brands`, `PUT /admin/brands/{id}`, `POST /admin/brands/{id}/logo`, `DELETE /admin/brands/{id}` — all confirmed working
-- **Hero Slides API:** `GET /hero-slides` (public, returns `video_url` + `media_type`), `GET /admin/hero-slides`, `POST /admin/hero-slides`, `PUT /admin/hero-slides/{id}`, `POST /admin/hero-slides/{id}/media` (image or video), `DELETE /admin/hero-slides/{id}`
-- **PHP/nginx upload limits:** `upload_max_filesize = 300M`, `post_max_size = 300M`, `client_max_body_size 300m`
-
----
-
-## Completed in Previous Session — Auth, Payment Config & Checkout API
-
-### Authentication (NextAuth.js)
-
-| File | Notes |
-|---|---|
-| `lib/auth.ts` | NextAuth config: Credentials provider, JWT strategy (30-day sessions), pages.signIn: "/auth". `authorize()` accepts valid-format email + password ≥8 chars — marked TODO for real DB |
-| `app/api/auth/[...nextauth]/route.ts` | NextAuth catch-all GET/POST handler |
-| `components/auth/session-provider.tsx` | `"use client"` wrapper around NextAuth `SessionProvider` so the server root layout can import it |
-| `middleware.ts` | `withAuth` from next-auth/middleware. Protects `/checkout` and `/account` only. All public routes never matched. |
-| `app/auth/page.tsx` | `useSearchParams` reads `callbackUrl`; `signIn("credentials", { redirect: false })` used; redirects via `result.url` (same-origin validated by NextAuth, prevents open redirect). Error state shown on invalid credentials. |
-| `app/checkout/page.tsx` | Added `getServerSession(authOptions)` + `redirect()` as defence-in-depth behind the middleware |
-| `app/layout.tsx` | `<AuthSessionProvider>` wraps the tree above all other providers |
-| `components/navbar.tsx` | Session-aware: when authenticated shows Account icon + Logout; when signed out shows Sign In icon. `justify-self-start` on logo link for equal left/right edge inset. |
-
-### Payment Configuration
-
-| File | Notes |
-|---|---|
-| `lib/payment-config.ts` | Feature flags driven by `NEXT_PUBLIC_` env vars. Exports `PAYMENT_PROVIDERS` record (enabled, label, description per method), `anyProviderEnabled`, `STRIPE_PUBLISHABLE_KEY`, `PAYPAL_CLIENT_ID`. |
-| `components/checkout/payment-selector.tsx` | Per-method `disabled` + "Soon" badge when provider not configured. Amber info panel shown when no provider is live. |
-| `components/checkout/express-checkout.tsx` | Returns `null` (hides entire section) when no express provider is configured. Individual buttons disabled + `opacity-40` when provider not enabled. |
-| `app/api/checkout/route.ts` | Full order handler: validates body, generates `OKL-XXXXX` order ref, sends Resend notification email to team, returns `{ success, orderRef, mode: "live" \| "manual" }`. Integration stubs for Stripe, PayPal, and Klarna (via Stripe) with install/env/docs comments. |
-| `components/checkout/checkout-flow.tsx` | `handleSubmit` now `async` — real `fetch("/api/checkout")` with delivery + paymentMethod + items. Reads `data.orderRef` and `data.mode`. `orderMode` state passed to `SuccessState`. `submitError` state shows red error banner on API/network failure. |
-| `.env.example` | Documents all required env vars: app URL, GA4, Resend, NextAuth, Stripe, PayPal, Klarna. |
-| `.gitignore` | Added `!.env.example` exception; added `.claude/` to ignore local IDE settings. |
-
-### Manual Order Pattern (when no payment credentials set)
-- API returns `mode: "manual"`
-- Success screen shows amber "What happens next" panel explaining team will contact for payment
-- Resend notification email always sent regardless of payment mode — no order ever silently lost
-- Once credentials are added and SDK stubs implemented, `mode: "live"` flows through with no frontend changes
-
-### GSAP Route Transition Hardening
-- `lib/gsap.ts` — `beforeunload` handler kills all ScrollTriggers and clears the global timeline on full-page navigation
-- `app/template.tsx` — `ScrollTrigger.refresh()` via `requestAnimationFrame` after each route mount, ensuring scroll positions recalculate after auth redirects
-- `hooks/useReveal.ts`, `hooks/useStagger.ts`, `hooks/useParallax.ts` — `clearProps` in `useGSAP` cleanup prevents `opacity: 0` flash when navigating away
-
-### Brands Section
-- Grid changed to `grid-cols-2` (was `[1.25fr_1fr]`) for visual balance
-- Pirelli logo: `style={{ width: "auto", height: "auto", maxWidth: "110px", maxHeight: "48px" }}` — resolves Next.js Image aspect-ratio warning
-
----
-
-## Completed in Previous Session — Analytics + Search
-
-### Analytics (GA4, GDPR-aware)
-| File | Notes |
-|---|---|
-| `lib/analytics.ts` | Typed event wrappers: `trackProductView`, `trackAddToCart`, `trackQuoteSubmit`, `trackContactSubmit`, `trackEvent` |
-| `components/analytics-script.tsx` | Consent-aware GA4 loader. Defaults to `analytics_storage: denied`. Upgrades on cookie accept. No-ops if `NEXT_PUBLIC_GA_ID` is unset. |
-| `components/shop/product-view-tracker.tsx` | Headless client component — fires `view_item` on product detail page mount |
-| `app/layout.tsx` | Added `<AnalyticsScript />` |
-| `app/shop/[id]/page.tsx` | Added `<ProductViewTracker product={product} />` |
-| `components/quote/quote-form.tsx` | `trackQuoteSubmit()` called on success |
-| `app/contact/page.tsx` | `trackContactSubmit()` called on success |
-
-**Env var required:** `NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX`
-
-### Search (site-wide, client-side)
-| File | Notes |
-|---|---|
-| `lib/search.ts` | Token-based search engine. Scores products (brand/name/size/type/sku) + articles (title/category/summary). Returns grouped `SearchResults`. |
-| `context/search-context.tsx` | Global state: `isOpen`, `query`, `results`. Provides `openSearch`, `closeSearch`, `setQuery`. Wraps root layout inside `LanguageProvider`. |
-| `components/search/search-modal.tsx` | Full-screen overlay. GSAP backdrop fade + modal slide-up. Keyboard nav (↑↓ Enter Esc). Cmd/Ctrl+K global shortcut. i18n. |
-| `lib/translations.ts` | Added `search` block (EN/DE/FR): `placeholder`, `noResults`, `noResultsHint`, `productsHeading`, `articlesHeading`, `close` |
-| `components/navbar.tsx` | Search icon added — desktop (between Help and Language) + mobile drawer meta section |
-| `app/layout.tsx` | Wrapped with `<SearchProvider>`, added `<SearchModal />` |
+| Admin — Products | Complete — list, create, edit, delete (soft), deactivate/reactivate, trash/restore, gallery images |
+| Admin — Articles | Complete — list, create, edit, delete (soft), publish/unpublish, trash/restore, slug auto-gen |
+| Admin — Orders | Complete — list with status filter + search + pagination, detail view, status update |
+| Admin — Brands | Complete — grid management, add/edit name inline, logo upload, delete with confirmation overlay |
+| Admin — Hero Slides | Complete — list ordered by position, add/edit form, image + video support, Route Handler upload |
+| Admin — Quote Requests | Complete — list with status filter + search + pagination, detail view, status update |
+| Admin — Settings | Complete — grouped cards, per-group save, toggle fields, empty state, normalises array/map API response |
 
 ---
 
@@ -725,23 +543,29 @@ settings.klarna_enabled === "true" → OR → (Stripe configured AND NEXT_PUBLIC
    NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
    NEXTAUTH_SECRET=<openssl rand -base64 32>
    NEXTAUTH_URL=https://okelcor.de
+   API_URL=https://api.takeovercreatives.com/api/v1
    ```
    Without `RESEND_API_KEY`, contact/quote/checkout routes return errors.
    Without `NEXT_PUBLIC_GA_ID`, analytics is a no-op silently.
    Without `NEXTAUTH_SECRET` + `NEXTAUTH_URL`, auth sessions will fail.
+   Without `API_URL`, order tracking and checkout proxy routes fall back to localhost.
 
 3. **Auth backend** — `lib/auth.ts` `authorize()` currently accepts any valid-format email + password ≥8 chars. Replace with real DB lookup before launch.
 
-### Remaining — Medium Priority
-4. **Unused public assets cleanup** — Old placeholder SVGs in `public/brands/` superseded by real logos in `public/brands/brand logo/`; safe to delete
+4. **FET video** — Place the hero video at `public/videos/fet-hero.mp4`. The fallback gradient + poster image display until then. Optional poster: `public/images/fet-hero-poster.jpg`.
 
-5. **Payment provider credentials** — When ready, add to production env vars and implement the SDK call in `app/api/checkout/route.ts` at the clearly marked integration stubs:
+### Remaining — Medium Priority
+5. **Payment provider credentials** — When ready, add to production env vars and implement the SDK call in `app/api/checkout/route.ts`:
    - **Stripe (card/Apple Pay/Google Pay):** `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` + `STRIPE_SECRET_KEY`
    - **PayPal:** `NEXT_PUBLIC_PAYPAL_CLIENT_ID` + `PAYPAL_CLIENT_SECRET`
    - **Klarna (via Stripe):** `NEXT_PUBLIC_KLARNA_ENABLED=true` (also needs Stripe keys)
 
+6. **FET sitemap entry** — Add `/fet` to `app/sitemap.ts` static routes (priority 0.8)
+
 ### Remaining — Low Priority
-6. **Newsletter backend** — `components/newsletter-strip.tsx` validates and shows success state but does not actually send/store emails; needs an endpoint
+7. **Newsletter backend** — `components/newsletter-strip.tsx` validates and shows success state but does not actually send/store emails; needs an endpoint
+
+8. **Unused public assets cleanup** — Old placeholder SVGs in `public/brands/` superseded by real logos in `public/brands/brand logo/`; safe to delete
 
 ---
 
@@ -759,10 +583,12 @@ Rules:
 - Do not redesign components without discussion
 - Preserve homepage layout order unless explicitly instructed
 - Explain plans before large changes
-- Use `var(--primary)`, `var(--primary-hover)`, `var(--foreground)`, `var(--muted)` — never hardcode hex values that duplicate these tokens
+- Use `var(--primary)`, `var(--primary-hover)`, `var(--foreground)`, `var(--muted)` — never hardcode hex values that duplicate these tokens **on Okelcor pages**
+- The FET page (`/fet`) has its own green palette — do NOT apply `var(--primary)` orange there
 - All buttons use `rounded-full` (pill shape) per DESIGN_SYSTEM.md
 - Prefer server components; only use `"use client"` where hooks or browser APIs are required
 - i18n: use `useLanguage()` in client wrappers; keep server components translation-free
 - Analytics: use helpers from `lib/analytics.ts` — never call `window.gtag` directly in components
 - Search: state lives in `context/search-context.tsx`; extend `lib/search.ts` if data sources change
 - Translations: always add new string keys to the type in `lib/translations.ts` AND all 3 locales (en, de, fr)
+- Navbar Shop dropdown: uses JS state (`openShop`) + GSAP + close-delay timer — do NOT revert to CSS `group-hover`
