@@ -17,7 +17,7 @@ const FET_SLIDE = {
   label:    "Also Available",
   title:    "FET Engine Treatment",
   subtitle: "Save fuel, improve performance and reduce emissions for any vehicle or fleet.",
-  videoSrc: "/videos/fet-hero.mp4",
+  videoSrc: "/videos/video with fx desktop.mp4",
 } as const;
 
 type DisplaySlot = { type: "fet" } | { type: "api"; apiIndex: number };
