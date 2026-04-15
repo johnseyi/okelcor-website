@@ -30,7 +30,6 @@ import {
   X,
   ChevronRight,
   ChevronLeft,
-  ChevronDown,
   ShoppingCart,
   Search,
   Package,
@@ -62,15 +61,12 @@ export default function Navbar() {
   const { data: session, status } = useSession();
   const isAuthed = status === "authenticated";
 
-  type NavChild = { label: string; href: string; accent: string };
-  type NavItem  = { label: string; href: string; children?: NavChild[] };
+  type NavItem = { label: string; href: string };
 
   const navItems: NavItem[] = [
     { label: t.nav.home,    href: "/" },
-    { label: t.nav.shop,    href: "/shop", children: [
-      { label: "Tyres",                href: "/shop", accent: "#f4511e" },
-      { label: "FET Engine Treatment", href: "/fet",  accent: "#10b981" },
-    ]},
+    { label: t.nav.shop,    href: "/shop" },
+    { label: "FET",         href: "/fet" },
     { label: t.nav.news,    href: "/news" },
     { label: t.nav.about,   href: "/about" },
     { label: t.nav.contact, href: "/contact" },
@@ -81,7 +77,6 @@ export default function Navbar() {
   const [openLang, setOpenLang]             = useState(false);
   const [openMobileLang, setOpenMobileLang] = useState(false);
   const [openProfile, setOpenProfile]       = useState(false);
-  const [openShop, setOpenShop]             = useState(false);
 
   // ── DOM refs ─────────────────────────────────────────────────────────────
   const headerRef           = useRef<HTMLElement>(null);
@@ -91,23 +86,11 @@ export default function Navbar() {
   const drawerRef           = useRef<HTMLElement>(null);
   const profileBackdropRef  = useRef<HTMLButtonElement>(null);
   const profilePanelRef     = useRef<HTMLDivElement>(null);
-  const shopPanelRef        = useRef<HTMLDivElement>(null);
-  const shopTimerRef        = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Skip the initial mount run for toggle effects (panels are already hidden)
   const isLangFirstRender     = useRef(true);
   const isMenuFirstRender     = useRef(true);
   const isProfileFirstRender  = useRef(true);
-  const isShopFirstRender     = useRef(true);
-
-  // ── Shop hover helpers — close delay prevents gap-flicker ────────────────
-  const openShopMenu = () => {
-    if (shopTimerRef.current) clearTimeout(shopTimerRef.current);
-    setOpenShop(true);
-  };
-  const closeShopMenu = () => {
-    shopTimerRef.current = setTimeout(() => setOpenShop(false), 130);
-  };
 
   // ── Route change: close all panels ───────────────────────────────────────
   useEffect(() => {
@@ -115,7 +98,6 @@ export default function Navbar() {
     setOpenLang(false);
     setOpenMobileLang(false);
     setOpenProfile(false);
-    setOpenShop(false);
   }, [pathname]);
 
   // ── Scroll lock for mobile overlays ──────────────────────────────────────
@@ -132,7 +114,6 @@ export default function Navbar() {
     setOpenLang(false);
     setOpenMobileLang(false);
     setOpenProfile(false);
-    setOpenShop(false);
   };
 
   // ── Escape key: close any open panel ─────────────────────────────────────
@@ -159,7 +140,6 @@ export default function Navbar() {
     gsap.set(drawerBackdropRef.current,  { autoAlpha: 0 });
     gsap.set(profilePanelRef.current,    { autoAlpha: 0, y: -8 });
     gsap.set(profileBackdropRef.current, { autoAlpha: 0 });
-    gsap.set(shopPanelRef.current,       { autoAlpha: 0, y: -6 });
   }, []);
 
   // ── Header entrance ───────────────────────────────────────────────────────
@@ -270,40 +250,6 @@ export default function Navbar() {
     };
   }, [openProfile]);
 
-  // ── Shop dropdown ─────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (isShopFirstRender.current) {
-      isShopFirstRender.current = false;
-      return;
-    }
-    const panel   = shopPanelRef.current;
-    const reduced = prefersReducedMotion();
-    if (openShop) {
-      if (reduced) {
-        gsap.set(panel, { autoAlpha: 1, y: 0 });
-      } else {
-        gsap.fromTo(
-          panel,
-          { autoAlpha: 0, y: -6 },
-          { autoAlpha: 1, y: 0, duration: 0.22, ease: ease.smooth }
-        );
-      }
-    } else {
-      if (reduced) {
-        gsap.set(panel, { autoAlpha: 0, y: -6 });
-      } else {
-        gsap.to(panel, {
-          autoAlpha: 0,
-          y: -6,
-          duration: 0.16,
-          ease: ease.sharp,
-          onInterrupt: () => { gsap.set(panel, { autoAlpha: 0 }); },
-        });
-      }
-    }
-    return () => { gsap.killTweensOf(panel); };
-  }, [openShop]);
-
   // ── Mobile drawer ─────────────────────────────────────────────────────────
   // Open:  slides in from right with expo.out deceleration.
   // Close: slides back out with power2.in, then hides via onComplete.
@@ -383,63 +329,6 @@ export default function Navbar() {
             <nav className="hidden items-center justify-center lg:flex">
               <div className="flex items-center rounded-2xl px-2 py-1">
                 {navItems.map((item) => {
-                  if (item.children) {
-                    const isActive = item.children.some((c) => pathname === c.href || pathname.startsWith(c.href + "/"));
-                    return (
-                      <div
-                        key={item.label}
-                        className="relative"
-                        onMouseEnter={openShopMenu}
-                        onMouseLeave={closeShopMenu}
-                      >
-                        <button
-                          type="button"
-                          className={`tesla-nav-link flex items-center gap-0.5 ${isActive || openShop ? "tesla-nav-link-active" : ""}`}
-                        >
-                          {item.label}
-                          <ChevronDown
-                            size={12}
-                            strokeWidth={2.2}
-                            className={`transition-transform duration-200 ${openShop ? "rotate-180" : ""}`}
-                          />
-                        </button>
-
-                        {/* Dropdown panel — JS state + GSAP, pt-3 creates seamless hover bridge */}
-                        <div
-                          ref={shopPanelRef}
-                          className="absolute left-1/2 top-full z-50 w-[240px] -translate-x-1/2 pt-3"
-                          style={{ visibility: "hidden" }}
-                          onMouseEnter={openShopMenu}
-                          onMouseLeave={closeShopMenu}
-                        >
-                          <div className="overflow-hidden rounded-[16px] border border-black/[0.07] bg-white shadow-[0_16px_40px_rgba(0,0,0,0.12)] backdrop-blur-xl">
-                            {/* Orange → green gradient accent bar */}
-                            <div className="h-[3px] w-full bg-gradient-to-r from-[#f4511e] via-[#f4511e]/60 to-[#10b981]" />
-                            <div className="p-2">
-                              {item.children.map((child) => (
-                                <Link
-                                  key={child.href}
-                                  href={child.href}
-                                  className="flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-[0.875rem] font-semibold text-black/70 transition-all duration-150 hover:bg-black/[0.04] hover:text-black"
-                                >
-                                  <span
-                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
-                                    style={{ backgroundColor: `${child.accent}18` }}
-                                  >
-                                    <span
-                                      className="h-2 w-2 rounded-full"
-                                      style={{ backgroundColor: child.accent }}
-                                    />
-                                  </span>
-                                  {child.label}
-                                </Link>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  }
                   const isActive = pathname === item.href;
                   return (
                     <Link
@@ -699,31 +588,6 @@ export default function Navbar() {
               {/* Nav links */}
               <div className="flex flex-col gap-1">
                 {navItems.map((item) => {
-                  if (item.children) {
-                    return (
-                      <div key={item.label}>
-                        <p className="mb-1 px-4 pt-1 text-[0.7rem] font-bold uppercase tracking-[0.22em] text-black/35">
-                          {item.label}
-                        </p>
-                        {item.children.map((child) => {
-                          const isChildActive = pathname === child.href || pathname.startsWith(child.href + "/");
-                          return (
-                            <Link
-                              key={child.href}
-                              href={child.href}
-                              onClick={closeAll}
-                              className={`tesla-mobile-link pl-7 ${isChildActive ? "tesla-mobile-link-active" : ""}`}
-                            >
-                              <span className="flex items-center gap-2.5">
-                                <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: child.accent }} />
-                                {child.label}
-                              </span>
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    );
-                  }
                   const isActive = pathname === item.href;
                   return (
                     <Link
