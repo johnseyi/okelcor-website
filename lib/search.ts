@@ -82,7 +82,7 @@ const MAX_ARTICLES = 4;
 export function search(query: string, locale: Locale): SearchResults {
   const tokens = tokenize(query);
 
-  if (tokens.length === 0 || query.trim().length < 3) {
+  if (tokens.length === 0) {
     return { products: [], articles: [], total: 0 };
   }
 

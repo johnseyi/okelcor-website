@@ -54,7 +54,7 @@ export function SearchProvider({ children }: { children: ReactNode }) {
   // Debounced API search with local fallback
   useEffect(() => {
     const trimmed = query.trim();
-    if (!trimmed || trimmed.length < 3) {
+    if (!trimmed) {
       setResults(EMPTY);
       return;
     }
@@ -97,7 +97,7 @@ export function SearchProvider({ children }: { children: ReactNode }) {
       } finally {
         setIsSearching(false);
       }
-    }, 500);
+    }, 300);
 
     return () => clearTimeout(timer);
   }, [query, locale]);

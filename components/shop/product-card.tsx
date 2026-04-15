@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import type { Product } from "./data";
 export type { Product } from "./data";
 import { useLanguage } from "@/context/language-context";
@@ -24,13 +23,11 @@ export default function ProductCard({ product }: { product: Product }) {
 
       <div className="relative aspect-[4/3] overflow-hidden bg-[#e0e0e0]">
         {product.image ? (
-          <Image
+          <img
             src={product.image}
             alt={`${product.brand} ${product.name}`}
-            fill
-            className="object-contain p-3 transition-transform duration-700 ease-in-out group-hover:scale-[1.08] lg:group-hover:scale-[1.1]"
-            sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
             loading="lazy"
+            className="h-full w-full object-contain p-3 transition-transform duration-700 ease-in-out group-hover:scale-[1.08] lg:group-hover:scale-[1.1]"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-[#d8d8d8] text-[0.65rem] font-bold uppercase tracking-widest text-[#aaa]">
