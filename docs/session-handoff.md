@@ -111,7 +111,121 @@ ease.sharp     "power2.inOut" — toggles/accordions
 
 ---
 
-## Completed in Latest Session — FET Engine Treatment Product Line (2026-04-14 → 2026-04-15)
+## Completed in Latest Session — FET Nav, Hero Slider & ROI Strip (2026-04-15)
+
+### Navbar — Shop Dropdown Removed, FET Standalone Link Added
+
+**File:** `components/navbar.tsx`
+
+The Shop dropdown/submenu has been removed entirely in favour of a flat navigation structure.
+
+| Change | Detail |
+|---|---|
+| Shop → direct link | `href="/shop"` — no dropdown, no children |
+| FET standalone link | Added `{ label: "FET", href: "/fet" }` as its own nav item |
+| Nav order | Home / Shop / FET / News / About / Contact / Quote |
+| Mobile drawer | Same flat structure — no sub-labels or indented links |
+
+**Removed from navbar:**
+- `openShop` state, `shopPanelRef`, `shopTimerRef`, `isShopFirstRender` refs
+- `openShopMenu()` / `closeShopMenu()` helpers
+- Shop dropdown GSAP `useEffect`
+- `ChevronDown` import (was only used by the dropdown)
+- `NavChild` type and `children?` field from `NavItem`
+
+---
+
+### Hero Slider — Hardcoded FET Slide + Per-Slide Duration
+
+**File:** `components/hero.tsx`  
+**File:** `app/globals.css`
+
+#### Slot-based slide ordering
+
+Replaced the single `FET_INDEX = apiCount` approach with a `DisplaySlot[]` array built by `buildDisplaySlots(apiCount)`:
+
+| API slide count | Display sequence |
+|---|---|
+| 0 | `[FET]` |
+| 1 | `[api[0], FET]` |
+| 2+ | `[api[0], FET, api[1], …, api[n-1], FET]` |
+
+FET appears at **index 1** (users see it early) and again as the **last slide** (users see it before the loop restarts). All slide count, pagination dots, and arrow navigation derive from `displaySlots.length` automatically.
+
+#### FET slide content
+
+```ts
+const FET_SLIDE = {
+  label:    "Also Available",
+  title:    "FET Engine Treatment",
+  subtitle: "Save fuel, improve performance and reduce emissions for any vehicle or fleet.",
+  videoSrc: "/videos/fet-hero.mp4",
+}
+```
+
+- Green pill badge (`#22c55e`) replaces the orange dot on the FET slide
+- CTAs: **"Learn More"** → `/fet` (green outlined) · **"Request a Quote"** → `/quote` (orange filled)
+
+#### Per-slide autoplay duration
+
+Switched from `setInterval` (fixed 5 000 ms) to `setTimeout` re-created on every `index` change:
+- **FET slides:** 8 000 ms (more copy to read)
+- **All other slides:** 6 000 ms
+
+#### `.tesla-hero-btn-fet` CSS class (fixed)
+
+Added to `globals.css`. Was previously missing from three shared selectors, causing it to render without proper sizing:
+
+| Selector | Fix |
+|---|---|
+| Base `.tesla-hero-btn-primary, .tesla-hero-btn-secondary` | Added `.tesla-hero-btn-fet` |
+| `@media (min-width: 640px)` responsive block | Added `.tesla-hero-btn-fet` |
+| `@media (max-width: 768px)` mobile block | Added `.tesla-hero-btn-fet` |
+| `:focus-visible` white-ring group | Added `.tesla-hero-btn-fet:focus-visible` |
+
+Unique styles kept in a separate block: `background: transparent`, `color: #22c55e`, `border: 2px solid #22c55e`; hover fills green.
+
+---
+
+### FET ROI Calculator Strip — New Homepage Section
+
+**File:** `components/fet-roi-strip.tsx` (new — `"use client"`)  
+**File:** `app/page.tsx` (added `<FetRoiStrip />` after `<FetTeaser />`)
+
+Two-column dark section placed between `<FetTeaser />` and `<Logistics />` on the homepage.
+
+#### Left column — copy
+- Green pill badge: "FET Engine Treatment"
+- Heading: "How much could you save?"
+- Subtext paragraph
+- "See full details →" link to `/fet`
+
+#### Right column — live calculator
+
+| Input | Detail |
+|---|---|
+| Vehicle type | 4-button grid: Passenger Car (€299) / Van SUV (€399) / Truck 18t (€499) / Truck 40t (€599) |
+| Annual km | Number input; default pre-filled per vehicle (15 000 / 30 000 / 80 000 / 100 000) |
+| Fuel price | Number input, default €1.65/L |
+| FET device cost | Read-only, auto-populated from selected vehicle |
+| Fuel savings | Slider 8–15%, default 10% |
+
+**Calculation formula** (same as `/fet` amortization calculator):
+```
+annualLitres   = (consumption / 100) × km
+annualFuelCost = annualLitres × fuelPrice
+annualSavings  = annualFuelCost × (savingsPct / 100)
+paybackMonths  = (fetCost / annualSavings) × 12
+```
+
+Live results panel: **Annual Savings** (large green number, `#10b981`) + **Payback Period** (white).  
+CTA: "Request a Quote →" solid green button → `/quote`.
+
+**Theme:** `#0a0f1e` background, `#10b981` accent, white text — visually separates from the Okelcor orange sections above and below it.
+
+---
+
+## Completed in Previous Session — FET Engine Treatment Product Line (2026-04-14 → 2026-04-15)
 
 ### New Product Line: FET Engine Treatment
 
