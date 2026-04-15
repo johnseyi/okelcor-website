@@ -15,7 +15,7 @@ type HeroProps = {
 
 const FET_SLIDE = {
   label:    "Also Available",
-  title:    "",
+  title:    "FET Engine Treatment",
   subtitle: "Save fuel, improve performance and reduce emissions for any vehicle or fleet.",
   videoSrc: "/videos/video with fx desktop.mp4",
 } as const;
@@ -358,7 +358,7 @@ export default function Hero({ slides: apiSlides }: HeroProps) {
 
                   <div
                     ref={buttonsRef}
-                    className="mt-4 flex flex-wrap justify-center gap-3"
+                    className="mt-6 flex flex-wrap justify-center gap-3"
                   >
                     {isFetSlide ? (
                       <>

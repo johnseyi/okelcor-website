@@ -73,17 +73,10 @@ export default function FetPage() {
           {/* Badge */}
           <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-[#22c55e]/20 px-4 py-1.5 ring-1 ring-[#22c55e]/30 backdrop-blur-sm">
             <span className="h-1.5 w-1.5 rounded-full bg-[#22c55e]" />
-            <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#22c55e]">
-              Fuel Efficiency Technology
-            </span>
+           
           </div>
 
-          <h1 className="text-4xl font-extrabold leading-[1.04] tracking-tight text-white sm:text-5xl md:text-6xl">
-            
-          </h1>
-          <p className="mt-5 text-[1.1rem] leading-7 text-white/70 sm:text-[1.2rem]">
-            Save Fuel. Improve Performance. Reduce Emissions.
-          </p>
+          
 
           {/* Benefit pills */}
           <div className="mt-8 flex flex-wrap justify-center gap-2.5">
