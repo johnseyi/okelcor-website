@@ -35,7 +35,7 @@ export default function TyreHighlightsSection() {
                 <p className="mt-3 text-[0.92rem] leading-7 text-[var(--muted)]">
                   {t.used.body}
                 </p>
-                <div className="mt-5 flex flex-wrap gap-3">
+                <div className="mt-4 flex flex-wrap gap-3">
                   <Link
                     href="/shop"
                     className="inline-flex h-[48px] items-center justify-center rounded-full bg-[var(--primary)] px-5 text-[0.88rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
@@ -72,7 +72,7 @@ export default function TyreHighlightsSection() {
                 <p className="mt-3 text-[0.92rem] leading-7 text-[var(--muted)]">
                   {t.tbr.body}
                 </p>
-                <div className="mt-5">
+                <div className="mt-4">
                   <Link
                     href="/quote"
                     className="inline-flex h-[48px] items-center justify-center rounded-full bg-[var(--primary)] px-5 text-[0.88rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"

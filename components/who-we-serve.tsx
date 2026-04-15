@@ -40,7 +40,7 @@ export default function WhoWeServeSection() {
                 <p className="mt-2 max-w-[480px] text-[0.92rem] leading-6 text-white/80">
                   {t.whoWeServe.business.body}
                 </p>
-                <div className="mt-5">
+                <div className="mt-4">
                   <Link
                     href="/quote"
                     className="inline-flex h-[48px] items-center justify-center rounded-full bg-[var(--primary)] px-6 text-[0.88rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
@@ -68,7 +68,7 @@ export default function WhoWeServeSection() {
                 <p className="mt-2 max-w-[480px] text-[0.92rem] leading-6 text-white/80">
                   {t.whoWeServe.driver.body}
                 </p>
-                <div className="mt-5">
+                <div className="mt-4">
                   <Link
                     href="/shop"
                     className="inline-flex h-[48px] items-center justify-center rounded-full border border-white/80 bg-white px-6 text-[0.88rem] font-semibold text-[var(--foreground)] transition hover:bg-white/90"

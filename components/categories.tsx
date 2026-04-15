@@ -95,7 +95,7 @@ function CategoryCard({
             {card.subtitle}
           </p>
 
-          <div className="mt-5 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap gap-2">
             <Link
               href="/quote"
               className="inline-flex h-[48px] items-center justify-center rounded-full bg-[var(--primary)] px-6 text-[1rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
@@ -220,7 +220,7 @@ export default function Categories() {
   };
 
   return (
-    <section className="w-full bg-[#f5f5f5] py-8 md:py-10">
+    <section className="w-full bg-[#f5f5f5] py-6 md:py-8">
       <div className="tesla-shell">
         <div ref={headingRef} className="mb-6 px-1">
           <p className="text-[13px] font-bold uppercase tracking-[0.28em] text-[var(--primary)]">

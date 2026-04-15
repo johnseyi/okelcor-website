@@ -19,7 +19,7 @@ export default function WhyOkelcor() {
             <p className="mt-3 text-[1rem] leading-7 text-[var(--muted)]">
               {t.why.card1.body}
             </p>
-            <div className="mt-6">
+            <div className="mt-4">
               <Link
                 href="/about"
                 className="inline-flex h-[48px] items-center justify-center rounded-full bg-[var(--primary)] px-6 text-[14px] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
@@ -47,7 +47,7 @@ export default function WhyOkelcor() {
             <p className="mt-3 text-[1rem] leading-7 text-[var(--muted)]">
               {t.why.card2.body}
             </p>
-            <div className="mt-6">
+            <div className="mt-4">
               <Link
                 href="/quote"
                 className="inline-flex h-[48px] items-center justify-center rounded-full bg-[var(--primary)] px-6 text-[14px] font-semibold text-white transition hover:bg-[var(--primary-hover)]"

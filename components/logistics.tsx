@@ -36,7 +36,7 @@ export default function Logistics() {
                 {t.logistics.body}
               </p>
 
-              <div className="mt-6 flex flex-wrap gap-3">
+              <div className="mt-4 flex flex-wrap gap-3">
                 <Link
                   href="/quote"
                   className="inline-flex h-[48px] items-center justify-center rounded-full bg-[var(--primary)] px-6 text-[14px] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
@@ -87,7 +87,7 @@ export default function Logistics() {
                 {t.logistics.distBody}
               </p>
 
-              <div className="mt-6">
+              <div className="mt-4">
                 <Link
                   href="/contact"
                   className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white px-6 py-3 text-[14px] font-semibold text-black transition hover:bg-[#f8f8f8]"

@@ -72,7 +72,7 @@ export default function Brands({ brands: apiBrands }: BrandsProps) {
               ))}
             </StaggerParent>
 
-            <div className="mt-8">
+            <div className="mt-6">
               <Link
                 href="/shop"
                 className="inline-flex h-[48px] items-center justify-center rounded-full border border-black/10 bg-white px-6 text-[14px] font-semibold text-[var(--foreground)] transition hover:bg-[#f8f8f8]"
@@ -101,7 +101,7 @@ export default function Brands({ brands: apiBrands }: BrandsProps) {
                 Built for global tyre distribution.
               </h3>
 
-              <div className="mt-6 flex flex-wrap gap-3">
+              <div className="mt-4 flex flex-wrap gap-3">
                 <Link
                   href="/shop"
                   className="inline-flex h-[48px] items-center justify-center rounded-full bg-[var(--primary)] px-6 text-[14px] font-semibold text-white transition hover:bg-[var(--primary-hover)]"

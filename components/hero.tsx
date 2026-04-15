@@ -358,7 +358,7 @@ export default function Hero({ slides: apiSlides }: HeroProps) {
 
                   <div
                     ref={buttonsRef}
-                    className="mt-6 flex flex-wrap justify-center gap-3"
+                    className="mt-4 flex flex-wrap justify-center gap-3"
                   >
                     {isFetSlide ? (
                       <>
