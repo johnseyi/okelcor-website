@@ -15,7 +15,7 @@ type HeroProps = {
 
 const FET_SLIDE = {
   label:    "Also Available",
-  title:    "FET Engine Treatment",
+  title:    "",
   subtitle: "Save fuel, improve performance and reduce emissions for any vehicle or fleet.",
   videoSrc: "/videos/video with fx desktop.mp4",
 } as const;
