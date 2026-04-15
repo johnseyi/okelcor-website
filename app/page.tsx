@@ -15,6 +15,7 @@ import CategoriesSection from "@/components/home/categories-section";
 import BrandsSection from "@/components/home/brands-section";
 import FetTeaser from "@/components/fet-teaser";
 import FetRoiStrip from "@/components/fet-roi-strip";
+import FetProof from "@/components/fet-proof";
 import {
   HeroSkeleton,
   CategoriesSkeleton,
@@ -61,6 +62,7 @@ export default function Home() {
 
       <FetTeaser />
       <FetRoiStrip />
+      <FetProof />
 
       <Logistics />
       <TyreHighlightsSection />
