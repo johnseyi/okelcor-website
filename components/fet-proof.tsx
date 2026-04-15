@@ -28,7 +28,7 @@ export default function FetProof() {
           {/* Before */}
           <div className="relative overflow-hidden rounded-[18px]">
             <video
-              src="/videos/fet-before.mp4"
+              src="/videos/fet-before-web.mp4"
               autoPlay
               muted
               loop
@@ -44,7 +44,7 @@ export default function FetProof() {
           {/* After */}
           <div className="relative overflow-hidden rounded-[18px]">
             <video
-              src="/videos/fet-after.mp4"
+              src="/videos/fet-after-web.mp4"
               autoPlay
               muted
               loop

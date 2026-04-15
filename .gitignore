@@ -43,3 +43,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Large raw video files — keep compressed -web.mp4 versions only
+public/videos/fet-before.mp4
+public/videos/fet-after.MP4
+public/videos/fet-after.mp4
