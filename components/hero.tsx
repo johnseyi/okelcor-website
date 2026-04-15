@@ -13,11 +13,21 @@ type HeroProps = {
   slides?: HeroSlide[];
 };
 
+// Hardcoded FET slide — always appended as the last slide.
+const FET_SLIDE = {
+  label:    "Also Available",
+  title:    "FET Engine Treatment",
+  subtitle: "Save fuel, improve performance and reduce emissions for any vehicle or fleet.",
+  videoSrc: "/videos/fet-hero.mp4",
+} as const;
+
 export default function Hero({ slides: apiSlides }: HeroProps) {
   const { t } = useLanguage();
-  // When API has no slides, render 1 slot so the layout/animations don't break.
-  // The slot shows a branded gradient background with no image.
-  const slideCount = apiSlides?.length ?? 1;
+  // API slides + 1 hardcoded FET slide at the end.
+  // When API has no slides, apiCount is 0; slideCount is still 1 (the FET slide).
+  const apiCount  = apiSlides?.length ?? 0;
+  const slideCount = apiCount + 1;
+  const FET_INDEX  = apiCount; // 0-based last position
 
   const [index, setIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -185,16 +195,20 @@ export default function Hero({ slides: apiSlides }: HeroProps) {
     };
   }, [index]);
 
-  // Slide text comes entirely from the API/admin panel.
-  const slideText = {
-    label:    apiSlides?.[index]?.label    ?? "",
-    title:    apiSlides?.[index]?.title    ?? "",
-    subtitle: apiSlides?.[index]?.subtitle ?? "",
-  };
+  const isFetSlide = index === FET_INDEX;
+
+  const slideText = isFetSlide
+    ? { label: FET_SLIDE.label, title: FET_SLIDE.title, subtitle: FET_SLIDE.subtitle }
+    : {
+        label:    apiSlides?.[index]?.label    ?? "",
+        title:    apiSlides?.[index]?.title    ?? "",
+        subtitle: apiSlides?.[index]?.subtitle ?? "",
+      };
 
   const getSlideMedia = (
     i: number
   ): { type: "image" | "video" | "none"; src: string } => {
+    if (i === FET_INDEX) return { type: "video", src: FET_SLIDE.videoSrc };
     const slide = apiSlides?.[i];
     if (!slide) return { type: "none", src: "" };
     if (slide.media_type === "video" && slide.video_url && !videoErrors.has(i)) {
@@ -288,9 +302,17 @@ export default function Hero({ slides: apiSlides }: HeroProps) {
               <div className="flex flex-col items-center">
                   <span
                     ref={labelRef}
-                    className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.22em] text-white/90 backdrop-blur-sm"
+                    className={`mb-4 inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.22em] backdrop-blur-sm ${
+                      isFetSlide
+                        ? "border-[#22c55e]/40 bg-[#22c55e]/15 text-[#22c55e]"
+                        : "border-white/20 bg-white/10 text-white/90"
+                    }`}
                   >
-                    <span className="h-1.5 w-1.5 rounded-full bg-[var(--primary)]" aria-hidden="true" />
+                    <span
+                      className="h-1.5 w-1.5 rounded-full"
+                      style={{ backgroundColor: isFetSlide ? "#22c55e" : "var(--primary)" }}
+                      aria-hidden="true"
+                    />
                     {slideText.label}
                   </span>
 
@@ -312,16 +334,33 @@ export default function Hero({ slides: apiSlides }: HeroProps) {
                     ref={buttonsRef}
                     className="mt-6 flex flex-wrap justify-center gap-3"
                   >
-                    <MagneticButton>
-                      <Link href="/quote" className="tesla-hero-btn-primary">
-                        {t.hero.ctaPrimary}
-                      </Link>
-                    </MagneticButton>
-                    <MagneticButton>
-                      <Link href="/shop" className="tesla-hero-btn-secondary">
-                        {t.hero.ctaSecondary}
-                      </Link>
-                    </MagneticButton>
+                    {isFetSlide ? (
+                      <>
+                        <MagneticButton>
+                          <Link href="/fet" className="tesla-hero-btn-fet">
+                            Learn More
+                          </Link>
+                        </MagneticButton>
+                        <MagneticButton>
+                          <Link href="/quote" className="tesla-hero-btn-primary">
+                            Request a Quote
+                          </Link>
+                        </MagneticButton>
+                      </>
+                    ) : (
+                      <>
+                        <MagneticButton>
+                          <Link href="/quote" className="tesla-hero-btn-primary">
+                            {t.hero.ctaPrimary}
+                          </Link>
+                        </MagneticButton>
+                        <MagneticButton>
+                          <Link href="/shop" className="tesla-hero-btn-secondary">
+                            {t.hero.ctaSecondary}
+                          </Link>
+                        </MagneticButton>
+                      </>
+                    )}
                   </div>
                 </div>
             </div>
