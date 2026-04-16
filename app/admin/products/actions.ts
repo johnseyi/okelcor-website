@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
@@ -18,12 +18,9 @@ async function getToken(): Promise<string> {
 // ── Cache revalidation ────────────────────────────────────────────────────────
 
 /**
- * Bust every cached product fetch after any create / update / delete / import.
- * - revalidateTag("products") clears all apiFetch calls tagged "products"
- * - revalidatePath busts the ISR page cache for the public shop pages
+ * Bust the ISR page cache for all public shop pages after any product mutation.
  */
 function revalidateProducts(id?: number) {
-  revalidateTag("products");
   revalidatePath("/shop", "page");
   revalidatePath("/shop/[id]", "page");
   if (id) revalidatePath(`/shop/${id}`, "page");
