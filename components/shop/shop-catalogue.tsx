@@ -31,10 +31,11 @@ function toProduct(p: any): Product {
 
 // ── Fallback filter values (used until /products/specs loads) ─────────────────
 
-const FALLBACK_WIDTHS  = ["145","155","165","175","185","195","205","215","225","235","245","255","265","275","285","295","305","315","325","335","345","355","365","375","385","395","405","415","425","435","445","455"];
-const FALLBACK_HEIGHTS = ["25","30","35","40","45","50","55","60","65","70","75","80","85","90","95"];
-const FALLBACK_RIMS    = ["10","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","28","30"];
-const FALLBACK_SPEEDS  = ["F","G","H","J","K","L","M","N","P","Q","R","S","T","U","V","W","Y","Z"];
+const FALLBACK_WIDTHS       = ["145","155","165","175","185","195","205","215","225","235","245","255","265","275","285","295","305","315","325","335","345","355","365","375","385","395","405","415","425","435","445","455"];
+const FALLBACK_HEIGHTS      = ["25","30","35","40","45","50","55","60","65","70","75","80","85","90","95"];
+const FALLBACK_RIMS         = ["10","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","28","30"];
+const FALLBACK_LOAD_INDEXES = ["62","67","70","71","72","75","79","80","82","84","85","87","88","91","94","95","96","98","100","101","102","103","104","106","108","109","112","114","116","118","121","125","128","130"];
+const FALLBACK_SPEEDS       = ["F","G","H","J","K","L","M","N","P","Q","R","S","T","U","V","W","Y","Z"];
 
 const TYPES   = ["PCR", "TBR", "OTR", "Used"];
 const SEASONS = ["Summer", "Winter", "All Season"];
@@ -64,8 +65,9 @@ export default function ShopCatalogue() {
   const [selHeight,  setSelHeight]  = useState("");
   const [selRim,     setSelRim]     = useState("");
   const [selSeason,  setSelSeason]  = useState("");
-  const [selSpeed,   setSelSpeed]   = useState("");
-  const [sortBy,     setSortBy]     = useState("");
+  const [selSpeed,     setSelSpeed]     = useState("");
+  const [selLoad,      setSelLoad]      = useState("");
+  const [sortBy,       setSortBy]       = useState("");
 
   // ── Results ──────────────────────────────────────────────────────────────────
   const [products,    setProducts]    = useState<Product[]>([]);
@@ -74,11 +76,12 @@ export default function ShopCatalogue() {
   const [resultCount, setResultCount] = useState(0);
 
   // ── Dynamic filter options ───────────────────────────────────────────────────
-  const [brands,  setBrands]  = useState<string[]>([]);
-  const [widths,  setWidths]  = useState<string[]>(FALLBACK_WIDTHS);
-  const [heights, setHeights] = useState<string[]>(FALLBACK_HEIGHTS);
-  const [rims,    setRims]    = useState<string[]>(FALLBACK_RIMS);
-  const [speeds,  setSpeeds]  = useState<string[]>(FALLBACK_SPEEDS);
+  const [brands,      setBrands]      = useState<string[]>([]);
+  const [widths,      setWidths]      = useState<string[]>(FALLBACK_WIDTHS);
+  const [heights,     setHeights]     = useState<string[]>(FALLBACK_HEIGHTS);
+  const [rims,        setRims]        = useState<string[]>(FALLBACK_RIMS);
+  const [loadIndexes, setLoadIndexes] = useState<string[]>(FALLBACK_LOAD_INDEXES);
+  const [speeds,      setSpeeds]      = useState<string[]>(FALLBACK_SPEEDS);
 
   // AbortController ref so we can cancel in-flight fetches
   const abortRef = useRef<AbortController | null>(null);
@@ -98,10 +101,11 @@ export default function ShopCatalogue() {
     fetch(`${API_URL}/products/specs`, { cache: "no-store" })
       .then((r) => r.json())
       .then((json) => {
-        if (json.data?.widths?.length)  setWidths(json.data.widths);
-        if (json.data?.heights?.length) setHeights(json.data.heights);
-        if (json.data?.rims?.length)    setRims(json.data.rims);
-        if (json.data?.speeds?.length)  setSpeeds(json.data.speeds);
+        if (json.data?.widths?.length)        setWidths(json.data.widths);
+        if (json.data?.heights?.length)       setHeights(json.data.heights);
+        if (json.data?.rims?.length)          setRims(json.data.rims);
+        if (json.data?.load_indexes?.length)  setLoadIndexes(json.data.load_indexes);
+        if (json.data?.speed_ratings?.length) setSpeeds(json.data.speed_ratings);
       })
       .catch(() => {}); // stays on hardcoded fallbacks if endpoint not yet available
   }, []);
@@ -111,7 +115,7 @@ export default function ShopCatalogue() {
   const runSearch = useCallback(() => {
     const hasInput =
       searchText.trim() || selType || selBrand ||
-      selWidth || selHeight || selRim || selSeason || selSpeed;
+      selWidth || selHeight || selRim || selSeason || selSpeed || selLoad;
     if (!hasInput) return;
 
     // Cancel any previous in-flight request
@@ -124,8 +128,9 @@ export default function ShopCatalogue() {
     if (selType)           params.set("type",   selType);
     if (selBrand)          params.set("brand",  selBrand);
     if (selSeason)         params.set("season", selSeason);
-    if (selSpeed)          params.set("speed",  selSpeed);
-    if (sortBy)            params.set("sort",   sortBy);
+    if (selSpeed)          params.set("speed",      selSpeed);
+    if (selLoad)           params.set("load_index", selLoad);
+    if (sortBy)            params.set("sort",       sortBy);
 
     // Build size string from width / height / rim components
     let sizeStr = "";
@@ -151,7 +156,7 @@ export default function ShopCatalogue() {
         if (err.name !== "AbortError") setProducts([]);
       })
       .finally(() => setIsLoading(false));
-  }, [searchText, selType, selBrand, selWidth, selHeight, selRim, selSeason, selSpeed, sortBy, locale]);
+  }, [searchText, selType, selBrand, selWidth, selHeight, selRim, selSeason, selSpeed, selLoad, sortBy, locale]);
 
   // Re-fetch when sort changes after results are already showing
   useEffect(() => {
@@ -162,7 +167,7 @@ export default function ShopCatalogue() {
   const reset = () => {
     setSearchText("");
     setSelType(""); setSelBrand(""); setSelWidth(""); setSelHeight("");
-    setSelRim(""); setSelSeason(""); setSelSpeed(""); setSortBy("");
+    setSelRim(""); setSelSeason(""); setSelSpeed(""); setSelLoad(""); setSortBy("");
     setHasSearched(false);
     setProducts([]);
     setResultCount(0);
@@ -170,7 +175,7 @@ export default function ShopCatalogue() {
 
   const hasActiveFilters =
     searchText.trim() || selType || selBrand ||
-    selWidth || selHeight || selRim || selSeason || selSpeed;
+    selWidth || selHeight || selRim || selSeason || selSpeed || selLoad;
 
   // ─────────────────────────────────────────────────────────────────────────────
 
@@ -250,6 +255,12 @@ export default function ShopCatalogue() {
             <select value={selSpeed} onChange={(e) => setSelSpeed(e.target.value)} className={sel}>
               <option value="">Speed</option>
               {speeds.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+
+            {/* Load index */}
+            <select value={selLoad} onChange={(e) => setSelLoad(e.target.value)} className={sel}>
+              <option value="">Load index</option>
+              {loadIndexes.map((l) => <option key={l} value={l}>{l}</option>)}
             </select>
 
             {/* Spacer */}
