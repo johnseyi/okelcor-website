@@ -48,6 +48,7 @@ async function fetchRelated(product: Product, locale: string, count = 3): Promis
     const res = await apiFetch<ApiProduct[]>("/products", {
       locale,
       revalidate: false,
+      params: { type: product.type }, // API requires at least one filter
     });
     if (!res.data?.length) throw new Error("empty");
     return res.data

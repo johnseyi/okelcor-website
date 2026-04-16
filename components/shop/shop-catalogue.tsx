@@ -1,15 +1,38 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  Search, SlidersHorizontal, X,
+  Search, SlidersHorizontal, X, Loader2,
   Sun, Snowflake, Layers,
   Car, Truck, Mountain, RotateCcw,
 } from "lucide-react";
 import FilterSidebar, { type FilterState } from "./filter-sidebar";
 import ProductGrid from "./product-grid";
-import { ALL_PRODUCTS, type Product } from "./data";
+import { type Product } from "./data";
 import { useLanguage } from "@/context/language-context";
+
+// ── API ───────────────────────────────────────────────────────────────────────
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function toProduct(p: any): Product {
+  const img = p.primary_image ?? p.image_url ?? p.image ?? p.images?.[0] ?? "";
+  return {
+    id:          p.id,
+    brand:       p.brand        ?? "",
+    name:        p.name         ?? "",
+    size:        p.size         ?? "",
+    spec:        p.spec         ?? "",
+    season:      p.season       ?? "",
+    type:        p.type         ?? "",
+    price:       Number(p.price ?? 0),
+    sku:         p.sku          ?? "",
+    description: p.description  ?? "",
+    image:       img,
+    images:      p.images?.length ? p.images : (img ? [img] : []),
+  };
+}
 
 // ── Discovery data ─────────────────────────────────────────────────────────────
 
@@ -19,9 +42,9 @@ const POPULAR_BRANDS = [
 ];
 
 const SEASONS = [
-  { label: "Summer Tyres",    value: "Summer",     icon: Sun,       desc: "High performance in warm conditions" },
-  { label: "Winter Tyres",    value: "Winter",     icon: Snowflake, desc: "Grip and safety in cold weather" },
-  { label: "All Season",      value: "All Season", icon: Layers,    desc: "Year-round versatility" },
+  { label: "Summer Tyres", value: "Summer",     icon: Sun,       desc: "High performance in warm conditions" },
+  { label: "Winter Tyres", value: "Winter",     icon: Snowflake, desc: "Grip and safety in cold weather" },
+  { label: "All Season",   value: "All Season", icon: Layers,    desc: "Year-round versatility" },
 ];
 
 const TYPES = [
@@ -33,69 +56,80 @@ const TYPES = [
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-type Props = {
-  /** Live products from the API — falls back to static ALL_PRODUCTS when empty/unavailable */
-  products?: Product[];
-};
+export default function ShopCatalogue() {
+  const { locale, t } = useLanguage();
 
-export default function ShopCatalogue({ products: apiProducts }: Props) {
-  const { t } = useLanguage();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filters, setFilters] = useState<FilterState>({
-    types: [],
-    brands: [],
-    seasons: [],
-  });
-  const [sortBy, setSortBy] = useState("default");
+  const [searchQuery, setSearchQuery]     = useState("");
+  const [filters, setFilters]             = useState<FilterState>({ types: [], brands: [], seasons: [] });
+  const [sortBy, setSortBy]               = useState("default");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+
+  // Live products fetched from the API
+  const [liveProducts, setLiveProducts]   = useState<Product[]>([]);
+  const [isLoading, setIsLoading]         = useState(false);
 
   const activeFilterCount =
     filters.types.length + filters.brands.length + filters.seasons.length;
 
   const hasSearched = searchQuery.trim().length > 0 || activeFilterCount > 0;
 
-  // Use whatever the API returned (even an empty array).
-  // Fall back to ALL_PRODUCTS only when the prop was never provided (undefined),
-  // which can only happen outside of the normal shop page flow.
-  const allProducts = apiProducts !== undefined ? apiProducts : ALL_PRODUCTS;
-
-  const filtered = useMemo(() => {
-    if (!hasSearched) return [];
-
-    let result = allProducts;
-
-    const q = searchQuery.trim().toLowerCase();
-    if (q) {
-      result = result.filter(
-        (p) =>
-          p.brand?.toLowerCase().includes(q) ||
-          p.name?.toLowerCase().includes(q) ||
-          p.size?.toLowerCase().includes(q) ||
-          p.type?.toLowerCase().includes(q)
-      );
+  // ── Fetch from API whenever search/filter state changes ──────────────────────
+  useEffect(() => {
+    if (!hasSearched) {
+      setLiveProducts([]);
+      return;
     }
 
-    if (filters.types.length > 0)
-      result = result.filter((p) => filters.types.includes(p.type));
-    if (filters.brands.length > 0)
+    const controller = new AbortController();
+    const params = new URLSearchParams();
+    params.set("locale", locale);
+
+    const q = searchQuery.trim();
+    if (q)                        params.set("q",      q);
+    if (filters.brands[0])        params.set("brand",  filters.brands[0]);
+    if (filters.types[0])         params.set("type",   filters.types[0]);
+    if (filters.seasons[0])       params.set("season", filters.seasons[0]);
+
+    setIsLoading(true);
+
+    fetch(`${API_URL}/products?${params.toString()}`, {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then((r) => r.json())
+      .then((json) => {
+        if (!Array.isArray(json.data)) { setLiveProducts([]); return; }
+        setLiveProducts(json.data.map(toProduct));
+      })
+      .catch((err) => {
+        if (err.name !== "AbortError") setLiveProducts([]);
+      })
+      .finally(() => setIsLoading(false));
+
+    return () => controller.abort();
+  }, [searchQuery, filters, hasSearched, locale]);
+
+  // ── Client-side sort + extra multi-select filtering ───────────────────────────
+  const filtered = useMemo(() => {
+    let result = liveProducts;
+
+    // Apply extra client-side filtering for multi-select (API received only first value)
+    if (filters.brands.length > 1)
       result = result.filter((p) => filters.brands.includes(p.brand));
-    if (filters.seasons.length > 0)
+    if (filters.types.length > 1)
+      result = result.filter((p) => filters.types.includes(p.type));
+    if (filters.seasons.length > 1)
       result = result.filter((p) => filters.seasons.includes(p.season));
 
-    if (sortBy === "price-asc") return [...result].sort((a, b) => a.price - b.price);
+    if (sortBy === "price-asc")  return [...result].sort((a, b) => a.price - b.price);
     if (sortBy === "price-desc") return [...result].sort((a, b) => b.price - a.price);
     return result;
-  }, [searchQuery, filters, sortBy, hasSearched, allProducts]);
+  }, [liveProducts, filters, sortBy]);
 
-  // ── Discovery helpers ────────────────────────────────────────────────────────
-
-  const selectBrand = (brand: string) => setSearchQuery(brand);
-
-  const selectSeason = (season: string) =>
-    setFilters((f) => ({ ...f, seasons: [season] }));
-
-  const selectType = (type: string) =>
-    setFilters((f) => ({ ...f, types: [type] }));
+  // ── Discovery click handlers ──────────────────────────────────────────────────
+  const selectBrand  = (brand: string)  => setSearchQuery(brand);
+  const selectSeason = (season: string) => setFilters((f) => ({ ...f, seasons: [season] }));
+  const selectType   = (type: string)   => setFilters((f) => ({ ...f, types: [type] }));
 
   // ─────────────────────────────────────────────────────────────────────────────
 
@@ -202,10 +236,16 @@ export default function ShopCatalogue({ products: apiProducts }: Props) {
             {/* Mobile filter toggle */}
             <div className="mb-5 flex items-center justify-between md:hidden">
               <p className="text-[0.9rem] text-[var(--muted)]">
-                <span className="font-semibold text-[var(--foreground)]">
-                  {filtered.length}
-                </span>{" "}
-                {filtered.length === 1 ? t.shop.catalogue.product : t.shop.catalogue.products}
+                {isLoading ? (
+                  <span className="flex items-center gap-1.5 text-[#5c5e62]">
+                    <Loader2 size={13} className="animate-spin" /> Searching…
+                  </span>
+                ) : (
+                  <>
+                    <span className="font-semibold text-[var(--foreground)]">{filtered.length}</span>{" "}
+                    {filtered.length === 1 ? t.shop.catalogue.product : t.shop.catalogue.products}
+                  </>
+                )}
               </p>
               <button
                 type="button"
@@ -230,12 +270,18 @@ export default function ShopCatalogue({ products: apiProducts }: Props) {
                 </div>
               </aside>
               <div className="min-w-0 flex-1">
-                <ProductGrid
-                  products={filtered}
-                  total={filtered.length}
-                  sortBy={sortBy}
-                  onSortChange={setSortBy}
-                />
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-24">
+                    <Loader2 size={28} className="animate-spin text-[#9ca3af]" />
+                  </div>
+                ) : (
+                  <ProductGrid
+                    products={filtered}
+                    total={filtered.length}
+                    sortBy={sortBy}
+                    onSortChange={setSortBy}
+                  />
+                )}
               </div>
             </div>
           </>
