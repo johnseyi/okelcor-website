@@ -98,12 +98,32 @@ export default function CsvActions() {
 
     setModal({ phase: "uploading" });
 
+    // Step 1 — get the bearer token from the httpOnly cookie via the token route
+    let token: string | null = null;
+    try {
+      const tokenRes = await fetch("/api/admin/token");
+      const tokenJson = await tokenRes.json().catch(() => ({}));
+      token = tokenJson.token ?? null;
+    } catch {
+      setModal({ phase: "error", message: "Network error — could not reach the server." });
+      return;
+    }
+
+    if (!token) {
+      setModal({ phase: "error", message: "Session expired — please refresh the page and log in again." });
+      return;
+    }
+
+    // Step 2 — POST directly to Laravel, bypassing Vercel's 4.5 MB body limit.
+    // Do NOT set Content-Type — the browser sets it automatically with the multipart boundary.
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
     const form = new FormData();
     form.append("file", file);
 
     try {
-      const res  = await fetch("/api/admin/products/import", {
+      const res = await fetch(`${apiUrl}/admin/products/import`, {
         method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
         body: form,
       });
 
