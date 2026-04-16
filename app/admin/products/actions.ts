@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
@@ -13,6 +13,21 @@ async function getToken(): Promise<string> {
   const token = cookieStore.get("admin_token")?.value;
   if (!token) redirect("/admin/login");
   return token;
+}
+
+// ── Cache revalidation ────────────────────────────────────────────────────────
+
+/**
+ * Bust every cached product fetch after any create / update / delete / import.
+ * - revalidateTag("products") clears all apiFetch calls tagged "products"
+ * - revalidatePath busts the ISR page cache for the public shop pages
+ */
+function revalidateProducts(id?: number) {
+  revalidateTag("products");
+  revalidatePath("/shop", "page");
+  revalidatePath("/shop/[id]", "page");
+  if (id) revalidatePath(`/shop/${id}`, "page");
+  revalidatePath("/admin/products");
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -57,7 +72,7 @@ export async function createProduct(
     return { error: json.message || `Failed to create product (HTTP ${res.status}).` };
   }
 
-  revalidatePath("/admin/products");
+  revalidateProducts();
   return { id: json.data?.id };
 }
 
@@ -87,10 +102,8 @@ export async function updateProduct(
     return { error: json.message || `Failed to update product (HTTP ${res.status}).` };
   }
 
+  revalidateProducts(id);
   revalidatePath(`/admin/products/${id}`);
-  revalidatePath("/admin/products");
-  revalidatePath("/shop", "page");
-  revalidatePath("/shop/[id]", "page");
   return {};
 }
 
@@ -114,7 +127,7 @@ export async function deleteProduct(
     return { error: json.message || `Failed to delete product (HTTP ${res.status}).` };
   }
 
-  revalidatePath("/admin/products");
+  revalidateProducts(id);
   return {};
 }
 
@@ -144,7 +157,7 @@ export async function toggleProductActive(
     return { error: json.message || "Failed to toggle product status." };
   }
 
-  revalidatePath("/admin/products");
+  revalidateProducts(id);
   return {};
 }
 
@@ -179,10 +192,8 @@ export async function uploadProductPrimaryImage(
     return { error: json.message || "Failed to upload primary image." };
   }
 
+  revalidateProducts(productId);
   revalidatePath(`/admin/products/${productId}`);
-  revalidatePath("/admin/products");
-  revalidatePath("/shop", "page");
-  revalidatePath("/shop/[id]", "page");
   return {};
 }
 
@@ -213,9 +224,8 @@ export async function uploadProductImages(
     return { error: json.message || "Failed to upload images." };
   }
 
+  revalidateProducts(productId);
   revalidatePath(`/admin/products/${productId}`);
-  revalidatePath("/shop", "page");
-  revalidatePath("/shop/[id]", "page");
   return {};
 }
 
@@ -240,6 +250,7 @@ export async function deleteProductImage(
     return { error: json.message || "Failed to delete image." };
   }
 
+  revalidateProducts(productId);
   revalidatePath(`/admin/products/${productId}`);
   return {};
 }
@@ -264,7 +275,7 @@ export async function restoreProduct(
     return { error: json.message || `Failed to restore product (HTTP ${res.status}).` };
   }
 
-  revalidatePath("/admin/products");
+  revalidateProducts(id);
   revalidatePath("/admin/products/trash");
   return {};
 }

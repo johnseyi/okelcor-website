@@ -17,6 +17,7 @@
 
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
@@ -58,6 +59,13 @@ export async function POST(request: NextRequest) {
   const json = await res.json().catch(() => ({
     error: "The server returned an unreadable response.",
   }));
+
+  if (res.ok) {
+    revalidateTag("products");
+    revalidatePath("/shop", "page");
+    revalidatePath("/shop/[id]", "page");
+    revalidatePath("/admin/products");
+  }
 
   return NextResponse.json(json, { status: res.status });
 }
