@@ -54,8 +54,10 @@ export default function ShopCatalogue({ products: apiProducts }: Props) {
 
   const hasSearched = searchQuery.trim().length > 0 || activeFilterCount > 0;
 
-  // Use live API products when available; static data is the last-resort fallback
-  const allProducts = apiProducts?.length ? apiProducts : ALL_PRODUCTS;
+  // Use whatever the API returned (even an empty array).
+  // Fall back to ALL_PRODUCTS only when the prop was never provided (undefined),
+  // which can only happen outside of the normal shop page flow.
+  const allProducts = apiProducts !== undefined ? apiProducts : ALL_PRODUCTS;
 
   const filtered = useMemo(() => {
     if (!hasSearched) return [];
