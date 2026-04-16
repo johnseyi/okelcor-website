@@ -37,7 +37,6 @@ const FALLBACK_RIMS         = ["10","12","13","14","15","16","17","18","19","20"
 const FALLBACK_LOAD_INDEXES = ["62","67","70","71","72","75","79","80","82","84","85","87","88","91","94","95","96","98","100","101","102","103","104","106","108","109","112","114","116","118","121","125","128","130"];
 const FALLBACK_SPEEDS       = ["F","G","H","J","K","L","M","N","P","Q","R","S","T","U","V","W","Y","Z"];
 
-const TYPES   = ["PCR", "TBR", "OTR", "Used"];
 const SEASONS = ["Summer", "Winter", "All Season"];
 
 const SORT_OPTIONS = [
@@ -59,7 +58,8 @@ export default function ShopCatalogue() {
 
   // ── Filter state ─────────────────────────────────────────────────────────────
   const [searchText, setSearchText] = useState("");
-  const [selType,    setSelType]    = useState("");
+  const [priceMin,   setPriceMin]   = useState("");
+  const [priceMax,   setPriceMax]   = useState("");
   const [selBrand,   setSelBrand]   = useState("");
   const [selWidth,   setSelWidth]   = useState("");
   const [selHeight,  setSelHeight]  = useState("");
@@ -114,7 +114,7 @@ export default function ShopCatalogue() {
 
   const runSearch = useCallback(() => {
     const hasInput =
-      searchText.trim() || selType || selBrand ||
+      searchText.trim() || priceMin || priceMax || selBrand ||
       selWidth || selHeight || selRim || selSeason || selSpeed || selLoad;
     if (!hasInput) return;
 
@@ -124,9 +124,10 @@ export default function ShopCatalogue() {
     abortRef.current = controller;
 
     const params = new URLSearchParams({ locale });
-    if (searchText.trim()) params.set("q",      searchText.trim());
-    if (selType)           params.set("type",   selType);
-    if (selBrand)          params.set("brand",  selBrand);
+    if (searchText.trim()) params.set("q",          searchText.trim());
+    if (priceMin)          params.set("price_min",  priceMin);
+    if (priceMax)          params.set("price_max",  priceMax);
+    if (selBrand)          params.set("brand",      selBrand);
     if (selSeason)         params.set("season", selSeason);
     if (selSpeed)          params.set("speed",      selSpeed);
     if (selLoad)           params.set("load_index", selLoad);
@@ -156,7 +157,7 @@ export default function ShopCatalogue() {
         if (err.name !== "AbortError") setProducts([]);
       })
       .finally(() => setIsLoading(false));
-  }, [searchText, selType, selBrand, selWidth, selHeight, selRim, selSeason, selSpeed, selLoad, sortBy, locale]);
+  }, [searchText, priceMin, priceMax, selBrand, selWidth, selHeight, selRim, selSeason, selSpeed, selLoad, sortBy, locale]);
 
   // Re-fetch when sort changes after results are already showing
   useEffect(() => {
@@ -166,7 +167,7 @@ export default function ShopCatalogue() {
 
   const reset = () => {
     setSearchText("");
-    setSelType(""); setSelBrand(""); setSelWidth(""); setSelHeight("");
+    setPriceMin(""); setPriceMax(""); setSelBrand(""); setSelWidth(""); setSelHeight("");
     setSelRim(""); setSelSeason(""); setSelSpeed(""); setSelLoad(""); setSortBy("");
     setHasSearched(false);
     setProducts([]);
@@ -174,7 +175,7 @@ export default function ShopCatalogue() {
   };
 
   const hasActiveFilters =
-    searchText.trim() || selType || selBrand ||
+    searchText.trim() || priceMin || priceMax || selBrand ||
     selWidth || selHeight || selRim || selSeason || selSpeed || selLoad;
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -215,15 +216,33 @@ export default function ShopCatalogue() {
           {/* Row 2 — dropdowns */}
           <div className="flex flex-wrap items-center gap-2 px-5 py-3">
 
-            {/* Type of use */}
-            <select value={selType} onChange={(e) => setSelType(e.target.value)} className={sel}>
-              <option value="">Type of use</option>
-              {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-            </select>
+            {/* Price range */}
+            <div className="flex h-10 min-w-0 flex-1 items-center gap-1 rounded-lg border border-[#e5e7eb] bg-white px-2 text-[0.82rem] text-[#374151] focus-within:border-[#f4511e] focus-within:ring-1 focus-within:ring-[#f4511e]/20 transition">
+              <span className="shrink-0 text-[#9ca3af]">€</span>
+              <input
+                type="number"
+                min="0"
+                value={priceMin}
+                onChange={(e) => setPriceMin(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && runSearch()}
+                placeholder="Min"
+                className="w-0 flex-1 bg-transparent outline-none placeholder:text-[#9ca3af]"
+              />
+              <span className="shrink-0 text-[#d1d5db]">–</span>
+              <input
+                type="number"
+                min="0"
+                value={priceMax}
+                onChange={(e) => setPriceMax(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && runSearch()}
+                placeholder="Max"
+                className="w-0 flex-1 bg-transparent outline-none placeholder:text-[#9ca3af]"
+              />
+            </div>
 
-            {/* Manufacturer */}
+            {/* Brand */}
             <select value={selBrand} onChange={(e) => setSelBrand(e.target.value)} className={sel}>
-              <option value="">Manufacturer</option>
+              <option value="">Brand</option>
               {brands.map((b) => <option key={b} value={b}>{b}</option>)}
             </select>
 
