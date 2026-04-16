@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Download, Upload, X, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 
@@ -31,9 +31,19 @@ export default function CsvActions() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [exporting, setExporting]   = useState(false);
+  const [exporting, setExporting]     = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
-  const [modal, setModal]           = useState<ModalState>({ phase: "idle" });
+  const [modal, setModal]             = useState<ModalState>({ phase: "idle" });
+
+  // Auto-close the modal 3 seconds after a successful import
+  useEffect(() => {
+    if (modal.phase !== "done") return;
+    const timer = setTimeout(() => {
+      setModal({ phase: "idle" });
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [modal.phase]);
 
   // ── Export ──────────────────────────────────────────────────────────────────
 
@@ -101,21 +111,18 @@ export default function CsvActions() {
         error: "Server returned an unreadable response.",
       }));
 
-      if (res.status === 401) {
-        router.push("/admin/login");
-        return;
-      }
-
       if (!res.ok) {
-        setModal({
-          phase: "error",
-          message: json.error ?? json.message ?? `Import failed (HTTP ${res.status}).`,
-        });
+        const msg =
+          res.status === 401
+            ? "Session expired — please refresh the page and log in again."
+            : json.error ?? json.message ?? `Import failed (HTTP ${res.status}).`;
+        setModal({ phase: "error", message: msg });
         return;
       }
 
+      // Success — refresh the products table immediately, then auto-close via useEffect
+      router.refresh();
       setModal({ phase: "done", result: json as ImportResult });
-      router.refresh(); // Refresh the server-rendered products table
     } catch {
       setModal({ phase: "error", message: "Network error — could not reach the server." });
     }
@@ -296,12 +303,15 @@ export default function CsvActions() {
                   </div>
                 )}
 
+                <p className="text-center text-[0.75rem] text-[#5c5e62]">
+                  Closing automatically in 3 seconds…
+                </p>
                 <button
                   type="button"
                   onClick={closeModal}
                   className="w-full rounded-full bg-[#171a20] py-3 text-[0.9rem] font-semibold text-white transition hover:bg-black"
                 >
-                  Done
+                  Close Now
                 </button>
               </div>
             )}
