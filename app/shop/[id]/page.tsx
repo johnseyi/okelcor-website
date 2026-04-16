@@ -38,8 +38,7 @@ async function fetchProduct(id: number, locale: string): Promise<Product | undef
   try {
     const res = await apiFetch<ApiProduct>(`/products/${id}`, {
       locale,
-      revalidate: 60,
-      tags: ["products", `product-${id}`, `products-${locale}`],
+      revalidate: false,
     });
     return res.data ? toProduct(res.data) : undefined;
   } catch {
@@ -52,8 +51,7 @@ async function fetchRelated(product: Product, locale: string, count = 3): Promis
   try {
     const res = await apiFetch<ApiProduct[]>("/products", {
       locale,
-      revalidate: 60,
-      tags: ["products", `products-${locale}`],
+      revalidate: false,
     });
     if (!res.data?.length) throw new Error("empty");
     return res.data
