@@ -25,14 +25,10 @@ function toProduct(p: ApiProduct): Product {
   };
 }
 
-// Pre-render static product IDs at build time.
-// New products added via the API CMS will be served on first request via ISR.
-export function generateStaticParams() {
-  return ALL_PRODUCTS.map((p) => ({ id: String(p.id) }));
-}
-
-// Allow product IDs beyond the static list to be rendered on demand.
-export const dynamicParams = true;
+// Always render dynamically — product data must never be baked at build time
+// because the API returns Cache-Control: no-store and products can be deleted
+// or updated at any time via the admin CMS.
+export const dynamic = "force-dynamic";
 
 async function fetchProduct(id: number, locale: string): Promise<Product | undefined> {
   try {

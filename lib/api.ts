@@ -165,10 +165,13 @@ export async function apiFetch<T>(
     Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   }
 
-  // Build Next.js fetch cache options
+  // Build Next.js fetch cache options.
+  // revalidate: false  → cache: 'no-store' (always fresh — must be top-level, NOT inside next:{})
+  // revalidate: number → next: { revalidate: n }  (ISR)
+  // revalidate: omitted → Next.js default (force-cache in production)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const nextCacheOptions: Record<string, any> = {};
-  if (revalidate !== undefined) nextCacheOptions.revalidate = revalidate;
+  if (typeof revalidate === "number") nextCacheOptions.revalidate = revalidate;
   if (tags?.length) nextCacheOptions.tags = tags;
 
   const res = await fetch(url.toString(), {
@@ -178,7 +181,11 @@ export async function apiFetch<T>(
       Accept: "application/json",
     },
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
-    ...(Object.keys(nextCacheOptions).length
+    // no-store must be a top-level cache option — next: { revalidate: false } means
+    // "cache forever", which is the opposite of what we want.
+    ...(revalidate === false
+      ? { cache: "no-store" as const }
+      : Object.keys(nextCacheOptions).length
       ? { next: nextCacheOptions }
       : {}),
   });
