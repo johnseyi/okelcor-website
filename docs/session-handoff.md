@@ -11,10 +11,10 @@ Okelco is a **global tyre sourcing and supply company** specializing in:
 * TBR tyres
 * Logistics tyre supply
 * Wholesale tyre distribution
-* **FET Engine Treatment** (fuel efficiency device — second product line)
+* **Fuel Echo Tech** (fuel efficiency device — second product line, previously called "FET Engine Treatment")
 
 The design system follows a **Tesla-inspired layout structure**, adapted to the tyre industry.
-No backend currently exists. This is a **frontend-only implementation** with real email via Resend.
+The backend is a Laravel API at `https://api.okelcor.de/api/v1` — fully live.
 
 ---
 
@@ -43,7 +43,7 @@ Development environment: Windows 11, VS Code, Node.js / npm
 | Surface Grey | `#efefef` | — |
 | Page Background | `#f5f5f5` | — |
 
-### FET Engine Treatment Page (`/fet`) — separate design system
+### Fuel Echo Tech Page (`/fet`) — separate design system
 | Role | Value |
 |---|---|
 | Page background | `#f0f4f0` |
@@ -55,7 +55,7 @@ Development environment: Windows 11, VS Code, Node.js / npm
 | Results section bg | `#0d2b1a` (dark green) — white text |
 | CTA hover | `#16a34a` |
 
-**Rule:** The FET page uses its own green-based palette. Never apply `var(--primary)` (orange) to FET-specific UI. All other Okelcor pages remain completely unchanged.
+**Rule:** The Fuel Echo Tech page uses its own green-based palette. Never apply `var(--primary)` (orange) to FET-specific UI. All other Okelcor pages remain completely unchanged.
 
 ---
 
@@ -111,7 +111,113 @@ ease.sharp     "power2.inOut" — toggles/accordions
 
 ---
 
-## Completed in Latest Session — FET Nav, Hero Slider & ROI Strip (2026-04-15)
+## Completed in Latest Session — Shop Filter Bar, CSV Import/Export & Orders Admin (2026-04-16)
+
+### Fuel Echo Tech — Brand Rename
+
+All UI text instances of "FET Engine Treatment" have been replaced with **"Fuel Echo Tech"** across:
+
+| File | Change |
+|---|---|
+| `components/fet-teaser.tsx` | Badge + heading copy |
+| `components/fet-roi-strip.tsx` | Badge + heading copy |
+| `components/fet-proof.tsx` | All references |
+| `components/hero.tsx` | FET slide title |
+| `components/checkout/checkout-flow.tsx` | Any inline reference |
+| `app/fet/page.tsx` | Page-level copy |
+
+The short name "FET" and the page route `/fet` are unchanged.
+
+---
+
+### Shop Page — Professional Two-Row Filter Bar
+
+**File:** `components/shop/shop-catalogue.tsx` — full rewrite
+
+Replaced the original search bar + sidebar layout with a single compact filter card styled after Tyre100.com.
+
+#### Layout
+
+| Row | Contents |
+|---|---|
+| Row 1 | Text search input + orange **Search** button |
+| Row 2 | Dropdowns: **Min price / Max price / Brand / Width / Height / Rim / Season / Speed / Load index** + orange **Filter** button + **Reset** link |
+
+#### Data sources
+
+| Data | Source |
+|---|---|
+| Brands | `GET /products/brands` — fetched on mount; `string[]` in `json.data` |
+| Widths / Heights / Rims / Load indexes / Speed ratings | `GET /products/specs` — fetched on mount; `json.data.widths`, `.heights`, `.rims`, `.load_indexes`, `.speed_ratings` |
+| All spec fields | Hardcoded fallback arrays remain active if endpoint is unavailable |
+
+#### Query params sent to `GET /products`
+
+| Param | Source |
+|---|---|
+| `q` | Text search |
+| `price_min` | Min price dropdown (€29–€539, €10 steps) |
+| `price_max` | Max price dropdown (€29–€539, €10 steps) |
+| `brand` | Brand dropdown |
+| `size` | Built as `{width}/{height}R{rim}` e.g. `205/45R17` |
+| `season` | Season dropdown |
+| `speed` | Speed dropdown (maps to `speed_ratings` from specs endpoint) |
+| `load_index` | Load Index dropdown (maps to `load_indexes` from specs endpoint) |
+| `sort` | `price_asc` / `price_desc` / `newest` — passed from ProductGrid sort control |
+
+#### Behaviour
+- **Search-first UX** — no products shown until the user applies at least one filter or runs a search
+- `AbortController` cancels in-flight requests when filters change
+- Sort dropdown re-triggers the fetch after results are already showing (via `useEffect([sortBy])`)
+- Reset clears all state and returns to the empty prompt
+- `FilterSidebar` and mobile drawer removed — no longer used
+
+#### Backend requirements (communicate to backend team)
+- `GET /products` must accept: `price_min`, `price_max` (integers, optional, used independently or together)
+- `GET /products/specs` must return: `{ data: { widths, heights, rims, load_indexes, speed_ratings } }`
+- `GET /products/brands` must return: `{ data: string[] }` (distinct brands from the products table)
+
+---
+
+### Admin — Products CSV Import/Export
+
+**File:** `components/admin/csv-actions.tsx`
+
+Already existed from a previous session. Key behaviours confirmed:
+
+- **Export:** `GET /api/admin/products/export` via the Vercel proxy route — downloads CSV via object URL
+- **Import:** `POST /admin/products/import` — fetches bearer token from `/api/admin/token`, then POSTs **directly to Laravel** (`NEXT_PUBLIC_API_URL`) bypassing Vercel's 4.5 MB body limit
+- Success modal auto-closes after 3 seconds; shows imported / updated / skipped counts + row-level errors
+- Amber warning shown in import modal: newly imported products default to `is_active = false` and must be manually activated in the admin list
+
+---
+
+### Admin — Orders CSV Import/Export
+
+**New file:** `components/admin/orders-csv-actions.tsx`  
+**Updated file:** `app/admin/orders/page.tsx`
+
+New `OrdersCsvActions` component wired into the Orders admin page header (right side, alongside the order count).
+
+#### Export — `GET /api/v1/admin/orders/export`
+- Fetches bearer token from `/api/admin/token` (same httpOnly cookie pattern)
+- POSTs **directly to Laravel** — bypasses Vercel proxy to avoid body size issues
+- Downloads via blob → object URL → hidden anchor click
+- Filename from `Content-Disposition` header; falls back to `okelcor_orders_{date}.csv`
+
+#### Import — `POST /api/v1/admin/orders/import`
+- Accepts a **Wix orders CSV export** (`field name: "file"`)
+- Uploads **directly to Laravel** (bypasses Vercel 4.5 MB limit — same pattern as products import)
+- **Idempotent / safe to re-run** — existing orders matched by order number are updated, not duplicated; order items are replaced on each run
+- Success response shape: `{ data: { imported, updated, skipped, errors[] }, message }`
+- Success modal auto-closes after 3 seconds with imported / updated / skipped summary + row errors
+- Error phase shows inline message; "Try Again" returns to file picker
+
+Both endpoints require a valid admin Bearer token (restricted to `super_admin` and `admin` roles).
+
+---
+
+## Completed in Previous Session — FET Nav, Hero Slider & ROI Strip (2026-04-15)
 
 ### Navbar — Shop Dropdown Removed, FET Standalone Link Added
 
@@ -157,7 +263,7 @@ FET appears at **index 1** (users see it early) and again as the **last slide** 
 ```ts
 const FET_SLIDE = {
   label:    "Also Available",
-  title:    "FET Engine Treatment",
+  title:    "Fuel Echo Tech",   // was "FET Engine Treatment" — renamed
   subtitle: "Save fuel, improve performance and reduce emissions for any vehicle or fleet.",
   videoSrc: "/videos/fet-hero.mp4",
 }
@@ -594,7 +700,7 @@ Server-side routes must use `API_URL` (no NEXT_PUBLIC_ prefix). Add `API_URL` to
 | CTA Section | Complete |
 | Floating bar | Complete — 48px form + CTA link |
 | Footer | Complete — 4-column B2B layout, flex-wrap legal links, 9px tagline |
-| Shop page | Complete — filter sidebar, product grid, 48px filter toggle + buttons |
+| Shop page | Complete — professional two-row filter bar (price range, brand, size, season, speed, load index); search-first UX; live API with AbortController |
 | Product detail page | Complete — gallery, accordion, related products |
 | About page | Complete — i18n via AboutPageUI wrapper |
 | Contact page | Complete — form wired to `/api/contact` (Resend), responsive map, sm: padding |
@@ -605,8 +711,8 @@ Server-side routes must use `API_URL` (no NEXT_PUBLIC_ prefix). Add `API_URL` to
 | Cart drawer | Complete — fully i18n'd (all strings via t.cart.*) |
 | Checkout page | Complete — wired to `/api/checkout`; orderRef + live/manual mode; Stripe CardElement |
 | Order tracking | Complete — `/account/orders` list + `/account/orders/[ref]` detail with timeline |
-| **FET page** | **Complete** — light theme, video hero, ROI calculator, 5 sections, stagger animations |
-| **FET teaser** | **Complete** — light green `#f0f4f0` strip on homepage |
+| **Fuel Echo Tech page** | **Complete** — light theme, video hero, ROI calculator, 5 sections, stagger animations; renamed from "FET Engine Treatment" |
+| **Fuel Echo Tech teaser** | **Complete** — light green `#f0f4f0` strip on homepage |
 | 404 page | Complete — on-brand, Navbar + Footer |
 | Error page | Complete — Try Again + Back to Home |
 | Loading state | Complete — orange spinner |
@@ -631,7 +737,7 @@ Server-side routes must use `API_URL` (no NEXT_PUBLIC_ prefix). Add `API_URL` to
 | Search | Complete — site-wide modal, products + articles, GSAP animation, keyboard nav, Cmd/Ctrl+K, i18n |
 | Admin — Products | Complete — list, create, edit, delete (soft), deactivate/reactivate, trash/restore, gallery images |
 | Admin — Articles | Complete — list, create, edit, delete (soft), publish/unpublish, trash/restore, slug auto-gen |
-| Admin — Orders | Complete — list with status filter + search + pagination, detail view, status update |
+| Admin — Orders | Complete — list with status filter + search + pagination, detail view, status update; **CSV import (Wix) + export wired** |
 | Admin — Brands | Complete — grid management, add/edit name inline, logo upload, delete with confirmation overlay |
 | Admin — Hero Slides | Complete — list ordered by position, add/edit form, image + video support, Route Handler upload |
 | Admin — Quote Requests | Complete — list with status filter + search + pagination, detail view, status update |
