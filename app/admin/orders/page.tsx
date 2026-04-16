@@ -7,6 +7,7 @@ import {
   type AdminOrder,
 } from "@/lib/admin-api";
 import OrdersTable from "@/components/admin/orders-table";
+import OrdersCsvActions from "@/components/admin/orders-csv-actions";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Orders" };
@@ -44,15 +45,18 @@ export default async function AdminOrdersPage({
 
   return (
     <div className="p-6 md:p-8">
-      <div className="mb-6">
-        <p className="text-[0.75rem] font-bold uppercase tracking-[0.18em] text-[#E85C1A]">
-          Orders
-        </p>
-        <p className="mt-0.5 text-[0.875rem] text-[#5c5e62]">
-          {typeof meta.total === "number"
-            ? `${meta.total} order${meta.total !== 1 ? "s" : ""} total`
-            : "Manage customer orders"}
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <p className="text-[0.75rem] font-bold uppercase tracking-[0.18em] text-[#E85C1A]">
+            Orders
+          </p>
+          <p className="mt-0.5 text-[0.875rem] text-[#5c5e62]">
+            {typeof meta.total === "number"
+              ? `${meta.total} order${meta.total !== 1 ? "s" : ""} total`
+              : "Manage customer orders"}
+          </p>
+        </div>
+        <OrdersCsvActions />
       </div>
 
       <OrdersTable
