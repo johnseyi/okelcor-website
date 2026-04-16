@@ -223,7 +223,10 @@ export default function CsvActions() {
                 </label>
 
                 <p className="text-[0.78rem] text-[#5c5e62]">
-                  The CSV must include columns: <code className="rounded bg-black/[0.06] px-1 py-0.5 font-mono text-[0.75rem]">brand</code>, <code className="rounded bg-black/[0.06] px-1 py-0.5 font-mono text-[0.75rem]">name</code>, <code className="rounded bg-black/[0.06] px-1 py-0.5 font-mono text-[0.75rem]">size</code>, <code className="rounded bg-black/[0.06] px-1 py-0.5 font-mono text-[0.75rem]">price</code>, <code className="rounded bg-black/[0.06] px-1 py-0.5 font-mono text-[0.75rem]">type</code>, <code className="rounded bg-black/[0.06] px-1 py-0.5 font-mono text-[0.75rem]">sku</code>. Rows with a matching SKU will be updated.
+                  Required columns: <code className="rounded bg-black/[0.06] px-1 py-0.5 font-mono text-[0.75rem]">brand</code>, <code className="rounded bg-black/[0.06] px-1 py-0.5 font-mono text-[0.75rem]">name</code>, <code className="rounded bg-black/[0.06] px-1 py-0.5 font-mono text-[0.75rem]">size</code>, <code className="rounded bg-black/[0.06] px-1 py-0.5 font-mono text-[0.75rem]">price</code>, <code className="rounded bg-black/[0.06] px-1 py-0.5 font-mono text-[0.75rem]">type</code>, <code className="rounded bg-black/[0.06] px-1 py-0.5 font-mono text-[0.75rem]">sku</code>. Rows with a matching SKU will be updated.
+                </p>
+                <p className="text-[0.78rem] font-medium text-amber-600">
+                  ⚠ Newly imported products are set to <strong>Inactive</strong> by default. After import, go to the products list and toggle each one to <strong>Active</strong> so they appear on the shop.
                 </p>
 
                 {/* Actions */}
