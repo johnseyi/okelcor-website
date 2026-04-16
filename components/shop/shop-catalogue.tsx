@@ -39,6 +39,9 @@ const FALLBACK_SPEEDS       = ["F","G","H","J","K","L","M","N","P","Q","R","S","
 
 const SEASONS = ["Summer", "Winter", "All Season"];
 
+// Price breakpoints: €29 → €539 in €10 steps
+const PRICES: string[] = Array.from({ length: 52 }, (_, i) => String(29 + i * 10));
+
 const SORT_OPTIONS = [
   { value: "",           label: "Default sort" },
   { value: "price_asc",  label: "Price: low → high" },
@@ -216,29 +219,17 @@ export default function ShopCatalogue() {
           {/* Row 2 — dropdowns */}
           <div className="flex flex-wrap items-center gap-2 px-5 py-3">
 
-            {/* Price range */}
-            <div className="flex h-10 min-w-0 flex-1 items-center gap-1 rounded-lg border border-[#e5e7eb] bg-white px-2 text-[0.82rem] text-[#374151] focus-within:border-[#f4511e] focus-within:ring-1 focus-within:ring-[#f4511e]/20 transition">
-              <span className="shrink-0 text-[#9ca3af]">€</span>
-              <input
-                type="number"
-                min="0"
-                value={priceMin}
-                onChange={(e) => setPriceMin(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && runSearch()}
-                placeholder="Min"
-                className="w-0 flex-1 bg-transparent outline-none placeholder:text-[#9ca3af]"
-              />
-              <span className="shrink-0 text-[#d1d5db]">–</span>
-              <input
-                type="number"
-                min="0"
-                value={priceMax}
-                onChange={(e) => setPriceMax(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && runSearch()}
-                placeholder="Max"
-                className="w-0 flex-1 bg-transparent outline-none placeholder:text-[#9ca3af]"
-              />
-            </div>
+            {/* Min price */}
+            <select value={priceMin} onChange={(e) => setPriceMin(e.target.value)} className={sel}>
+              <option value="">Min price</option>
+              {PRICES.map((p) => <option key={p} value={p}>€{p}</option>)}
+            </select>
+
+            {/* Max price */}
+            <select value={priceMax} onChange={(e) => setPriceMax(e.target.value)} className={sel}>
+              <option value="">Max price</option>
+              {PRICES.map((p) => <option key={p} value={p}>€{p}</option>)}
+            </select>
 
             {/* Brand */}
             <select value={selBrand} onChange={(e) => setSelBrand(e.target.value)} className={sel}>
