@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import FilterSidebar, { type FilterState } from "./filter-sidebar";
 import ProductGrid from "./product-grid";
-import { ALL_PRODUCTS } from "./data";
+import { ALL_PRODUCTS, type Product } from "./data";
 import { useLanguage } from "@/context/language-context";
 
 // ── Discovery data ─────────────────────────────────────────────────────────────
@@ -33,7 +33,12 @@ const TYPES = [
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function ShopCatalogue() {
+type Props = {
+  /** Live products from the API — falls back to static ALL_PRODUCTS when empty/unavailable */
+  products?: Product[];
+};
+
+export default function ShopCatalogue({ products: apiProducts }: Props) {
   const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<FilterState>({
@@ -49,10 +54,13 @@ export default function ShopCatalogue() {
 
   const hasSearched = searchQuery.trim().length > 0 || activeFilterCount > 0;
 
+  // Use live API products when available; static data is the last-resort fallback
+  const allProducts = apiProducts?.length ? apiProducts : ALL_PRODUCTS;
+
   const filtered = useMemo(() => {
     if (!hasSearched) return [];
 
-    let result = ALL_PRODUCTS;
+    let result = allProducts;
 
     const q = searchQuery.trim().toLowerCase();
     if (q) {
@@ -75,7 +83,7 @@ export default function ShopCatalogue() {
     if (sortBy === "price-asc") return [...result].sort((a, b) => a.price - b.price);
     if (sortBy === "price-desc") return [...result].sort((a, b) => b.price - a.price);
     return result;
-  }, [searchQuery, filters, sortBy, hasSearched]);
+  }, [searchQuery, filters, sortBy, hasSearched, allProducts]);
 
   // ── Discovery helpers ────────────────────────────────────────────────────────
 
