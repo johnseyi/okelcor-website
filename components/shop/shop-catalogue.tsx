@@ -1,12 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import {
-  Search, SlidersHorizontal, X, Loader2,
-  Sun, Snowflake, Layers,
-  Car, Truck, Mountain, RotateCcw,
-} from "lucide-react";
-import FilterSidebar, { type FilterState } from "./filter-sidebar";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Search, Loader2, RotateCcw } from "lucide-react";
 import ProductGrid from "./product-grid";
 import { type Product } from "./data";
 import { useLanguage } from "@/context/language-context";
@@ -34,88 +29,113 @@ function toProduct(p: any): Product {
   };
 }
 
-// ── Discovery data ─────────────────────────────────────────────────────────────
+// ── Fallback filter values (used until /products/specs loads) ─────────────────
 
-// Shown in the discovery section before any search — capped at 12 so the pill
-// row stays manageable. FilterSidebar shows all brands as checkboxes.
-const FALLBACK_POPULAR_BRANDS = [
-  "Michelin", "Bridgestone", "Continental", "Goodyear",
-  "Pirelli", "Dunlop", "Hankook", "Falken",
+const FALLBACK_WIDTHS  = ["145","155","165","175","185","195","205","215","225","235","245","255","265","275","285","295","305","315","325","335","345","355","365","375","385","395","405","415","425","435","445","455"];
+const FALLBACK_HEIGHTS = ["25","30","35","40","45","50","55","60","65","70","75","80","85","90","95"];
+const FALLBACK_RIMS    = ["10","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","28","30"];
+const FALLBACK_SPEEDS  = ["F","G","H","J","K","L","M","N","P","Q","R","S","T","U","V","W","Y","Z"];
+
+const TYPES   = ["PCR", "TBR", "OTR", "Used"];
+const SEASONS = ["Summer", "Winter", "All Season"];
+
+const SORT_OPTIONS = [
+  { value: "",           label: "Default sort" },
+  { value: "price_asc",  label: "Price: low → high" },
+  { value: "price_desc", label: "Price: high → low" },
+  { value: "newest",     label: "Newest first" },
 ];
 
-const SEASONS = [
-  { label: "Summer Tyres", value: "Summer",     icon: Sun,       desc: "High performance in warm conditions" },
-  { label: "Winter Tyres", value: "Winter",     icon: Snowflake, desc: "Grip and safety in cold weather" },
-  { label: "All Season",   value: "All Season", icon: Layers,    desc: "Year-round versatility" },
-];
+// ── Dropdown style ─────────────────────────────────────────────────────────────
 
-const TYPES = [
-  { label: "PCR",  value: "PCR",  icon: Car,       desc: "Passenger car radial" },
-  { label: "TBR",  value: "TBR",  icon: Truck,     desc: "Truck & bus radial" },
-  { label: "OTR",  value: "OTR",  icon: Mountain,  desc: "Off-the-road" },
-  { label: "Used", value: "Used", icon: RotateCcw, desc: "Premium used tyres" },
-];
+const sel =
+  "h-10 min-w-0 flex-1 rounded-lg border border-[#e5e7eb] bg-white px-3 text-[0.82rem] text-[#374151] outline-none transition cursor-pointer focus:border-[#f4511e] focus:ring-1 focus:ring-[#f4511e]/20 disabled:opacity-40";
 
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function ShopCatalogue() {
   const { locale, t } = useLanguage();
 
-  const [searchQuery, setSearchQuery]     = useState("");
-  const [filters, setFilters]             = useState<FilterState>({ types: [], brands: [], seasons: [] });
-  const [sortBy, setSortBy]               = useState("default");
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  // ── Filter state ─────────────────────────────────────────────────────────────
+  const [searchText, setSearchText] = useState("");
+  const [selType,    setSelType]    = useState("");
+  const [selBrand,   setSelBrand]   = useState("");
+  const [selWidth,   setSelWidth]   = useState("");
+  const [selHeight,  setSelHeight]  = useState("");
+  const [selRim,     setSelRim]     = useState("");
+  const [selSeason,  setSelSeason]  = useState("");
+  const [selSpeed,   setSelSpeed]   = useState("");
+  const [sortBy,     setSortBy]     = useState("");
 
-  // Live products fetched from the API
-  const [liveProducts, setLiveProducts]   = useState<Product[]>([]);
-  const [isLoading, setIsLoading]         = useState(false);
+  // ── Results ──────────────────────────────────────────────────────────────────
+  const [products,    setProducts]    = useState<Product[]>([]);
+  const [isLoading,   setIsLoading]   = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [resultCount, setResultCount] = useState(0);
 
-  // Dynamic brand list from GET /api/v1/products/brands
-  const [availableBrands, setAvailableBrands] = useState<string[]>([]);
+  // ── Dynamic filter options ───────────────────────────────────────────────────
+  const [brands,  setBrands]  = useState<string[]>([]);
+  const [widths,  setWidths]  = useState<string[]>(FALLBACK_WIDTHS);
+  const [heights, setHeights] = useState<string[]>(FALLBACK_HEIGHTS);
+  const [rims,    setRims]    = useState<string[]>(FALLBACK_RIMS);
+  const [speeds,  setSpeeds]  = useState<string[]>(FALLBACK_SPEEDS);
 
+  // AbortController ref so we can cancel in-flight fetches
+  const abortRef = useRef<AbortController | null>(null);
+
+  // Load brands + specs on mount
   useEffect(() => {
     fetch(`${API_URL}/products/brands`, { cache: "no-store" })
       .then((r) => r.json())
       .then((json) => {
-        // Response shape: { data: ["ATTURO", "BARUM", ...] }
-        const names: string[] = Array.isArray(json.data)
-          ? json.data.filter((b: unknown) => typeof b === "string" && b)
+        const list = Array.isArray(json.data)
+          ? (json.data as unknown[]).filter((b): b is string => typeof b === "string" && !!b)
           : [];
-        if (names.length) setAvailableBrands(names);
+        if (list.length) setBrands(list);
       })
-      .catch(() => {}); // silently fall back to hardcoded list in FilterSidebar
+      .catch(() => {});
+
+    fetch(`${API_URL}/products/specs`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.data?.widths?.length)  setWidths(json.data.widths);
+        if (json.data?.heights?.length) setHeights(json.data.heights);
+        if (json.data?.rims?.length)    setRims(json.data.rims);
+        if (json.data?.speeds?.length)  setSpeeds(json.data.speeds);
+      })
+      .catch(() => {}); // stays on hardcoded fallbacks if endpoint not yet available
   }, []);
 
-  const activeFilterCount =
-    filters.types.length + filters.brands.length + filters.seasons.length;
+  // ── Search handler ───────────────────────────────────────────────────────────
 
-  const hasSearched = searchQuery.trim().length > 0 || activeFilterCount > 0;
+  const runSearch = useCallback(() => {
+    const hasInput =
+      searchText.trim() || selType || selBrand ||
+      selWidth || selHeight || selRim || selSeason || selSpeed;
+    if (!hasInput) return;
 
-  // ── Fetch from API whenever search/filter state changes ──────────────────────
-  useEffect(() => {
-    if (!hasSearched) {
-      setLiveProducts([]);
-      return;
-    }
-
+    // Cancel any previous in-flight request
+    abortRef.current?.abort();
     const controller = new AbortController();
-    const params = new URLSearchParams();
-    params.set("locale", locale);
+    abortRef.current = controller;
 
-    const q = searchQuery.trim();
-    if (q)                  params.set("q",      q);
-    if (filters.brands[0])  params.set("brand",  filters.brands[0]);
-    if (filters.types[0])   params.set("type",   filters.types[0]);
-    if (filters.seasons[0]) params.set("season", filters.seasons[0]);
+    const params = new URLSearchParams({ locale });
+    if (searchText.trim()) params.set("q",      searchText.trim());
+    if (selType)           params.set("type",   selType);
+    if (selBrand)          params.set("brand",  selBrand);
+    if (selSeason)         params.set("season", selSeason);
+    if (selSpeed)          params.set("speed",  selSpeed);
+    if (sortBy)            params.set("sort",   sortBy);
 
-    // Map UI sort values to API sort param
-    const sortMap: Record<string, string> = {
-      "price-asc":  "price_asc",
-      "price-desc": "price_desc",
-    };
-    if (sortMap[sortBy]) params.set("sort", sortMap[sortBy]);
+    // Build size string from width / height / rim components
+    let sizeStr = "";
+    if (selWidth)  sizeStr  = selWidth;
+    if (selHeight) sizeStr += (sizeStr ? "/" + selHeight : selHeight);
+    if (selRim)    sizeStr += (sizeStr ? "R" + selRim   : "R" + selRim);
+    if (sizeStr)   params.set("size", sizeStr);
 
     setIsLoading(true);
+    setHasSearched(true);
 
     fetch(`${API_URL}/products?${params.toString()}`, {
       cache: "no-store",
@@ -123,35 +143,34 @@ export default function ShopCatalogue() {
     })
       .then((r) => r.json())
       .then((json) => {
-        if (!Array.isArray(json.data)) { setLiveProducts([]); return; }
-        setLiveProducts(json.data.map(toProduct));
+        const list = Array.isArray(json.data) ? json.data.map(toProduct) : [];
+        setProducts(list);
+        setResultCount(typeof json.meta?.total === "number" ? json.meta.total : list.length);
       })
       .catch((err) => {
-        if (err.name !== "AbortError") setLiveProducts([]);
+        if (err.name !== "AbortError") setProducts([]);
       })
       .finally(() => setIsLoading(false));
+  }, [searchText, selType, selBrand, selWidth, selHeight, selRim, selSeason, selSpeed, sortBy, locale]);
 
-    return () => controller.abort();
-  }, [searchQuery, filters, sortBy, hasSearched, locale]);
+  // Re-fetch when sort changes after results are already showing
+  useEffect(() => {
+    if (hasSearched) runSearch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortBy]);
 
-  // ── Extra client-side filtering for multi-select ────────────────────────────
-  // The API received only the first value per filter group; narrow further here
-  // when the user has checked more than one brand / type / season.
-  const filtered = useMemo(() => {
-    let result = liveProducts;
-    if (filters.brands.length > 1)
-      result = result.filter((p) => filters.brands.includes(p.brand));
-    if (filters.types.length > 1)
-      result = result.filter((p) => filters.types.includes(p.type));
-    if (filters.seasons.length > 1)
-      result = result.filter((p) => filters.seasons.includes(p.season));
-    return result;
-  }, [liveProducts, filters]);
+  const reset = () => {
+    setSearchText("");
+    setSelType(""); setSelBrand(""); setSelWidth(""); setSelHeight("");
+    setSelRim(""); setSelSeason(""); setSelSpeed(""); setSortBy("");
+    setHasSearched(false);
+    setProducts([]);
+    setResultCount(0);
+  };
 
-  // ── Discovery click handlers ──────────────────────────────────────────────────
-  const selectBrand  = (brand: string)  => setSearchQuery(brand);
-  const selectSeason = (season: string) => setFilters((f) => ({ ...f, seasons: [season] }));
-  const selectType   = (type: string)   => setFilters((f) => ({ ...f, types: [type] }));
+  const hasActiveFilters =
+    searchText.trim() || selType || selBrand ||
+    selWidth || selHeight || selRim || selSeason || selSpeed;
 
   // ─────────────────────────────────────────────────────────────────────────────
 
@@ -159,190 +178,150 @@ export default function ShopCatalogue() {
     <section className="w-full bg-[#f5f5f5] py-8 md:py-10">
       <div className="tesla-shell">
 
-        {/* ── Search bar ── */}
-        <div className="mb-8">
-          <div className="relative">
-            <Search
-              size={17}
-              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#5c5e62]"
-            />
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by brand, size or tyre type…"
-              className="w-full rounded-full border border-black/10 bg-white py-3.5 pl-11 pr-5 text-[0.93rem] text-[#171a20] placeholder-[#9ca3af] shadow-sm outline-none transition focus:border-[#f4511e]/40 focus:ring-2 focus:ring-[#f4511e]/10"
-            />
+        {/* ── Filter bar ── */}
+        <div className="mb-6 overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-sm">
+
+          {/* Row 1 — text search */}
+          <div className="flex items-center gap-3 border-b border-[#f0f0f0] px-5 py-4">
+            <div className="relative flex-1">
+              <Search
+                size={16}
+                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9ca3af]"
+              />
+              <input
+                type="search"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && runSearch()}
+                placeholder="Search by matchcode, brand, size or article number"
+                className="h-11 w-full rounded-lg border border-[#e5e7eb] bg-[#fafafa] pl-10 pr-4 text-[0.88rem] text-[#171a20] outline-none placeholder:text-[#9ca3af] transition focus:border-[#f4511e] focus:bg-white focus:ring-1 focus:ring-[#f4511e]/20"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={runSearch}
+              className="flex h-11 items-center gap-2 rounded-lg bg-[#f4511e] px-6 text-[0.88rem] font-semibold text-white transition hover:bg-[#d14f14]"
+            >
+              <Search size={15} strokeWidth={2.2} />
+              Search
+            </button>
+          </div>
+
+          {/* Row 2 — dropdowns */}
+          <div className="flex flex-wrap items-center gap-2 px-5 py-3">
+
+            {/* Type of use */}
+            <select value={selType} onChange={(e) => setSelType(e.target.value)} className={sel}>
+              <option value="">Type of use</option>
+              {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+
+            {/* Manufacturer */}
+            <select value={selBrand} onChange={(e) => setSelBrand(e.target.value)} className={sel}>
+              <option value="">Manufacturer</option>
+              {brands.map((b) => <option key={b} value={b}>{b}</option>)}
+            </select>
+
+            {/* Width */}
+            <select value={selWidth} onChange={(e) => setSelWidth(e.target.value)} className={sel}>
+              <option value="">Width</option>
+              {widths.map((w) => <option key={w} value={w}>{w}</option>)}
+            </select>
+
+            {/* Height */}
+            <select value={selHeight} onChange={(e) => setSelHeight(e.target.value)} className={sel}>
+              <option value="">Height</option>
+              {heights.map((h) => <option key={h} value={h}>{h}</option>)}
+            </select>
+
+            {/* Rim */}
+            <select value={selRim} onChange={(e) => setSelRim(e.target.value)} className={sel}>
+              <option value="">Rim</option>
+              {rims.map((r) => <option key={r} value={r}>{r}</option>)}
+            </select>
+
+            {/* Season */}
+            <select value={selSeason} onChange={(e) => setSelSeason(e.target.value)} className={sel}>
+              <option value="">Season</option>
+              {SEASONS.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+
+            {/* Speed index */}
+            <select value={selSpeed} onChange={(e) => setSelSpeed(e.target.value)} className={sel}>
+              <option value="">Speed</option>
+              {speeds.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+
+            {/* Spacer */}
+            <div className="hidden flex-1 md:block" />
+
+            {/* Filter button */}
+            <button
+              type="button"
+              onClick={runSearch}
+              className="flex h-10 items-center gap-2 rounded-lg bg-[#f4511e] px-5 text-[0.82rem] font-semibold text-white transition hover:bg-[#d14f14]"
+            >
+              {isLoading ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Search size={14} strokeWidth={2.2} />
+              )}
+              Filter
+            </button>
+
+            {/* Reset */}
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={reset}
+                className="flex h-10 items-center gap-1.5 rounded-lg border border-[#e5e7eb] px-4 text-[0.82rem] font-semibold text-[#5c5e62] transition hover:border-[#f4511e]/40 hover:text-[#f4511e]"
+              >
+                <RotateCcw size={13} strokeWidth={2} />
+                Reset
+              </button>
+            )}
           </div>
         </div>
 
-        {/* ── Discovery state ── */}
-        {!hasSearched && (
-          <div className="space-y-10">
-
-            {/* Popular Brands */}
-            <div>
-              <h3 className="mb-4 text-[0.75rem] font-bold uppercase tracking-[0.18em] text-[#5c5e62]">
-                Popular Brands
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {(availableBrands.length ? availableBrands : FALLBACK_POPULAR_BRANDS).slice(0, 12).map((brand) => (
-                  <button
-                    key={brand}
-                    type="button"
-                    onClick={() => selectBrand(brand)}
-                    className="rounded-full border border-black/10 bg-white px-4 py-2 text-[0.88rem] font-semibold text-[#171a20] transition hover:border-[#f4511e]/40 hover:bg-[#f4511e]/[0.04] hover:text-[#f4511e]"
-                  >
-                    {brand}
-                  </button>
-                ))}
+        {/* ── Results ── */}
+        {hasSearched && (
+          <div>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-24">
+                <Loader2 size={28} className="animate-spin text-[#9ca3af]" />
               </div>
-            </div>
-
-            {/* Browse by Season */}
-            <div>
-              <h3 className="mb-4 text-[0.75rem] font-bold uppercase tracking-[0.18em] text-[#5c5e62]">
-                Browse by Season
-              </h3>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                {SEASONS.map(({ label, value, icon: Icon, desc }) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => selectSeason(value)}
-                    className="group flex flex-col items-start gap-3 rounded-[16px] border border-black/[0.07] bg-white p-5 text-left transition hover:border-[#f4511e]/30 hover:shadow-sm"
-                  >
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f5f5f5] transition group-hover:bg-[#f4511e]/10">
-                      <Icon size={18} strokeWidth={1.8} className="text-[#5c5e62] transition group-hover:text-[#f4511e]" />
-                    </span>
-                    <div>
-                      <p className="text-[0.93rem] font-extrabold text-[#171a20]">{label}</p>
-                      <p className="mt-0.5 text-[0.78rem] text-[#5c5e62]">{desc}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Browse by Type */}
-            <div>
-              <h3 className="mb-4 text-[0.75rem] font-bold uppercase tracking-[0.18em] text-[#5c5e62]">
-                Browse by Type
-              </h3>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {TYPES.map(({ label, value, icon: Icon, desc }) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => selectType(value)}
-                    className="group flex flex-col items-start gap-3 rounded-[16px] border border-black/[0.07] bg-white p-5 text-left transition hover:border-[#f4511e]/30 hover:shadow-sm"
-                  >
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f5f5f5] transition group-hover:bg-[#f4511e]/10">
-                      <Icon size={18} strokeWidth={1.8} className="text-[#5c5e62] transition group-hover:text-[#f4511e]" />
-                    </span>
-                    <div>
-                      <p className="text-[0.93rem] font-extrabold text-[#171a20]">{label}</p>
-                      <p className="mt-0.5 text-[0.78rem] text-[#5c5e62]">{desc}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
+            ) : (
+              <>
+                {/* Result count */}
+                <p className="mb-4 text-[0.85rem] text-[#5c5e62]">
+                  <span className="font-semibold text-[#171a20]">{resultCount}</span>{" "}
+                  {resultCount === 1 ? t.shop.catalogue.product : t.shop.catalogue.products} found
+                </p>
+                <ProductGrid
+                  products={products}
+                  total={resultCount}
+                  sortBy={sortBy}
+                  onSortChange={setSortBy}
+                />
+              </>
+            )}
           </div>
         )}
 
-        {/* ── Results state ── */}
-        {hasSearched && (
-          <>
-            {/* Mobile filter toggle */}
-            <div className="mb-5 flex items-center justify-between md:hidden">
-              <p className="text-[0.9rem] text-[var(--muted)]">
-                {isLoading ? (
-                  <span className="flex items-center gap-1.5 text-[#5c5e62]">
-                    <Loader2 size={13} className="animate-spin" /> Searching…
-                  </span>
-                ) : (
-                  <>
-                    <span className="font-semibold text-[var(--foreground)]">{filtered.length}</span>{" "}
-                    {filtered.length === 1 ? t.shop.catalogue.product : t.shop.catalogue.products}
-                  </>
-                )}
-              </p>
-              <button
-                type="button"
-                onClick={() => setMobileFiltersOpen(true)}
-                className="flex h-[48px] items-center gap-2 rounded-full border border-black/10 bg-white px-5 text-[0.88rem] font-semibold text-[var(--foreground)] transition hover:border-black/20"
-              >
-                <SlidersHorizontal size={15} />
-                {t.shop.catalogue.filtersBtn}
-                {activeFilterCount > 0 && (
-                  <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-[var(--primary)] text-[10px] font-bold text-white">
-                    {activeFilterCount}
-                  </span>
-                )}
-              </button>
+        {/* ── Empty prompt (before first search) ── */}
+        {!hasSearched && (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-sm">
+              <Search size={22} className="text-[#9ca3af]" />
             </div>
-
-            {/* Desktop: sidebar + grid */}
-            <div className="flex gap-7">
-              <aside className="hidden shrink-0 md:block" style={{ width: "260px" }}>
-                <div className="sticky top-[96px]">
-                  <FilterSidebar filters={filters} onChange={setFilters} brands={availableBrands} />
-                </div>
-              </aside>
-              <div className="min-w-0 flex-1">
-                {isLoading ? (
-                  <div className="flex items-center justify-center py-24">
-                    <Loader2 size={28} className="animate-spin text-[#9ca3af]" />
-                  </div>
-                ) : (
-                  <ProductGrid
-                    products={filtered}
-                    total={filtered.length}
-                    sortBy={sortBy}
-                    onSortChange={setSortBy}
-                  />
-                )}
-              </div>
-            </div>
-          </>
+            <p className="text-[0.95rem] font-semibold text-[#171a20]">Find your tyres</p>
+            <p className="mt-1 max-w-[300px] text-[0.83rem] leading-6 text-[#5c5e62]">
+              Use the filters above or type a brand, size or article number to search the catalogue.
+            </p>
+          </div>
         )}
 
       </div>
-
-      {/* Mobile filter drawer */}
-      {mobileFiltersOpen && (
-        <>
-          <div
-            className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px] md:hidden"
-            onClick={() => setMobileFiltersOpen(false)}
-          />
-          <div className="fixed bottom-0 left-0 right-0 z-50 max-h-[82vh] overflow-y-auto rounded-t-[24px] bg-[#f5f5f5] p-5 pb-8 shadow-[0_-8px_40px_rgba(0,0,0,0.14)] md:hidden">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-[1.05rem] font-extrabold text-[var(--foreground)]">
-                {t.shop.catalogue.filtersHeading}
-              </h2>
-              <button
-                type="button"
-                onClick={() => setMobileFiltersOpen(false)}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-black/[0.06] transition hover:bg-black/10"
-                aria-label="Close filters"
-              >
-                <X size={17} />
-              </button>
-            </div>
-            <FilterSidebar filters={filters} onChange={setFilters} brands={availableBrands} />
-            <button
-              type="button"
-              onClick={() => setMobileFiltersOpen(false)}
-              className="mt-5 w-full rounded-full bg-[var(--primary)] py-3 text-[0.95rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
-            >
-              {t.shop.catalogue.show} {filtered.length} {t.shop.catalogue.results}
-            </button>
-          </div>
-        </>
-      )}
     </section>
   );
 }
