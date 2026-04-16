@@ -70,15 +70,16 @@ export default function ShopCatalogue() {
   const [liveProducts, setLiveProducts]   = useState<Product[]>([]);
   const [isLoading, setIsLoading]         = useState(false);
 
-  // Dynamic brand list from GET /api/v1/brands
+  // Dynamic brand list from GET /api/v1/products/brands
   const [availableBrands, setAvailableBrands] = useState<string[]>([]);
 
   useEffect(() => {
-    fetch(`${API_URL}/brands`, { cache: "no-store" })
+    fetch(`${API_URL}/products/brands`, { cache: "no-store" })
       .then((r) => r.json())
       .then((json) => {
+        // Response shape: { data: ["ATTURO", "BARUM", ...] }
         const names: string[] = Array.isArray(json.data)
-          ? json.data.map((b: { name: string }) => b.name).filter(Boolean)
+          ? json.data.filter((b: unknown) => typeof b === "string" && b)
           : [];
         if (names.length) setAvailableBrands(names);
       })
@@ -102,10 +103,17 @@ export default function ShopCatalogue() {
     params.set("locale", locale);
 
     const q = searchQuery.trim();
-    if (q)                        params.set("q",      q);
-    if (filters.brands[0])        params.set("brand",  filters.brands[0]);
-    if (filters.types[0])         params.set("type",   filters.types[0]);
-    if (filters.seasons[0])       params.set("season", filters.seasons[0]);
+    if (q)                  params.set("q",      q);
+    if (filters.brands[0])  params.set("brand",  filters.brands[0]);
+    if (filters.types[0])   params.set("type",   filters.types[0]);
+    if (filters.seasons[0]) params.set("season", filters.seasons[0]);
+
+    // Map UI sort values to API sort param
+    const sortMap: Record<string, string> = {
+      "price-asc":  "price_asc",
+      "price-desc": "price_desc",
+    };
+    if (sortMap[sortBy]) params.set("sort", sortMap[sortBy]);
 
     setIsLoading(true);
 
@@ -124,24 +132,21 @@ export default function ShopCatalogue() {
       .finally(() => setIsLoading(false));
 
     return () => controller.abort();
-  }, [searchQuery, filters, hasSearched, locale]);
+  }, [searchQuery, filters, sortBy, hasSearched, locale]);
 
-  // ── Client-side sort + extra multi-select filtering ───────────────────────────
+  // ── Extra client-side filtering for multi-select ────────────────────────────
+  // The API received only the first value per filter group; narrow further here
+  // when the user has checked more than one brand / type / season.
   const filtered = useMemo(() => {
     let result = liveProducts;
-
-    // Apply extra client-side filtering for multi-select (API received only first value)
     if (filters.brands.length > 1)
       result = result.filter((p) => filters.brands.includes(p.brand));
     if (filters.types.length > 1)
       result = result.filter((p) => filters.types.includes(p.type));
     if (filters.seasons.length > 1)
       result = result.filter((p) => filters.seasons.includes(p.season));
-
-    if (sortBy === "price-asc")  return [...result].sort((a, b) => a.price - b.price);
-    if (sortBy === "price-desc") return [...result].sort((a, b) => b.price - a.price);
     return result;
-  }, [liveProducts, filters, sortBy]);
+  }, [liveProducts, filters]);
 
   // ── Discovery click handlers ──────────────────────────────────────────────────
   const selectBrand  = (brand: string)  => setSearchQuery(brand);
