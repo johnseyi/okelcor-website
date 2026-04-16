@@ -36,7 +36,9 @@ function toProduct(p: any): Product {
 
 // ── Discovery data ─────────────────────────────────────────────────────────────
 
-const POPULAR_BRANDS = [
+// Shown in the discovery section before any search — capped at 12 so the pill
+// row stays manageable. FilterSidebar shows all brands as checkboxes.
+const FALLBACK_POPULAR_BRANDS = [
   "Michelin", "Bridgestone", "Continental", "Goodyear",
   "Pirelli", "Dunlop", "Hankook", "Falken",
 ];
@@ -67,6 +69,21 @@ export default function ShopCatalogue() {
   // Live products fetched from the API
   const [liveProducts, setLiveProducts]   = useState<Product[]>([]);
   const [isLoading, setIsLoading]         = useState(false);
+
+  // Dynamic brand list from GET /api/v1/brands
+  const [availableBrands, setAvailableBrands] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetch(`${API_URL}/brands`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((json) => {
+        const names: string[] = Array.isArray(json.data)
+          ? json.data.map((b: { name: string }) => b.name).filter(Boolean)
+          : [];
+        if (names.length) setAvailableBrands(names);
+      })
+      .catch(() => {}); // silently fall back to hardcoded list in FilterSidebar
+  }, []);
 
   const activeFilterCount =
     filters.types.length + filters.brands.length + filters.seasons.length;
@@ -164,7 +181,7 @@ export default function ShopCatalogue() {
                 Popular Brands
               </h3>
               <div className="flex flex-wrap gap-2">
-                {POPULAR_BRANDS.map((brand) => (
+                {(availableBrands.length ? availableBrands : FALLBACK_POPULAR_BRANDS).slice(0, 12).map((brand) => (
                   <button
                     key={brand}
                     type="button"
@@ -266,7 +283,7 @@ export default function ShopCatalogue() {
             <div className="flex gap-7">
               <aside className="hidden shrink-0 md:block" style={{ width: "260px" }}>
                 <div className="sticky top-[96px]">
-                  <FilterSidebar filters={filters} onChange={setFilters} />
+                  <FilterSidebar filters={filters} onChange={setFilters} brands={availableBrands} />
                 </div>
               </aside>
               <div className="min-w-0 flex-1">
@@ -310,7 +327,7 @@ export default function ShopCatalogue() {
                 <X size={17} />
               </button>
             </div>
-            <FilterSidebar filters={filters} onChange={setFilters} />
+            <FilterSidebar filters={filters} onChange={setFilters} brands={availableBrands} />
             <button
               type="button"
               onClick={() => setMobileFiltersOpen(false)}

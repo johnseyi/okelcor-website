@@ -13,19 +13,14 @@ export type FilterState = {
 type Props = {
   filters: FilterState;
   onChange: (filters: FilterState) => void;
+  /** Dynamic brand list from the API — falls back to the hardcoded list if not provided */
+  brands?: string[];
 };
 
 const TYPES = ["PCR", "TBR", "Used", "OTR"];
-const BRANDS = [
-  "Michelin",
-  "Bridgestone",
-  "Continental",
-  "Pirelli",
-  "Goodyear",
-  "Dunlop",
-  "Hankook",
-  "Yokohama",
-  "Nexen",
+const FALLBACK_BRANDS = [
+  "Michelin", "Bridgestone", "Continental", "Pirelli",
+  "Goodyear", "Dunlop", "Hankook", "Yokohama", "Nexen",
 ];
 const SEASONS = ["Summer", "Winter", "All Season"];
 
@@ -36,12 +31,13 @@ type SectionConfig = {
   filterKey: keyof FilterState;
 };
 
-export default function FilterSidebar({ filters, onChange }: Props) {
+export default function FilterSidebar({ filters, onChange, brands }: Props) {
   const { t } = useLanguage();
+  const brandList = brands?.length ? brands : FALLBACK_BRANDS;
   const SECTIONS: SectionConfig[] = [
-    { key: "types", title: t.shop.filter.tyreType, items: TYPES, filterKey: "types" },
-    { key: "brands", title: t.shop.filter.brand, items: BRANDS, filterKey: "brands" },
-    { key: "seasons", title: t.shop.filter.season, items: SEASONS, filterKey: "seasons" },
+    { key: "types",   title: t.shop.filter.tyreType, items: TYPES,     filterKey: "types" },
+    { key: "brands",  title: t.shop.filter.brand,    items: brandList, filterKey: "brands" },
+    { key: "seasons", title: t.shop.filter.season,   items: SEASONS,   filterKey: "seasons" },
   ];
   const [open, setOpen] = useState<Record<string, boolean>>({
     types: true,
