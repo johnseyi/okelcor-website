@@ -68,7 +68,7 @@ export default function FetRoiStrip() {
         <div>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-[#10b981]/15 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-[#10b981]">
             <span className="h-1.5 w-1.5 rounded-full bg-[#10b981]" aria-hidden="true" />
-            FET Engine Treatment
+            Fuel Echo Tech
           </span>
 
           <h2 className="mt-4 text-[2rem] font-extrabold leading-tight tracking-tight text-white sm:text-[2.4rem] lg:text-[2.6rem]">

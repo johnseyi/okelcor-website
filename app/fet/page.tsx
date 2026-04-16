@@ -13,7 +13,7 @@ import FadeUp from "@/components/motion/fade-up";
 export const metadata: Metadata = {
   title: "",
   description:
-    "FET Engine Treatment — the fuel efficiency device trusted by fleet operators across Europe. Up to 15% fuel savings, reduced emissions, improved engine performance.",
+    "Fuel Echo Tech — the fuel efficiency device trusted by fleet operators across Europe. Up to 15% fuel savings, reduced emissions, improved engine performance.",
 };
 
 // ─── Section wrapper ──────────────────────────────────────────────────────────

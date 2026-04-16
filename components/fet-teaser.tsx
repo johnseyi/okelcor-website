@@ -12,7 +12,7 @@ export default function FetTeaser() {
             Also Available
           </span>
           <h2 className="text-[1.15rem] font-extrabold leading-snug tracking-tight text-[#111111] sm:text-[1.25rem]">
-            FET Engine Treatment —{" "}
+            Fuel Echo Tech —{" "}
             <span className="text-[#22c55e]">Save Fuel. Improve Performance.</span>
           </h2>
           <p className="max-w-[480px] text-[0.85rem] leading-6 text-[#6b7280]">

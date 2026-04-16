@@ -69,7 +69,7 @@ export default function FetProof() {
             href="/fet"
             className="inline-flex items-center gap-2 rounded-full bg-[#10b981] px-7 py-3.5 text-[0.92rem] font-bold text-white transition hover:bg-[#0d9e6e]"
           >
-            Explore FET Engine Treatment <ArrowRight size={15} strokeWidth={2.2} />
+            Explore Fuel Echo Tech <ArrowRight size={15} strokeWidth={2.2} />
           </Link>
         </div>
 

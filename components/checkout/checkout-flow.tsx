@@ -47,7 +47,7 @@ const inputErrCls =
 // ─── FET upsell ───────────────────────────────────────────────────────────────
 
 const FET_PRODUCT = {
-  product_name: "FET Engine Treatment",
+  product_name: "Fuel Echo Tech",
   sku:          "FET-001",
   unit_price:   249.00,
 } as const;
@@ -81,7 +81,7 @@ function FetUpsellCard({
               Add-on
             </span>
             <h3 className="text-[1rem] font-extrabold leading-snug text-[#111111]">
-              Add FET Engine Treatment to your order?
+              Add Fuel Echo Tech to your order?
             </h3>
             <p className="mt-1.5 max-w-[460px] text-[0.85rem] leading-6 text-[#6b7280]">
               Improve fuel efficiency by up to 15% and protect your engine. Trusted by fleet operators across Europe.
