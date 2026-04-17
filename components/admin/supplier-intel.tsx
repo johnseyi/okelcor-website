@@ -12,20 +12,21 @@ import type { AdminProduct } from "@/lib/admin-api";
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface EbayItem {
-  item_id?:  string;
-  title?:    string;
-  price?:    number;
-  currency?: string;
-  condition?: string;
-  seller?:   string;
-  quantity?: number;
-  image?:    string;
-  url?:      string;
+  item_id?:           string;
+  title?:             string;
+  price?:             string | number;
+  currency?:          string;
+  condition?:         string;
+  seller?:            string;
+  quantity_available?: number;
+  image?:             string;
+  url?:               string;
 }
 
-interface SupplierSearchResult {
-  items?: EbayItem[];
-  total?: number;
+// API shape: { data: EbayItem[], meta: { total: number } }
+interface SupplierSearchResponse {
+  data?: EbayItem[];
+  meta?: { total?: number };
 }
 
 type SearchState = "idle" | "loading" | "done" | "error";
@@ -64,7 +65,8 @@ function SkeletonCard() {
 }
 
 function EbayCard({ item }: { item: EbayItem }) {
-  const price = item.price != null ? `€${Number(item.price).toFixed(2)}` : "—";
+  const priceNum = item.price != null ? parseFloat(String(item.price)) : NaN;
+  const price = !isNaN(priceNum) ? `€${priceNum.toFixed(2)}` : "—";
 
   return (
     <div className="flex flex-col overflow-hidden rounded-xl border border-black/[0.06] bg-white transition hover:shadow-md">
@@ -97,9 +99,9 @@ function EbayCard({ item }: { item: EbayItem }) {
               {item.condition}
             </span>
           )}
-          {item.quantity != null && (
+          {item.quantity_available != null && (
             <span className="rounded-full bg-[#f0f2f5] px-2 py-0.5 text-[0.67rem] font-semibold text-[#5c5e62]">
-              {item.quantity} avail.
+              {item.quantity_available} avail.
             </span>
           )}
         </div>
@@ -219,10 +221,12 @@ export default function SupplierIntel({ products }: { products: AdminProduct[] }
   const [alibabaLoading, setAlibabaLoading] = useState(false);
 
   const selectedProduct = products.find((p) => p.id === selectedId) ?? null;
-  const lowestEbayPrice =
-    ebayItems.length > 0
-      ? Math.min(...ebayItems.filter((i) => i.price != null).map((i) => i.price!))
-      : null;
+  const lowestEbayPrice = (() => {
+    const nums = ebayItems
+      .map((i) => parseFloat(String(i.price ?? "")))
+      .filter((n) => !isNaN(n));
+    return nums.length > 0 ? Math.min(...nums) : null;
+  })();
 
   // Sync product dropdown → query input
   const handleProductSelect = (id: number | "") => {
@@ -257,9 +261,8 @@ export default function SupplierIntel({ products }: { products: AdminProduct[] }
         return;
       }
 
-      const json = await res.json() as { data?: SupplierSearchResult } & SupplierSearchResult;
-      const result: SupplierSearchResult = json.data ?? json;
-      const items = (result.items ?? []).slice(0, 20);
+      const json = await res.json() as SupplierSearchResponse;
+      const items = (Array.isArray(json.data) ? json.data : []).slice(0, 20);
       setEbayItems(items);
       setSearchState("done");
     } catch {
