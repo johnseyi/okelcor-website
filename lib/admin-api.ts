@@ -134,6 +134,7 @@ export type AdminOrder = {
   total: number;
   status: "pending" | "confirmed" | "shipped" | "delivered" | "cancelled" | string;
   payment_method?: string;
+  payment_status?: "paid" | "unpaid" | "refunded" | string;
   created_at: string;
 };
 

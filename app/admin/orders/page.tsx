@@ -12,14 +12,19 @@ import OrdersCsvActions from "@/components/admin/orders-csv-actions";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Orders" };
 
-type SearchParams = Promise<{ status?: string; q?: string; page?: string }>;
+type SearchParams = Promise<{
+  status?: string;
+  payment_status?: string;
+  q?: string;
+  page?: string;
+}>;
 
 export default async function AdminOrdersPage({
   searchParams,
 }: {
   searchParams: SearchParams;
 }) {
-  const { status, q, page } = await searchParams;
+  const { status, payment_status, q, page } = await searchParams;
 
   try {
     await adminApiFetch<AdminOrder[]>("/orders", {
@@ -31,9 +36,10 @@ export default async function AdminOrdersPage({
   }
 
   const params: Record<string, string | number> = { per_page: 20 };
-  if (status && status !== "all") params.status = status;
-  if (q?.trim()) params.q = q.trim();
-  if (page) params.page = page;
+  if (status && status !== "all")                   params.status         = status;
+  if (payment_status && payment_status !== "all")   params.payment_status = payment_status;
+  if (q?.trim())                                    params.q              = q.trim();
+  if (page)                                         params.page           = page;
 
   const res = await adminSafeFetch<AdminOrder[]>("/orders", {
     params,
@@ -63,6 +69,7 @@ export default async function AdminOrdersPage({
         orders={orders}
         meta={meta}
         currentStatus={status ?? "all"}
+        currentPaymentStatus={payment_status ?? "all"}
         currentQ={q ?? ""}
         currentPage={Number(page ?? 1)}
       />

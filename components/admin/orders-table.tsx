@@ -20,6 +20,7 @@ type Props = {
   orders: AdminOrder[];
   meta: Meta;
   currentStatus: string;
+  currentPaymentStatus: string;
   currentQ: string;
   currentPage: number;
 };
@@ -27,6 +28,7 @@ type Props = {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const STATUS_OPTIONS = ["all", "pending", "confirmed", "shipped", "delivered", "cancelled"] as const;
+const PAYMENT_STATUS_OPTIONS = ["all", "paid", "unpaid", "refunded"] as const;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -37,6 +39,20 @@ const STATUS_STYLES: Record<string, string> = {
   delivered: "bg-emerald-100 text-emerald-700",
   cancelled: "bg-red-100 text-red-600",
 };
+
+const PAYMENT_STATUS_STYLES: Record<string, string> = {
+  paid:      "bg-emerald-100 text-emerald-700",
+  unpaid:    "bg-amber-100 text-amber-700",
+  refunded:  "bg-slate-100 text-slate-600",
+};
+
+function PaymentStatusBadge({ status }: { status: string }) {
+  return (
+    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.68rem] font-bold capitalize ${PAYMENT_STATUS_STYLES[status] ?? "bg-gray-100 text-gray-500"}`}>
+      {status}
+    </span>
+  );
+}
 
 function StatusBadge({ status }: { status: string }) {
   return (
@@ -57,19 +73,26 @@ function shortDate(iso: string): string {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function OrdersTable({
-  orders, meta, currentStatus, currentQ, currentPage,
+  orders, meta, currentStatus, currentPaymentStatus, currentQ, currentPage,
 }: Props) {
   const router = useRouter();
   const [q, setQ] = useState(currentQ);
 
-  const buildUrl = (overrides: { status?: string; q?: string; page?: number }) => {
+  const buildUrl = (overrides: {
+    status?: string;
+    paymentStatus?: string;
+    q?: string;
+    page?: number;
+  }) => {
     const params = new URLSearchParams();
-    const statusVal = overrides.status ?? currentStatus;
-    const qVal = overrides.q ?? q;
-    const pageVal = overrides.page ?? 1;
-    if (statusVal && statusVal !== "all") params.set("status", statusVal);
-    if (qVal.trim()) params.set("q", qVal.trim());
-    if (pageVal > 1) params.set("page", String(pageVal));
+    const statusVal        = overrides.status        ?? currentStatus;
+    const paymentStatusVal = overrides.paymentStatus ?? currentPaymentStatus;
+    const qVal             = overrides.q             ?? q;
+    const pageVal          = overrides.page          ?? 1;
+    if (statusVal        && statusVal !== "all")        params.set("status",         statusVal);
+    if (paymentStatusVal && paymentStatusVal !== "all") params.set("payment_status", paymentStatusVal);
+    if (qVal.trim())                                    params.set("q",              qVal.trim());
+    if (pageVal > 1)                                    params.set("page",           String(pageVal));
     const qs = params.toString();
     return `/admin/orders${qs ? `?${qs}` : ""}`;
   };
@@ -135,6 +158,30 @@ export default function OrdersTable({
         </div>
       </div>
 
+      {/* Payment status filter row */}
+      <div className="mb-4 flex items-center gap-2">
+        <span className="shrink-0 text-[0.75rem] font-semibold uppercase tracking-[0.12em] text-[#5c5e62]">
+          Payment
+        </span>
+        <div className="flex gap-1.5 overflow-x-auto">
+          {PAYMENT_STATUS_OPTIONS.map((ps) => (
+            <button
+              key={ps}
+              type="button"
+              onClick={() => router.push(buildUrl({ paymentStatus: ps, page: 1 }))}
+              className={[
+                "h-8 whitespace-nowrap rounded-xl px-3 text-[0.77rem] font-semibold capitalize transition",
+                currentPaymentStatus === ps
+                  ? "bg-[#1a1a1a] text-white"
+                  : "border border-black/[0.09] bg-white text-[#5c5e62] hover:border-black/20 hover:text-[#1a1a1a]",
+              ].join(" ")}
+            >
+              {ps === "all" ? "All payments" : ps}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Table */}
       <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
         <div className="overflow-x-auto">
@@ -170,8 +217,15 @@ export default function OrdersTable({
                     <td className="px-4 py-3">
                       <StatusBadge status={order.status} />
                     </td>
-                    <td className="px-4 py-3 text-[0.83rem] capitalize text-[#5c5e62]">
-                      {order.payment_method ?? "—"}
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col gap-1">
+                        {order.payment_status && (
+                          <PaymentStatusBadge status={order.payment_status} />
+                        )}
+                        <span className="text-[0.78rem] capitalize text-[#5c5e62]">
+                          {order.payment_method ?? "—"}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-[0.875rem] font-semibold text-[#1a1a1a]">
                       €{Number(order.total).toFixed(2)}

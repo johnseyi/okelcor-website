@@ -153,7 +153,9 @@ export default function OrdersCsvActions() {
         return;
       }
 
-      router.refresh();
+      // Navigate to /admin/orders (no filters) so imported orders are visible
+      // regardless of whatever status filter was active before the import.
+      router.push("/admin/orders");
       setModal({ phase: "done", result: json.data as ImportResult });
     } catch {
       setModal({ phase: "error", message: "Network error — could not reach the server." });
