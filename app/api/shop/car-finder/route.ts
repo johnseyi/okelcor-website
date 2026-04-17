@@ -117,39 +117,32 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  console.log("[car-finder] Request params:", { make, model, year });
-  console.log("[car-finder] API key exists:", !!process.env.WHEEL_SIZE_API_KEY);
+  // 2. Query Wheel-Size search/by_model across regions in parallel
+  // Valid region codes: eudm, usdm, jdm, audm, cadm — no "worldwide" option.
+  const REGIONS = ["eudm", "usdm", "jdm", "audm", "cadm"];
 
-  // 2. Query Wheel-Size search/by_model
   let allSizes: string[] = [];
   try {
-    const url =
-      `${BASE}/search/by_model/?make=${encodeURIComponent(make)}` +
-      `&model=${encodeURIComponent(model)}&year=${year}&region=worldwide&user_key=${WHEEL_SIZE_KEY}`;
+    const results = await Promise.allSettled(
+      REGIONS.map((region) =>
+        fetch(
+          `${BASE}/search/by_model/?make=${encodeURIComponent(make)}` +
+          `&model=${encodeURIComponent(model)}&year=${year}&region=${region}&user_key=${WHEEL_SIZE_KEY}`,
+          { cache: "no-store" },
+        ).then(async (res) => {
+          if (!res.ok) return [];
+          const json = await res.json() as { data?: unknown[] };
+          return Array.isArray(json.data) ? json.data : [];
+        }),
+      ),
+    );
 
-    console.log("[car-finder] Wheel-Size URL:", url);
-
-    const res = await fetch(url, { cache: "no-store" });
-
-    console.log("[car-finder] Response status:", res.status);
-
-    if (!res.ok) {
-      const errText = await res.text().catch(() => "");
-      console.log("[car-finder] Error body:", errText);
-      return NextResponse.json({
-        car: { make, model, year },
-        sizes: [],
-        message: "No tyre data found for this vehicle. Try searching by size below.",
-      });
+    const combined: unknown[] = [];
+    for (const r of results) {
+      if (r.status === "fulfilled") combined.push(...r.value);
     }
 
-    const json = await res.json() as { data?: unknown[] };
-    console.log("[car-finder] Response data:", JSON.stringify(json).slice(0, 2000));
-
-    const data = Array.isArray(json.data) ? json.data : [];
-    console.log("[car-finder] data array length:", data.length);
-    allSizes = extractSizes(data);
-    console.log("[car-finder] extracted sizes:", allSizes);
+    allSizes = extractSizes(combined);
   } catch (err) {
     console.error("[car-finder] fetch error:", err);
     return NextResponse.json(
@@ -159,7 +152,6 @@ export async function POST(req: NextRequest) {
   }
 
   if (allSizes.length === 0) {
-    console.log("[car-finder] No sizes extracted from response — returning empty");
     return NextResponse.json({
       car: { make, model, year },
       sizes: [],
