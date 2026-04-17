@@ -111,7 +111,165 @@ ease.sharp     "power2.inOut" — toggles/accordions
 
 ---
 
-## Completed in Latest Session — Shop Filter Bar, CSV Import/Export & Orders Admin (2026-04-16)
+## Completed in Latest Session — Adyen, Car Finder, Shipment Tracker, Supplier Intel & Mobile (2026-04-18)
+
+### Payment — Stripe replaced with Adyen Drop-in
+
+Stripe (`@stripe/stripe-js`, `@stripe/react-stripe-js`) has been fully removed. Adyen Web v6 Drop-in is now the payment provider.
+
+| File | Change |
+|---|---|
+| `lib/adyen-client.ts` | **NEW** — named export `export { AdyenCheckout } from "@adyen/adyen-web"` (v6 has no default export) |
+| `lib/payment-config.ts` | `stripeConfigured` → `adyenConfigured = !!process.env.NEXT_PUBLIC_ADYEN_CLIENT_KEY`; exports `ADYEN_CLIENT_KEY`, `ADYEN_ENVIRONMENT` |
+| `app/api/payments/create-session/route.ts` | **NEW** — proxies `POST ${API_URL}/payments/create-session`; unwraps Laravel `data` envelope; returns `{ session_id, session_data, client_key }` |
+| `components/checkout/checkout-flow.tsx` | Removed Stripe `<Elements>` wrapper; `AdyenSession` type `{ id, sessionData, clientKey }`; Drop-in mounted via `useEffect`; on `Authorised` → clears cart + sets orderRef |
+| `components/checkout/payment-selector.tsx` | Removed `CardElement`; removed Revolut placeholder |
+| `components/admin/settings-panel.tsx` | `stripe_enabled` → `adyen_enabled`, `stripe_publishable_key` → `adyen_client_key` |
+
+**Adyen Sessions flow:** Laravel creates a session → returns `{ session_id, session_data, client_key }` → frontend mounts Drop-in via `useEffect`. Manual payment fallback retained when `NEXT_PUBLIC_ADYEN_CLIENT_KEY` is not set.
+
+**New env vars required:**
+```
+NEXT_PUBLIC_ADYEN_CLIENT_KEY=test_xxxx
+NEXT_PUBLIC_ADYEN_ENVIRONMENT=test   # change to "live" in production
+```
+
+---
+
+### Shop — Wheel-Size Car Finder (4-step cascade)
+
+Replaced the old RapidAPI-based car finder with a full Wheel-Size.com cascade: Make → Model → Year → Modification/Trim → Find Tyres.
+
+#### New API proxy routes
+
+| Route | Endpoint | Notes |
+|---|---|---|
+| `app/api/shop/makes/route.ts` | `GET /v2/makes/` | 24h cache; returns `{ makes: [{slug, name}] }` |
+| `app/api/shop/models/route.ts` | `GET /v2/models/?make=` | 24h cache; returns `{ models: [{slug, name}] }` |
+| `app/api/shop/years/route.ts` | `GET /v2/years/?make=&model=` | Normalises `{ slug: 2026, name: 2026 }` (numeric fields); returns `{ years: number[] }` sorted newest-first |
+| `app/api/shop/modifications/route.ts` | `GET /v2/modifications/?make=&model=&year=` | Builds human-readable label from `trim_level · body · power · drive`; returns `{ modifications: [{slug, name}] }` |
+| `app/api/shop/car-finder/route.ts` | `POST → GET /v2/search/by_model/?modification={slug}` | Requires all 4 fields; dual+triple shape size extractor; stock filter via `/products/specs` |
+
+#### `extractSizes()` — three response shapes handled
+
+| Shape | Source field | Description |
+|---|---|---|
+| A | `tires[].tire_front.full_format` | Old Wheel-Size format |
+| B | `rims[].tires[].tire.name` | Mid Wheel-Size format |
+| **C** | `wheels[].front.tire` / `wheels[].rear.tire` | **Current format** — this was the bug; added in this session |
+
+Shape C fix: the `search/by_model` response returns `wheels[].front.tire` (e.g. `"235/45ZR18"`), which neither Shape A nor B matched, causing "No tyre data found" for all valid searches.
+
+#### `components/shop/car-finder.tsx` — rewritten
+
+- 4 cascading dropdowns: Make / Model / Year / Trim; each resets all downstream state on change
+- Loading flags per step (`makesLoading`, `modelsLoading`, `yearsLoading`, `modsLoading`)
+- `canSearch = !!make && !!model && !!year && !!modification && !isLoading`
+- POST body: `{ make, model, year: Number(year), modification }` (modification = slug string)
+- Result size pills: clicking auto-fills the shop catalogue filter and scrolls to `#shop-catalogue`
+
+**Required env var:** `WHEEL_SIZE_API_KEY=your_key`
+
+---
+
+### Shipment Tracker — Three + Pending States with Auto-Polling
+
+**File:** `components/account/shipment-tracker.tsx` — full rewrite
+
+| State | Trigger | UI |
+|---|---|---|
+| `"loading"` | Initial fetch in progress | Spinning `RefreshCw` |
+| `"fetching"` | HTTP 200 but `data.status` is null (ShipsGo still fetching from carrier) | Blue banner: "Tracking data is being fetched — please check back in a few minutes." Auto-polls every 60s up to 5× |
+| `"no-data"` | HTTP 404 / container not registered | Grey clock icon + "Awaiting first tracking update from carrier" |
+| `"error"` | Network / server fault | Amber warning, Retry button |
+| `"ok"` | Full data present | Container number + carrier row, 4 info chips, ETA, latest event, Refresh button |
+
+**Auto-polling:** When state is `"fetching"`, a `setTimeout` (60 000 ms) silently re-fetches without resetting to "loading". Stops after 5 polls (5 minutes) or when data arrives. "Check now" button resets poll count and triggers immediate re-fetch.
+
+**Response field mapping:**
+- `json.carrier` (top-level) → carrier display
+- `json.data` → tracking payload
+- `hasTrackingData()` checks: `vessel_name`, `current_location`, `location`, `port_of_loading`, `pol`, `port_of_discharge`, `pod`, `events`
+
+---
+
+### Admin — Order Detail Tracking Fix
+
+**File:** `components/admin/order-detail.tsx`
+
+- **Bug fixed:** When ShipsGo returned 200 with all tracking fields null, the widget was silently rendering nothing (all `{data.status && ...}` chips individually false). Added an explicit empty-data check.
+- When all fields null → blue "Awaiting first tracking update from carrier — check back in a few hours" banner (Clock icon)
+- When data present → full chips grid (unchanged)
+- Added `console.log("Tracking response:", json)` to `TrackingWidget.load()` for debugging
+
+---
+
+### Shop — Mobile Responsiveness Improvements
+
+**File:** `components/shop/car-finder.tsx`
+
+| Change | Detail |
+|---|---|
+| Tab padding | `px-6 py-4` → `px-3 py-3.5 sm:px-6 sm:py-4` |
+| Tab font | `text-sm` → `text-[0.81rem] sm:text-sm` |
+| Body padding | `px-5 py-5` → `px-4 py-4 sm:px-5 sm:py-5` |
+| Form gap | `gap-3` → `gap-2.5 sm:gap-3` |
+
+**File:** `components/shop/shop-catalogue.tsx`
+
+| Change | Detail |
+|---|---|
+| Search row padding | `px-5 py-4` → `px-4 py-3 sm:px-5 sm:py-4` |
+| Search button | Icon-only on mobile (`w-10 h-10` square); full `px-6 + "Search"` label on `sm+` |
+| Input placeholder | Shortened to fit narrow mobile viewports |
+| Dropdown layout | `flex flex-wrap` → `grid grid-cols-2 gap-2` on mobile → `sm:flex sm:flex-wrap` on sm+ |
+| Filter button | `col-span-2` (full width) on mobile, `sm:col-auto sm:flex-none sm:px-5` on sm+ |
+| Reset button | Same `col-span-2` treatment |
+| Section padding | `py-8` → `py-6 md:py-10` |
+
+On a 320px screen, `tesla-shell` gives ~300px inner width. The old layout left only ~96px for the search input; the icon-only button saves ~80px.
+
+---
+
+### Admin — Supplier Intelligence Page
+
+New page at `/admin/supplier` — visible to `super_admin` and `admin` roles only.
+
+**Files:**
+- `app/admin/supplier/page.tsx` — server component; fetches up to 200 catalogue products for the pre-fill dropdown; redirects to login on auth failure
+- `components/admin/supplier-intel.tsx` — full client component
+- `components/admin/admin-shell.tsx` — added `TrendingUp` icon + "Supplier Intel" nav entry
+
+#### Features
+
+**Search bar:**
+- Free-text input (`e.g. 205/55R16 Michelin`) + orange Search button
+- Product pre-fill dropdown: selecting a catalogue product builds `size · brand · name` as the query
+- Enter key triggers search
+
+**eBay column (`GET /api/v1/admin/supplier/search?q=`):**
+- Bearer token from `admin_token` cookie (client-side `getCookie()`)
+- Response shape: `{ data: EbayItem[], meta: { total } }` — `data` is a flat array (not `data.items`)
+- `EbayItem` fields: `title`, `price` (string), `currency`, `condition`, `seller`, `quantity_available`, `image`, `url`
+- Loading: 6 skeleton cards (2-col grid, `animate-pulse`)
+- Results: up to 20 cards — product image (with `<Image unoptimized>`), title (2-line clamp), condition + quantity badges, price, "View on eBay" button
+- Error banner on non-200 or network failure
+
+**Alibaba / B2B column:**
+- "Search on Alibaba.com" button: calls `GET /api/v1/admin/supplier/alibaba-link?q=` → opens returned `data.url` in new tab; falls back to constructing `alibaba.com/trade/search?SearchText=` directly
+- Quick links (pre-fill query in new tab): Made-in-China, Global Sources, DHgate
+- Tip text about Alibaba search best practices
+
+**Price comparison strip** (visible once a product is selected AND eBay results are in):
+- Okelcor sell price (from selected catalogue product)
+- Lowest eBay buy price (min of all result prices, parsed from string)
+- Margin indicator: difference with `TrendingUp` (green, positive) / `TrendingDown` (red, negative) / `Minus` (neutral)
+
+**Note:** eBay returns sandbox dummy data until `EBAY_ENVIRONMENT=production` is set on Hostinger with live credentials.
+
+---
+
+## Completed in Previous Session — Shop Filter Bar, CSV Import/Export & Orders Admin (2026-04-16)
 
 ### Fuel Echo Tech — Brand Rename
 
@@ -709,8 +867,8 @@ Server-side routes must use `API_URL` (no NEXT_PUBLIC_ prefix). Add `API_URL` to
 | Auth page | Complete — NextAuth Credentials provider, JWT sessions, callbackUrl redirect, i18n |
 | Quote page | Complete — form wired to `/api/quote` (Resend), reference number shown on success |
 | Cart drawer | Complete — fully i18n'd (all strings via t.cart.*) |
-| Checkout page | Complete — wired to `/api/checkout`; orderRef + live/manual mode; Stripe CardElement |
-| Order tracking | Complete — `/account/orders` list + `/account/orders/[ref]` detail with timeline |
+| Checkout page | Complete — wired to `/api/checkout`; orderRef + live/manual mode; **Adyen Drop-in** (Stripe removed) |
+| Order tracking | Complete — `/account/orders` list + `/account/orders/[ref]` detail with timeline + **ShipmentTracker (4 states + 60s auto-poll)** |
 | **Fuel Echo Tech page** | **Complete** — light theme, video hero, ROI calculator, 5 sections, stagger animations; renamed from "FET Engine Treatment" |
 | **Fuel Echo Tech teaser** | **Complete** — light green `#f0f4f0` strip on homepage |
 | 404 page | Complete — on-brand, Navbar + Footer |
@@ -741,7 +899,10 @@ Server-side routes must use `API_URL` (no NEXT_PUBLIC_ prefix). Add `API_URL` to
 | Admin — Brands | Complete — grid management, add/edit name inline, logo upload, delete with confirmation overlay |
 | Admin — Hero Slides | Complete — list ordered by position, add/edit form, image + video support, Route Handler upload |
 | Admin — Quote Requests | Complete — list with status filter + search + pagination, detail view, status update |
-| Admin — Settings | Complete — grouped cards, per-group save, toggle fields, empty state, normalises array/map API response |
+| Admin — Settings | Complete — grouped cards, per-group save, toggle fields, empty state, normalises array/map API response; Adyen fields |
+| Admin — Supplier Intel | **Complete** — eBay DE results, Alibaba/B2B quick links, price comparison strip; `/admin/supplier` |
+| Shop — Car Finder | **Complete** — 4-step Wheel-Size cascade (Make/Model/Year/Trim); 3-shape size extractor; stock filter |
+| Shop — Mobile layout | **Complete** — 2-col grid dropdowns, icon-only search button on mobile, compact car finder tabs |
 
 ---
 
@@ -763,22 +924,29 @@ Server-side routes must use `API_URL` (no NEXT_PUBLIC_ prefix). Add `API_URL` to
    NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
    NEXTAUTH_SECRET=<openssl rand -base64 32>
    NEXTAUTH_URL=https://okelcor.de
-   API_URL=https://api.takeovercreatives.com/api/v1
+   API_URL=https://api.okelcor.de/api/v1
+   NEXT_PUBLIC_API_URL=https://api.okelcor.de/api/v1
+
+   # Adyen (replaces Stripe)
+   NEXT_PUBLIC_ADYEN_CLIENT_KEY=test_xxxx      # from Adyen dashboard → Developers → API credentials
+   NEXT_PUBLIC_ADYEN_ENVIRONMENT=test          # change to "live" in production
+
+   # Wheel-Size car finder
+   WHEEL_SIZE_API_KEY=your_key                 # from wheel-size.com developer portal
    ```
    Without `RESEND_API_KEY`, contact/quote/checkout routes return errors.
    Without `NEXT_PUBLIC_GA_ID`, analytics is a no-op silently.
    Without `NEXTAUTH_SECRET` + `NEXTAUTH_URL`, auth sessions will fail.
    Without `API_URL`, order tracking and checkout proxy routes fall back to localhost.
+   Without `WHEEL_SIZE_API_KEY`, the car finder dropdowns (makes/models/years/modifications) will return 503.
+   Without `NEXT_PUBLIC_ADYEN_CLIENT_KEY`, checkout falls back to the manual payment mode.
 
 3. **Auth backend** — `lib/auth.ts` `authorize()` currently accepts any valid-format email + password ≥8 chars. Replace with real DB lookup before launch.
 
 4. **FET video** — Place the hero video at `public/videos/fet-hero.mp4`. The fallback gradient + poster image display until then. Optional poster: `public/images/fet-hero-poster.jpg`.
 
 ### Remaining — Medium Priority
-5. **Payment provider credentials** — When ready, add to production env vars and implement the SDK call in `app/api/checkout/route.ts`:
-   - **Stripe (card/Apple Pay/Google Pay):** `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` + `STRIPE_SECRET_KEY`
-   - **PayPal:** `NEXT_PUBLIC_PAYPAL_CLIENT_ID` + `PAYPAL_CLIENT_SECRET`
-   - **Klarna (via Stripe):** `NEXT_PUBLIC_KLARNA_ENABLED=true` (also needs Stripe keys)
+5. **Adyen live credentials** — Switch `NEXT_PUBLIC_ADYEN_ENVIRONMENT=live` and update `NEXT_PUBLIC_ADYEN_CLIENT_KEY` to the live key from the Adyen dashboard. The Drop-in is fully wired; only the env vars need changing.
 
 6. **FET sitemap entry** — Add `/fet` to `app/sitemap.ts` static routes (priority 0.8)
 
