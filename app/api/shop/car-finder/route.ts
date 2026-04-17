@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
   try {
     const url =
       `${BASE}/search/by_model/?make=${encodeURIComponent(make)}` +
-      `&model=${encodeURIComponent(model)}&year=${year}&user_key=${WHEEL_SIZE_KEY}`;
+      `&model=${encodeURIComponent(model)}&year=${year}&region=worldwide&user_key=${WHEEL_SIZE_KEY}`;
 
     console.log("[car-finder] Wheel-Size URL:", url);
 
