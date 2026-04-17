@@ -149,7 +149,7 @@ export default function CarFinder({ onSizeSelect }: Props) {
   const canSearch  = !!make && !!model && !!year && !!modification && !isLoading;
   const noResults  = result && (result.error || result.sizes.length === 0);
   const tabCls     = (tab: Tab) =>
-    `flex items-center gap-2 px-6 py-4 text-sm font-semibold transition border-b-2 -mb-px ${
+    `flex items-center gap-1.5 px-4 py-3.5 text-[0.81rem] font-semibold transition border-b-2 -mb-px sm:gap-2 sm:px-6 sm:py-4 sm:text-sm ${
       activeTab === tab ? "border-[#f4511e] text-[#f4511e]" : "border-transparent text-[#5c5e62] hover:text-[#171a20]"
     }`;
 
@@ -173,7 +173,7 @@ export default function CarFinder({ onSizeSelect }: Props) {
 
           {/* ── Search by Car ── */}
           {activeTab === "car" && (
-            <div className="px-5 py-5">
+            <div className="px-4 py-4 sm:px-5 sm:py-5">
 
               {makesError && (
                 <div className="mb-4 flex items-start gap-2 rounded-xl border border-[#fde8e4] bg-[#fff8f7] px-4 py-3 text-[0.83rem] text-[#c0392b]">
@@ -182,7 +182,7 @@ export default function CarFinder({ onSizeSelect }: Props) {
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+              <form onSubmit={handleSubmit} className="flex flex-col gap-2.5 sm:gap-3">
 
                 {/* Row 1: Make + Model */}
                 <div className="flex flex-col gap-3 sm:flex-row">
@@ -320,7 +320,7 @@ export default function CarFinder({ onSizeSelect }: Props) {
 
           {/* ── Search by Size ── */}
           {activeTab === "size" && (
-            <div className="flex flex-col items-center gap-3 px-5 py-8 text-center">
+            <div className="flex flex-col items-center gap-3 px-4 py-8 text-center sm:px-5">
               <p className="text-[0.9rem] text-[#5c5e62]">
                 Use the size filters in the search bar below to find your tyres.
               </p>

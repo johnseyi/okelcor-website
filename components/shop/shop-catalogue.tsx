@@ -214,40 +214,43 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed }
   // ─────────────────────────────────────────────────────────────────────────────
 
   return (
-    <section className="w-full bg-[#f5f5f5] py-8 md:py-10">
+    <section className="w-full bg-[#f5f5f5] py-6 md:py-10">
       <div className="tesla-shell">
 
         {/* ── Filter bar ── */}
         <div className="mb-6 overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-sm">
 
           {/* Row 1 — text search */}
-          <div className="flex items-center gap-3 border-b border-[#f0f0f0] px-5 py-4">
+          <div className="flex items-center gap-2 border-b border-[#f0f0f0] px-4 py-3 sm:gap-3 sm:px-5 sm:py-4">
             <div className="relative flex-1">
               <Search
                 size={16}
-                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9ca3af]"
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#9ca3af] sm:left-3.5"
               />
               <input
                 type="search"
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && runSearch()}
-                placeholder="Search by matchcode, brand, size or article number"
-                className="h-11 w-full rounded-lg border border-[#e5e7eb] bg-[#fafafa] pl-10 pr-4 text-[0.88rem] text-[#171a20] outline-none placeholder:text-[#9ca3af] transition focus:border-[#f4511e] focus:bg-white focus:ring-1 focus:ring-[#f4511e]/20"
+                placeholder="Search by brand, size or article number"
+                className="h-10 w-full rounded-lg border border-[#e5e7eb] bg-[#fafafa] pl-9 pr-3 text-[0.85rem] text-[#171a20] outline-none placeholder:text-[#9ca3af] transition focus:border-[#f4511e] focus:bg-white focus:ring-1 focus:ring-[#f4511e]/20 sm:h-11 sm:pl-10 sm:pr-4 sm:text-[0.88rem]"
               />
             </div>
+            {/* Icon-only on mobile, icon + label on sm+ */}
             <button
               type="button"
               onClick={runSearch}
-              className="flex h-11 items-center gap-2 rounded-lg bg-[#f4511e] px-6 text-[0.88rem] font-semibold text-white transition hover:bg-[#d14f14]"
+              className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#f4511e] text-white transition hover:bg-[#d14f14] sm:h-11 sm:w-auto sm:gap-2 sm:px-6 sm:text-[0.88rem] sm:font-semibold"
             >
               <Search size={15} strokeWidth={2.2} />
-              Search
+              <span className="hidden sm:inline">Search</span>
             </button>
           </div>
 
-          {/* Row 2 — dropdowns */}
-          <div className="flex flex-wrap items-center gap-2 px-5 py-3">
+          {/* Row 2 — dropdowns + action buttons */}
+          {/* Mobile: 2-col grid so each dropdown gets a proper half-width cell.    */}
+          {/* sm+: revert to flex-wrap (original behaviour).                        */}
+          <div className="grid grid-cols-2 gap-2 px-4 py-3 sm:flex sm:flex-wrap sm:items-center sm:px-5">
 
             {/* Min price */}
             <select value={priceMin} onChange={(e) => setPriceMin(e.target.value)} className={sel}>
@@ -303,14 +306,14 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed }
               {loadIndexes.map((l) => <option key={l} value={l}>{l}</option>)}
             </select>
 
-            {/* Spacer */}
+            {/* Spacer — only on md+ to push buttons right */}
             <div className="hidden flex-1 md:block" />
 
-            {/* Filter button */}
+            {/* Filter button — spans both columns on mobile, normal flex item on sm+ */}
             <button
               type="button"
               onClick={runSearch}
-              className="flex h-10 items-center gap-2 rounded-lg bg-[#f4511e] px-5 text-[0.82rem] font-semibold text-white transition hover:bg-[#d14f14]"
+              className="col-span-2 flex h-10 items-center justify-center gap-2 rounded-lg bg-[#f4511e] text-[0.82rem] font-semibold text-white transition hover:bg-[#d14f14] sm:col-auto sm:flex-none sm:px-5"
             >
               {isLoading ? (
                 <Loader2 size={14} className="animate-spin" />
@@ -320,12 +323,12 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed }
               Filter
             </button>
 
-            {/* Reset */}
+            {/* Reset — spans both columns on mobile, normal flex item on sm+ */}
             {hasActiveFilters && (
               <button
                 type="button"
                 onClick={reset}
-                className="flex h-10 items-center gap-1.5 rounded-lg border border-[#e5e7eb] px-4 text-[0.82rem] font-semibold text-[#5c5e62] transition hover:border-[#f4511e]/40 hover:text-[#f4511e]"
+                className="col-span-2 flex h-10 items-center justify-center gap-1.5 rounded-lg border border-[#e5e7eb] text-[0.82rem] font-semibold text-[#5c5e62] transition hover:border-[#f4511e]/40 hover:text-[#f4511e] sm:col-auto sm:flex-none sm:px-4"
               >
                 <RotateCcw size={13} strokeWidth={2} />
                 Reset
