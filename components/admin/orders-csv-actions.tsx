@@ -37,15 +37,18 @@ export default function OrdersCsvActions() {
   const [exportError, setExportError] = useState<string | null>(null);
   const [modal, setModal]             = useState<ModalState>({ phase: "idle" });
 
-  // Auto-close the modal 3 seconds after a successful import
+  // Auto-close 3 s after a successful import, then navigate to the clean
+  // orders list so Wix-imported "delivered" orders are visible regardless
+  // of whatever status filter was active before the import.
   useEffect(() => {
     if (modal.phase !== "done") return;
     const timer = setTimeout(() => {
       setModal({ phase: "idle" });
       if (fileInputRef.current) fileInputRef.current.value = "";
+      router.push("/admin/orders");
     }, 3000);
     return () => clearTimeout(timer);
-  }, [modal.phase]);
+  }, [modal.phase, router]);
 
   // ── Export ──────────────────────────────────────────────────────────────────
 
@@ -153,10 +156,11 @@ export default function OrdersCsvActions() {
         return;
       }
 
-      // Navigate to /admin/orders (no filters) so imported orders are visible
-      // regardless of whatever status filter was active before the import.
-      router.push("/admin/orders");
+      // Show the result modal first, then refresh server-component data
+      // in the background. The auto-close timer navigates to /admin/orders
+      // (no filters) so newly imported "delivered" orders are visible.
       setModal({ phase: "done", result: json.data as ImportResult });
+      router.refresh();
     } catch {
       setModal({ phase: "error", message: "Network error — could not reach the server." });
     }
@@ -336,7 +340,11 @@ export default function OrdersCsvActions() {
                 </p>
                 <button
                   type="button"
-                  onClick={closeModal}
+                  onClick={() => {
+                    setModal({ phase: "idle" });
+                    if (fileInputRef.current) fileInputRef.current.value = "";
+                    router.push("/admin/orders");
+                  }}
                   className="w-full rounded-full bg-[#171a20] py-3 text-[0.9rem] font-semibold text-white transition hover:bg-black"
                 >
                   Close Now
