@@ -498,7 +498,7 @@ export default function SupplierIntel({ products }: { products: AdminProduct[] }
       {/* ── Price comparison strip ── */}
       <PriceStrip
         okelcorPrice={selectedProduct ? Number(selectedProduct.price) : null}
-        lowestEbay={lowestEbay}
+        lowestEbay={lowestEbayPrice}
       />
 
     </div>
