@@ -37,18 +37,20 @@ export default function OrdersCsvActions() {
   const [exportError, setExportError] = useState<string | null>(null);
   const [modal, setModal]             = useState<ModalState>({ phase: "idle" });
 
-  // Auto-close 3 s after a successful import, then navigate to the clean
-  // orders list so Wix-imported "delivered" orders are visible regardless
-  // of whatever status filter was active before the import.
+  // Auto-close 3 s after a successful import then hard-navigate to
+  // /admin/orders with no filter params. A hard navigation (window.location)
+  // is used instead of router.push/refresh because router.push() to the
+  // current pathname can be a no-op in Next.js App Router, leaving stale
+  // data on screen. Hard nav guarantees a fresh server render.
   useEffect(() => {
     if (modal.phase !== "done") return;
     const timer = setTimeout(() => {
       setModal({ phase: "idle" });
       if (fileInputRef.current) fileInputRef.current.value = "";
-      router.push("/admin/orders");
+      window.location.href = "/admin/orders";
     }, 3000);
     return () => clearTimeout(timer);
-  }, [modal.phase, router]);
+  }, [modal.phase]);
 
   // ── Export ──────────────────────────────────────────────────────────────────
 
@@ -343,7 +345,7 @@ export default function OrdersCsvActions() {
                   onClick={() => {
                     setModal({ phase: "idle" });
                     if (fileInputRef.current) fileInputRef.current.value = "";
-                    router.push("/admin/orders");
+                    window.location.href = "/admin/orders";
                   }}
                   className="w-full rounded-full bg-[#171a20] py-3 text-[0.9rem] font-semibold text-white transition hover:bg-black"
                 >

@@ -108,8 +108,9 @@ export default function OrdersTable({
 
   return (
     <>
-      {/* Search + status filter */}
+      {/* Search + filter row */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row">
+        {/* Search input */}
         <form onSubmit={handleSearch} className="flex flex-1 gap-2">
           <div className="relative flex-1">
             <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#5c5e62]" />
@@ -138,48 +139,29 @@ export default function OrdersTable({
           )}
         </form>
 
-        {/* Status filter tabs */}
-        <div className="flex gap-1.5 overflow-x-auto">
-          {STATUS_OPTIONS.map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => router.push(buildUrl({ status: s, page: 1 }))}
-              className={[
-                "h-10 whitespace-nowrap rounded-xl px-3.5 text-[0.8rem] font-semibold capitalize transition",
-                currentStatus === s
-                  ? "bg-[#E85C1A] text-white"
-                  : "border border-black/[0.09] bg-white text-[#5c5e62] hover:border-[#E85C1A] hover:text-[#E85C1A]",
-              ].join(" ")}
-            >
-              {s === "all" ? "All" : s}
-            </button>
+        {/* Status dropdown — no value = show all, no default filter */}
+        <select
+          value={currentStatus === "all" ? "" : currentStatus}
+          onChange={(e) => router.push(buildUrl({ status: e.target.value || "all", page: 1 }))}
+          className="h-10 rounded-xl border border-black/[0.09] bg-white px-3 pr-8 text-[0.875rem] text-[#1a1a1a] outline-none transition focus:border-[#E85C1A] focus:ring-2 focus:ring-[#E85C1A]/10 cursor-pointer"
+        >
+          <option value="">All statuses</option>
+          {STATUS_OPTIONS.filter((s) => s !== "all").map((s) => (
+            <option key={s} value={s} className="capitalize">{s.charAt(0).toUpperCase() + s.slice(1)}</option>
           ))}
-        </div>
-      </div>
+        </select>
 
-      {/* Payment status filter row */}
-      <div className="mb-4 flex items-center gap-2">
-        <span className="shrink-0 text-[0.75rem] font-semibold uppercase tracking-[0.12em] text-[#5c5e62]">
-          Payment
-        </span>
-        <div className="flex gap-1.5 overflow-x-auto">
-          {PAYMENT_STATUS_OPTIONS.map((ps) => (
-            <button
-              key={ps}
-              type="button"
-              onClick={() => router.push(buildUrl({ paymentStatus: ps, page: 1 }))}
-              className={[
-                "h-8 whitespace-nowrap rounded-xl px-3 text-[0.77rem] font-semibold capitalize transition",
-                currentPaymentStatus === ps
-                  ? "bg-[#1a1a1a] text-white"
-                  : "border border-black/[0.09] bg-white text-[#5c5e62] hover:border-black/20 hover:text-[#1a1a1a]",
-              ].join(" ")}
-            >
-              {ps === "all" ? "All payments" : ps}
-            </button>
+        {/* Payment status dropdown */}
+        <select
+          value={currentPaymentStatus === "all" ? "" : currentPaymentStatus}
+          onChange={(e) => router.push(buildUrl({ paymentStatus: e.target.value || "all", page: 1 }))}
+          className="h-10 rounded-xl border border-black/[0.09] bg-white px-3 pr-8 text-[0.875rem] text-[#1a1a1a] outline-none transition focus:border-[#E85C1A] focus:ring-2 focus:ring-[#E85C1A]/10 cursor-pointer"
+        >
+          <option value="">All payments</option>
+          {PAYMENT_STATUS_OPTIONS.filter((ps) => ps !== "all").map((ps) => (
+            <option key={ps} value={ps} className="capitalize">{ps.charAt(0).toUpperCase() + ps.slice(1)}</option>
           ))}
-        </div>
+        </select>
       </div>
 
       {/* Table */}
