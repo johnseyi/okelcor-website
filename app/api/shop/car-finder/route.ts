@@ -146,6 +146,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  console.log("[car-finder] RAPIDAPI_KEY exists:", !!process.env.RAPIDAPI_KEY);
+  console.log("[car-finder] Request params:", { make, model, year });
+
   if (!RAPIDAPI_KEY) {
     return NextResponse.json(
       { error: "Car lookup is not configured (missing RAPIDAPI_KEY)" },
@@ -156,22 +159,27 @@ export async function POST(req: NextRequest) {
   // 2. Fetch car details from RapidAPI Cars by API-Ninjas
   let carData: CarApiEntry | null = null;
   try {
-    const rapidRes = await fetch(
-      `https://cars-by-api-ninjas.p.rapidapi.com/v1/cars?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}&year=${year}&limit=1`,
-      {
-        headers: {
-          "X-RapidAPI-Key":  RAPIDAPI_KEY,
-          "X-RapidAPI-Host": RAPIDAPI_HOST,
-        },
-        cache: "no-store",
+    const rapidUrl = `https://cars-by-api-ninjas.p.rapidapi.com/v1/cars?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}&year=${year}`;
+    console.log("[car-finder] RapidAPI URL:", rapidUrl);
+
+    const rapidRes = await fetch(rapidUrl, {
+      headers: {
+        "X-RapidAPI-Key":  RAPIDAPI_KEY,
+        "X-RapidAPI-Host": RAPIDAPI_HOST,
       },
-    );
+      cache: "no-store",
+    });
+
+    console.log("[car-finder] RapidAPI status:", rapidRes.status);
+
+    const data = await rapidRes.json() as CarApiEntry[] | CarApiEntry;
+    console.log("[car-finder] RapidAPI data:", JSON.stringify(data));
 
     if (rapidRes.ok) {
-      const json = await rapidRes.json() as CarApiEntry[] | CarApiEntry;
-      carData = Array.isArray(json) ? (json[0] ?? null) : json;
+      carData = Array.isArray(data) ? (data[0] ?? null) : data;
     }
-  } catch {
+  } catch (err) {
+    console.error("[car-finder] RapidAPI fetch error:", err);
     // carData stays null — handled below
   }
 
