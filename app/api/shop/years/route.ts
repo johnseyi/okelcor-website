@@ -41,11 +41,10 @@ export async function GET(req: NextRequest) {
         if (typeof y === "number") return y;
         if (typeof y === "string") return parseInt(y, 10);
         const obj = y as Record<string, unknown>;
-        return typeof obj.slug === "string"
-          ? parseInt(obj.slug, 10)
-          : typeof obj.name === "string"
-            ? parseInt(obj.name, 10)
-            : NaN;
+        const val = obj.slug ?? obj.name;
+        if (typeof val === "number") return val;
+        if (typeof val === "string") return parseInt(val, 10);
+        return NaN;
       })
       .filter((y) => !isNaN(y))
       .sort((a, b) => b - a); // newest first
