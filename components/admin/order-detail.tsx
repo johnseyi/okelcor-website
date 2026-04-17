@@ -98,10 +98,10 @@ function TrackingWidget({ containerNumber }: { containerNumber: string }) {
     try {
       const res  = await fetch(`/api/tracking/${encodeURIComponent(containerNumber)}`);
       const json = await res.json() as { data?: TrackingData; error?: string } & TrackingData;
+      console.log("Tracking response:", json);
       if (!res.ok) {
         setError(json.error ?? "No tracking data found for this container.");
       } else {
-        // Handle both { data: {...} } and flat response shapes
         setData(json.data ?? (json as TrackingData));
       }
     } catch {
@@ -147,7 +147,14 @@ function TrackingWidget({ containerNumber }: { containerNumber: string }) {
           </div>
         )}
 
-        {!loading && data && (
+        {!loading && data && !(data.status || data.vessel || data.location || data.eta || data.events?.length) && (
+          <div className="flex items-start gap-2.5 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-[0.83rem] text-blue-800">
+            <Clock size={15} className="mt-0.5 shrink-0 text-blue-500" />
+            Awaiting first tracking update from carrier — check back in a few hours.
+          </div>
+        )}
+
+        {!loading && data && !!(data.status || data.vessel || data.location || data.eta || data.events?.length) && (
           <div className="space-y-5">
             {/* Summary chips */}
             <div className="flex flex-wrap gap-3">
