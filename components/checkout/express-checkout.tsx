@@ -4,7 +4,7 @@ import { useLanguage } from "@/context/language-context";
 import { PAYMENT_PROVIDERS } from "@/lib/payment-config";
 
 type Props = {
-  onSelect: (method: "applepay" | "paypal" | "googlepay") => void;
+  onSelect: (method?: "applepay" | "paypal" | "googlepay") => void;
 };
 
 export default function ExpressCheckout({ onSelect }: Props) {

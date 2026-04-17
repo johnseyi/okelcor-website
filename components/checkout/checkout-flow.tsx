@@ -1,14 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import { CheckCircle2, ChevronRight } from "lucide-react";
-import { Elements, useStripe, useElements, CardElement } from "@stripe/react-stripe-js";
 import { useCart } from "@/context/cart-context";
 import { useLanguage } from "@/context/language-context";
-import { stripePromise } from "@/lib/stripe-client";
 import ExpressCheckout from "./express-checkout";
-import PaymentSelector, { type PaymentMethod } from "./payment-selector";
 import OrderSummary from "./order-summary";
 import VatField from "@/components/vat-field";
 
@@ -25,6 +22,8 @@ type DeliveryData = {
 };
 
 type DeliveryErrors = Partial<DeliveryData>;
+
+type AdyenSession = { id: string; sessionData: string };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -53,27 +52,16 @@ const FET_PRODUCT = {
 } as const;
 
 function FetUpsellCard({
-  added,
-  qty,
-  onAdd,
-  onChangeQty,
-  onRemove,
-  onDismiss,
+  added, qty, onAdd, onChangeQty, onRemove, onDismiss,
 }: {
-  added:        boolean;
-  qty:          number;
-  onAdd:        () => void;
-  onChangeQty:  (q: number) => void;
-  onRemove:     () => void;
-  onDismiss:    () => void;
+  added: boolean; qty: number;
+  onAdd: () => void; onChangeQty: (q: number) => void;
+  onRemove: () => void; onDismiss: () => void;
 }) {
   return (
     <div className="relative overflow-hidden rounded-[22px] border border-[#d1fae5] bg-[#f0fdf4]">
-      {/* Green left accent bar */}
       <div className="absolute inset-y-0 left-0 w-1 bg-[#10b981]" aria-hidden="true" />
-
       <div className="px-5 py-5 pl-7 sm:px-6 sm:pl-8">
-        {/* Top row: copy + price */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <span className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-[#dcfce7] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[#166534]">
@@ -87,7 +75,6 @@ function FetUpsellCard({
               Improve fuel efficiency by up to 15% and protect your engine. Trusted by fleet operators across Europe.
             </p>
           </div>
-
           <div className="shrink-0 sm:text-right">
             <p className="text-[0.72rem] font-semibold uppercase tracking-wide text-[#9ca3af]">From</p>
             <p className="text-[1.4rem] font-extrabold leading-none text-[#10b981]">€249.00</p>
@@ -95,21 +82,14 @@ function FetUpsellCard({
           </div>
         </div>
 
-        {/* Action row */}
         {!added ? (
           <div className="mt-4 flex w-full flex-col gap-2 sm:flex-row sm:items-center">
-            <button
-              type="button"
-              onClick={onAdd}
-              className="flex h-[44px] w-full items-center justify-center rounded-full bg-[#10b981] px-6 text-[0.88rem] font-semibold text-white transition hover:bg-[#0d9e6e] sm:w-auto"
-            >
+            <button type="button" onClick={onAdd}
+              className="flex h-[44px] w-full items-center justify-center rounded-full bg-[#10b981] px-6 text-[0.88rem] font-semibold text-white transition hover:bg-[#0d9e6e] sm:w-auto">
               Add to Order
             </button>
-            <button
-              type="button"
-              onClick={onDismiss}
-              className="flex h-[44px] w-full items-center justify-center rounded-full px-4 text-[0.88rem] font-semibold text-[#6b7280] transition hover:text-[#111111] sm:w-auto"
-            >
+            <button type="button" onClick={onDismiss}
+              className="flex h-[44px] w-full items-center justify-center rounded-full px-4 text-[0.88rem] font-semibold text-[#6b7280] transition hover:text-[#111111] sm:w-auto">
               No thanks
             </button>
           </div>
@@ -120,25 +100,16 @@ function FetUpsellCard({
               <span className="text-[0.82rem] font-semibold text-[#166534]">Added to order</span>
             </div>
             <div className="flex items-center gap-2">
-              <label className="text-[0.82rem] font-semibold text-[#6b7280]" htmlFor="fet-qty">
-                Qty:
-              </label>
-              <select
-                id="fet-qty"
-                value={qty}
-                onChange={(e) => onChangeQty(Number(e.target.value))}
-                className="rounded-[8px] border border-[#d1fae5] bg-white px-3 py-1.5 text-[0.88rem] font-semibold text-[#111111] outline-none focus:border-[#10b981] focus:ring-1 focus:ring-[#10b981]/20"
-              >
+              <label className="text-[0.82rem] font-semibold text-[#6b7280]" htmlFor="fet-qty">Qty:</label>
+              <select id="fet-qty" value={qty} onChange={(e) => onChangeQty(Number(e.target.value))}
+                className="rounded-[8px] border border-[#d1fae5] bg-white px-3 py-1.5 text-[0.88rem] font-semibold text-[#111111] outline-none focus:border-[#10b981] focus:ring-1 focus:ring-[#10b981]/20">
                 {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
                   <option key={n} value={n}>{n}</option>
                 ))}
               </select>
             </div>
-            <button
-              type="button"
-              onClick={onRemove}
-              className="text-[0.82rem] font-semibold text-[#9ca3af] underline transition hover:text-[#111111]"
-            >
+            <button type="button" onClick={onRemove}
+              className="text-[0.82rem] font-semibold text-[#9ca3af] underline transition hover:text-[#111111]">
               Remove
             </button>
           </div>
@@ -150,16 +121,8 @@ function FetUpsellCard({
 
 // ─── Small helpers ────────────────────────────────────────────────────────────
 
-function Field({
-  label,
-  htmlFor,
-  error,
-  children,
-}: {
-  label: string;
-  htmlFor?: string;
-  error?: string;
-  children: React.ReactNode;
+function Field({ label, htmlFor, error, children }: {
+  label: string; htmlFor?: string; error?: string; children: React.ReactNode;
 }) {
   return (
     <div>
@@ -168,7 +131,9 @@ function Field({
       </label>
       {children}
       {error && (
-        <p id={htmlFor ? `${htmlFor}-error` : undefined} role="alert" className="mt-0.5 text-[0.75rem] text-red-500">{error}</p>
+        <p id={htmlFor ? `${htmlFor}-error` : undefined} role="alert" className="mt-0.5 text-[0.75rem] text-red-500">
+          {error}
+        </p>
       )}
     </div>
   );
@@ -217,16 +182,12 @@ function SuccessState({ orderRef, mode }: { orderRef: string; mode: "live" | "ma
           </p>
         </div>
         <div className="mt-6 flex flex-col gap-2.5 sm:flex-row">
-          <Link
-            href="/shop"
-            className="flex h-[46px] flex-1 items-center justify-center rounded-full bg-[var(--primary)] text-[0.9rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
-          >
+          <Link href="/shop"
+            className="flex h-[46px] flex-1 items-center justify-center rounded-full bg-[var(--primary)] text-[0.9rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]">
             {c.continueShopping}
           </Link>
-          <Link
-            href="/"
-            className="flex h-[46px] flex-1 items-center justify-center rounded-full border border-black/10 bg-white text-[0.9rem] font-semibold text-[var(--foreground)] transition hover:bg-[#f5f5f5]"
-          >
+          <Link href="/"
+            className="flex h-[46px] flex-1 items-center justify-center rounded-full border border-black/10 bg-white text-[0.9rem] font-semibold text-[var(--foreground)] transition hover:bg-[#f5f5f5]">
             {c.backToHome}
           </Link>
         </div>
@@ -245,10 +206,8 @@ function EmptyCartState() {
       <div>
         <p className="text-2xl font-extrabold text-[var(--foreground)]">{c.emptyTitle}</p>
         <p className="mt-2 text-[0.95rem] text-[var(--muted)]">{c.emptyBody}</p>
-        <Link
-          href="/shop"
-          className="mt-5 inline-flex h-[46px] items-center gap-2 rounded-full bg-[var(--primary)] px-6 text-[0.9rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
-        >
+        <Link href="/shop"
+          className="mt-5 inline-flex h-[46px] items-center gap-2 rounded-full bg-[var(--primary)] px-6 text-[0.9rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]">
           {c.browseCatalogue} <ChevronRight size={16} />
         </Link>
       </div>
@@ -256,33 +215,86 @@ function EmptyCartState() {
   );
 }
 
-// ─── Inner checkout (needs to be inside <Elements>) ───────────────────────────
+// ─── Main checkout component ──────────────────────────────────────────────────
 
-function CheckoutInner() {
+export default function CheckoutFlow() {
   const { items, clearCart } = useCart();
   const { t } = useLanguage();
   const c = t.checkout;
-  const stripe = useStripe();
-  const elements = useElements();
   const deliveryRef = useRef<HTMLDivElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const dropinRef = useRef<any>(null);
 
   const [delivery, setDelivery] = useState<DeliveryData>({
-    name: "", email: "", address: "",
-    city: "", postalCode: "", country: "", phone: "",
+    name: "", email: "", address: "", city: "", postalCode: "", country: "", phone: "",
   });
   const [deliveryErrors, setDeliveryErrors] = useState<DeliveryErrors>({});
   const [vatNumber, setVatNumber] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [orderRef, setOrderRef] = useState("");
   const [orderMode, setOrderMode] = useState<"live" | "manual">("manual");
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [adyenSession, setAdyenSession] = useState<AdyenSession | null>(null);
+  const [dropinMounted, setDropinMounted] = useState(false);
 
-  // FET upsell state — dismissed once "No thanks" is clicked (session-scoped)
-  const [fetAdded, setFetAdded]       = useState(false);
-  const [fetQty, setFetQty]           = useState(1);
+  const [fetAdded, setFetAdded]         = useState(false);
+  const [fetQty, setFetQty]             = useState(1);
   const [fetDismissed, setFetDismissed] = useState(false);
+
+  // Cleanup Drop-in on unmount
+  useEffect(() => {
+    return () => { dropinRef.current?.unmount(); };
+  }, []);
+
+  // Mount Adyen Drop-in once session is created
+  useEffect(() => {
+    if (!adyenSession) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const { AdyenCheckout } = await import("@/lib/adyen-client");
+        if (cancelled) return;
+
+        dropinRef.current?.unmount();
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const checkout = await (AdyenCheckout as any)({
+          environment: process.env.NEXT_PUBLIC_ADYEN_ENVIRONMENT ?? "test",
+          clientKey:   process.env.NEXT_PUBLIC_ADYEN_CLIENT_KEY ?? "",
+          session: { id: adyenSession.id, sessionData: adyenSession.sessionData },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          onPaymentCompleted: (result: any) => {
+            if (result.resultCode === "Authorised") {
+              clearCart();
+              setOrderRef(result.merchantReference ?? adyenSession.id);
+              setOrderMode("live");
+              setSubmitted(true);
+            } else {
+              setSubmitError(`Payment ${result.resultCode}. Please try again.`);
+            }
+          },
+          onError: (error: Error) => {
+            setSubmitError(error.message ?? "Payment failed. Please try again.");
+          },
+        });
+
+        if (cancelled) return;
+        const dropin = checkout.create("dropin");
+        dropin.mount("#adyen-dropin");
+        dropinRef.current = dropin;
+        setDropinMounted(true);
+      } catch (err) {
+        if (!cancelled) {
+          setSubmitError((err as Error).message ?? "Could not load payment UI.");
+          setAdyenSession(null);
+        }
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [adyenSession, clearCart]);
 
   if (items.length === 0 && !submitted) return <EmptyCartState />;
   if (submitted) return <SuccessState orderRef={orderRef} mode={orderMode} />;
@@ -291,23 +303,22 @@ function CheckoutInner() {
 
   const validateDelivery = (): boolean => {
     const errs: DeliveryErrors = {};
-    if (!delivery.name.trim()) errs.name = c.errName;
-    if (!delivery.email.trim()) errs.email = c.errEmail;
+    if (!delivery.name.trim())     errs.name = c.errName;
+    if (!delivery.email.trim())    errs.email = c.errEmail;
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(delivery.email)) errs.email = c.errEmailInvalid;
-    if (!delivery.address.trim()) errs.address = c.errAddress;
-    if (!delivery.city.trim()) errs.city = c.errCity;
+    if (!delivery.address.trim())  errs.address = c.errAddress;
+    if (!delivery.city.trim())     errs.city = c.errCity;
     if (!delivery.postalCode.trim()) errs.postalCode = c.errPostalCode;
-    if (!delivery.country) errs.country = c.errCountry;
-    if (!delivery.phone.trim()) errs.phone = c.errPhone;
+    if (!delivery.country)         errs.country = c.errCountry;
+    if (!delivery.phone.trim())    errs.phone = c.errPhone;
     setDeliveryErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
-  // ── Order payload (shared between Stripe and manual flows) ──────────────────
+  // ── Order payload ───────────────────────────────────────────────────────────
 
   const orderPayload = () => ({
     delivery,
-    paymentMethod,
     vat_number: vatNumber.trim() || undefined,
     items: items.map((item) => ({
       product: {
@@ -340,76 +351,34 @@ function CheckoutInner() {
     setSubmitting(true);
     setSubmitError(null);
 
-    // ── Stripe card payment ─────────────────────────────────────────────────
-    if (paymentMethod === "card") {
-      if (!stripe || !elements) {
-        setSubmitError("Payment system not ready. Please refresh and try again.");
-        setSubmitting(false);
-        return;
-      }
+    const adyenKey = process.env.NEXT_PUBLIC_ADYEN_CLIENT_KEY;
 
-      const cardElement = elements.getElement(CardElement);
-      if (!cardElement) {
-        setSubmitError("Card element not found. Please refresh and try again.");
-        setSubmitting(false);
-        return;
-      }
-
-      // Step 1 — create payment intent via Next.js API route (keeps secret key server-side)
-      let clientSecret: string;
+    if (adyenKey) {
+      // ── Adyen sessions flow ───────────────────────────────────────────────
       try {
-        const intentRes = await fetch("/api/payments/create-intent", {
+        const res = await fetch("/api/payments/create-session", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(orderPayload()),
         });
-        const intentData = await intentRes.json();
+        const data = await res.json();
 
-        if (!intentRes.ok || intentData.error) {
-          setSubmitError(intentData.error ?? "Failed to initialise payment. Please try again.");
+        if (!res.ok || data.error) {
+          setSubmitError(data.error ?? "Failed to initialise payment. Please try again.");
           setSubmitting(false);
           return;
         }
 
-        clientSecret = intentData.client_secret;
+        setAdyenSession({ id: data.id, sessionData: data.sessionData });
+        // Drop-in mounts via useEffect above; keep submitting=true until mounted
       } catch {
         setSubmitError("Network error. Could not reach the payment service.");
         setSubmitting(false);
-        return;
       }
-
-      // Step 2 — confirm card payment with Stripe
-      const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: {
-          card: cardElement,
-          billing_details: {
-            name:  delivery.name,
-            email: delivery.email,
-          },
-        },
-      });
-
-      if (error) {
-        // Stripe provides user-friendly messages (e.g. "Your card was declined.")
-        setSubmitError(error.message ?? "Payment failed. Please try again.");
-        setSubmitting(false);
-        return;
-      }
-
-      if (paymentIntent?.status === "succeeded") {
-        clearCart();
-        setOrderRef(paymentIntent.id);
-        setOrderMode("live");
-        setSubmitted(true);
-      } else {
-        setSubmitError("Payment did not complete. Please try again.");
-      }
-
-      setSubmitting(false);
       return;
     }
 
-    // ── Manual / non-card fallback (PayPal, Apple Pay, etc.) ───────────────
+    // ── Manual fallback (no Adyen key configured) ─────────────────────────
     const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
     try {
       const res = await fetch(`${API_URL}/orders`, {
@@ -436,19 +405,18 @@ function CheckoutInner() {
     }
   };
 
-  // ── Express checkout shortcuts ──────────────────────────────────────────────
-
-  const handleExpressSelect = (m: "applepay" | "paypal" | "googlepay") => {
-    setPaymentMethod(m === "googlepay" ? "card" : m === "applepay" ? "applepay" : "paypal");
-    deliveryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
+  // Clear submitting spinner once Drop-in has mounted
+  useEffect(() => {
+    if (dropinMounted) setSubmitting(false);
+  }, [dropinMounted]);
 
   // ── Field helpers ───────────────────────────────────────────────────────────
 
-  const set = (key: keyof DeliveryData) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setDelivery((prev) => ({ ...prev, [key]: e.target.value }));
-    setDeliveryErrors((prev) => ({ ...prev, [key]: undefined }));
-  };
+  const set = (key: keyof DeliveryData) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+      setDelivery((prev) => ({ ...prev, [key]: e.target.value }));
+      setDeliveryErrors((prev) => ({ ...prev, [key]: undefined }));
+    };
 
   const ic = (key: keyof DeliveryData) => deliveryErrors[key] ? inputErrCls : inputCls;
 
@@ -470,7 +438,7 @@ function CheckoutInner() {
         {/* ── Left column ── */}
         <div className="flex flex-col gap-5">
 
-          <ExpressCheckout onSelect={handleExpressSelect} />
+          <ExpressCheckout onSelect={() => deliveryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })} />
 
           <div className="flex items-center gap-4">
             <div className="h-px flex-1 bg-black/[0.08]" />
@@ -484,35 +452,35 @@ function CheckoutInner() {
               <div className="flex flex-col gap-4">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label={c.labelName} htmlFor="checkout-name" error={deliveryErrors.name}>
-                    <input id="checkout-name" type="text" placeholder={c.placeholderName} value={delivery.name} onChange={set("name")} aria-describedby={deliveryErrors.name ? "checkout-name-error" : undefined} aria-invalid={!!deliveryErrors.name} className={ic("name")} />
+                    <input id="checkout-name" type="text" placeholder={c.placeholderName} value={delivery.name} onChange={set("name")} aria-invalid={!!deliveryErrors.name} className={ic("name")} />
                   </Field>
                   <Field label={c.labelEmail} htmlFor="checkout-email" error={deliveryErrors.email}>
-                    <input id="checkout-email" type="email" placeholder={c.placeholderEmail} value={delivery.email} onChange={set("email")} aria-describedby={deliveryErrors.email ? "checkout-email-error" : undefined} aria-invalid={!!deliveryErrors.email} className={ic("email")} />
+                    <input id="checkout-email" type="email" placeholder={c.placeholderEmail} value={delivery.email} onChange={set("email")} aria-invalid={!!deliveryErrors.email} className={ic("email")} />
                   </Field>
                 </div>
 
                 <Field label={c.labelAddress} htmlFor="checkout-address" error={deliveryErrors.address}>
-                  <input id="checkout-address" type="text" placeholder={c.placeholderAddress} value={delivery.address} onChange={set("address")} aria-describedby={deliveryErrors.address ? "checkout-address-error" : undefined} aria-invalid={!!deliveryErrors.address} className={ic("address")} />
+                  <input id="checkout-address" type="text" placeholder={c.placeholderAddress} value={delivery.address} onChange={set("address")} aria-invalid={!!deliveryErrors.address} className={ic("address")} />
                 </Field>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label={c.labelCity} htmlFor="checkout-city" error={deliveryErrors.city}>
-                    <input id="checkout-city" type="text" placeholder={c.placeholderCity} value={delivery.city} onChange={set("city")} aria-describedby={deliveryErrors.city ? "checkout-city-error" : undefined} aria-invalid={!!deliveryErrors.city} className={ic("city")} />
+                    <input id="checkout-city" type="text" placeholder={c.placeholderCity} value={delivery.city} onChange={set("city")} aria-invalid={!!deliveryErrors.city} className={ic("city")} />
                   </Field>
                   <Field label={c.labelPostalCode} htmlFor="checkout-postalCode" error={deliveryErrors.postalCode}>
-                    <input id="checkout-postalCode" type="text" placeholder={c.placeholderPostalCode} value={delivery.postalCode} onChange={set("postalCode")} aria-describedby={deliveryErrors.postalCode ? "checkout-postalCode-error" : undefined} aria-invalid={!!deliveryErrors.postalCode} className={ic("postalCode")} />
+                    <input id="checkout-postalCode" type="text" placeholder={c.placeholderPostalCode} value={delivery.postalCode} onChange={set("postalCode")} aria-invalid={!!deliveryErrors.postalCode} className={ic("postalCode")} />
                   </Field>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label={c.labelCountry} htmlFor="checkout-country" error={deliveryErrors.country}>
-                    <select id="checkout-country" value={delivery.country} onChange={set("country")} aria-describedby={deliveryErrors.country ? "checkout-country-error" : undefined} aria-invalid={!!deliveryErrors.country} className={ic("country")}>
+                    <select id="checkout-country" value={delivery.country} onChange={set("country")} aria-invalid={!!deliveryErrors.country} className={ic("country")}>
                       <option value="">{c.placeholderCountry}</option>
                       {COUNTRIES.map((ctry) => <option key={ctry} value={ctry}>{ctry}</option>)}
                     </select>
                   </Field>
                   <Field label={c.labelPhone} htmlFor="checkout-phone" error={deliveryErrors.phone}>
-                    <input id="checkout-phone" type="tel" placeholder={c.placeholderPhone} value={delivery.phone} onChange={set("phone")} aria-describedby={deliveryErrors.phone ? "checkout-phone-error" : undefined} aria-invalid={!!deliveryErrors.phone} className={ic("phone")} />
+                    <input id="checkout-phone" type="tel" placeholder={c.placeholderPhone} value={delivery.phone} onChange={set("phone")} aria-invalid={!!deliveryErrors.phone} className={ic("phone")} />
                   </Field>
                 </div>
               </div>
@@ -535,7 +503,7 @@ function CheckoutInner() {
             </div>
           </SectionCard>
 
-          {/* FET upsell — shown between delivery method and payment */}
+          {/* FET upsell — above payment section */}
           {!fetDismissed && (
             <FetUpsellCard
               added={fetAdded}
@@ -547,14 +515,16 @@ function CheckoutInner() {
             />
           )}
 
-          {/* Payment method — CardElement lives inside here */}
-          <PaymentSelector
-            method={paymentMethod}
-            onChange={(m) => {
-              setPaymentMethod(m);
-              setSubmitError(null);
-            }}
-          />
+          {/* Payment — Adyen Drop-in */}
+          <SectionCard title={c.paymentMethod}>
+            {!dropinMounted && !adyenSession && (
+              <p className="mb-2 text-[0.88rem] text-[var(--muted)]">
+                Complete your delivery details above, then click <strong>Continue to Payment</strong> to choose your payment method.
+              </p>
+            )}
+            {/* Drop-in mounts here — must stay in DOM */}
+            <div id="adyen-dropin" />
+          </SectionCard>
 
           {/* Submit error */}
           {submitError && (
@@ -563,25 +533,27 @@ function CheckoutInner() {
             </div>
           )}
 
-          {/* Place order */}
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="flex h-[54px] w-full items-center justify-center rounded-full bg-[var(--primary)] text-[1rem] font-semibold text-white transition hover:bg-[var(--primary-hover)] disabled:opacity-60"
-          >
-            {submitting ? (
-              <span className="flex items-center gap-2">
-                <svg className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                </svg>
-                {c.processing}
-              </span>
-            ) : (
-              c.placeOrder
-            )}
-          </button>
+          {/* CTA button — hidden once Drop-in is mounted */}
+          {!dropinMounted && (
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="flex h-[54px] w-full items-center justify-center rounded-full bg-[var(--primary)] text-[1rem] font-semibold text-white transition hover:bg-[var(--primary-hover)] disabled:opacity-60"
+            >
+              {submitting ? (
+                <span className="flex items-center gap-2">
+                  <svg className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                  {c.processing}
+                </span>
+              ) : (
+                "Continue to Payment"
+              )}
+            </button>
+          )}
 
           <p className="text-center text-[0.78rem] text-[var(--muted)]">
             {c.placeOrderNote}{" "}
@@ -605,15 +577,5 @@ function CheckoutInner() {
 
       </div>
     </div>
-  );
-}
-
-// ─── Outer wrapper — provides Stripe context ──────────────────────────────────
-
-export default function CheckoutFlow() {
-  return (
-    <Elements stripe={stripePromise}>
-      <CheckoutInner />
-    </Elements>
   );
 }

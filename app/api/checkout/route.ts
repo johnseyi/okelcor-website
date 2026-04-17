@@ -23,20 +23,15 @@ import {
  *
  * ── INTEGRATION POINTS ────────────────────────────────────────────────────────
  *
- * Stripe (card / Apple Pay / Google Pay):
- *   Install:  npm install stripe
- *   Env vars: STRIPE_SECRET_KEY
- *   Docs:     https://stripe.com/docs/api/payment_intents/create
+ * Adyen (card / Apple Pay / Google Pay / Klarna / PayPal via Drop-in):
+ *   Package:  @adyen/adyen-web (already installed)
+ *   Env vars: NEXT_PUBLIC_ADYEN_CLIENT_KEY, NEXT_PUBLIC_ADYEN_ENVIRONMENT
+ *   Sessions: POST /api/payments/create-session → Laravel → Adyen Sessions API
  *
- * PayPal:
+ * PayPal (standalone):
  *   Install:  npm install @paypal/paypal-server-sdk
  *   Env vars: PAYPAL_CLIENT_SECRET + NEXT_PUBLIC_PAYPAL_CLIENT_ID
  *   Docs:     https://developer.paypal.com/docs/api/orders/v2/
- *
- * Klarna (via Stripe):
- *   No extra package — uses the Stripe SDK above.
- *   Env vars: NEXT_PUBLIC_KLARNA_ENABLED=true (also needs STRIPE_SECRET_KEY)
- *   Docs:     https://stripe.com/docs/payments/klarna
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -46,9 +41,8 @@ const resend       = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL   = process.env.FROM_EMAIL  || `${COMPANY_NAME} Website <${COMPANY_NOREPLY_EMAIL}>`;
 const NOTIFY_EMAIL = process.env.QUOTE_EMAIL || process.env.CONTACT_EMAIL || COMPANY_EMAIL;
 
-const stripeConfigured = !!process.env.STRIPE_SECRET_KEY;
+const adyenConfigured  = !!process.env.NEXT_PUBLIC_ADYEN_CLIENT_KEY;
 const paypalConfigured = !!process.env.PAYPAL_CLIENT_SECRET;
-const klarnaConfigured = stripeConfigured && !!process.env.NEXT_PUBLIC_KLARNA_ENABLED;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -212,34 +206,17 @@ export async function POST(req: NextRequest): Promise<NextResponse<CheckoutRespo
   // When credentials are configured, uncomment and implement the SDK call.
   // On payment failure, return an error response before the email block.
 
-  if (order.paymentMethod === "card" && stripeConfigured) {
-    // ── STRIPE INTEGRATION POINT ───────────────────────────────────────────
-    // 1. npm install stripe
-    // 2. import Stripe from "stripe";
-    //    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-    // 3. const intent = await stripe.paymentIntents.create({
-    //      amount:   Math.round(subtotal * 100),
-    //      currency: "eur",
-    //      metadata: { orderRef, customer: order.delivery.email },
-    //    });
-    //    Return { success: true, orderRef, clientSecret: intent.client_secret }
-    //    so the client can confirm with Stripe.js Elements.
-    // ──────────────────────────────────────────────────────────────────────
-    isLive = false; // flip to true once the SDK call above is implemented
+  if (adyenConfigured) {
+    // Adyen Drop-in handles card/Apple Pay/Google Pay/Klarna/PayPal.
+    // Live payment is completed client-side via /api/payments/create-session.
+    // This route handles email notification and order reference generation only.
+    isLive = false;
   }
 
   if (order.paymentMethod === "paypal" && paypalConfigured) {
     // ── PAYPAL INTEGRATION POINT ───────────────────────────────────────────
     // 1. npm install @paypal/paypal-server-sdk
     // 2. Create a PayPal Orders v2 order, return the approval link to client.
-    // ──────────────────────────────────────────────────────────────────────
-    isLive = false;
-  }
-
-  if (order.paymentMethod === "klarna" && klarnaConfigured) {
-    // ── KLARNA INTEGRATION POINT ───────────────────────────────────────────
-    // Klarna runs through Stripe. Use stripe.paymentIntents.create with
-    // payment_method_types: ["klarna"] and return the client_secret.
     // ──────────────────────────────────────────────────────────────────────
     isLive = false;
   }

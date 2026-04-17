@@ -23,7 +23,16 @@
       "Bash(grep -r \"addEventListener.*scroll\\\\|window\\\\.scrollY\\\\|will-change\\\\|transform\\\\|translate\\\\|scale\" /c/Users/user/Desktop/Projects/okelcor-website/components --include=\"*.tsx\" ! -path \"*/node_modules/*\" -l)",
       "Bash(find /c/Users/user/Desktop/Projects/okelcor-website -type f -name \"*.tsx\" ! -path \"*/node_modules/*\" ! -path \"*/.next/*\" ! -path \"*/.claude/*\" -exec wc -l {} +)",
       "Bash(rm \"C:/Users/user/Desktop/Projects/okelcor-website/components/smooth-scroll.tsx\")",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "Bash(where ffmpeg *)",
+      "Bash(ffmpeg -version)",
+      "Bash(ffmpeg.exe -version)",
+      "Bash(winget list *)",
+      "Bash(powershell.exe *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git commit *)"
     ]
   }
 }

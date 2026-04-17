@@ -45,9 +45,9 @@ const SCHEMA: GroupDef[] = [
     label: "Payment Methods",
     fields: [
       {
-        key: "stripe_enabled", label: "Stripe — Card / Apple Pay / Google Pay",
+        key: "adyen_enabled", label: "Adyen — Card / Apple Pay / Google Pay / Klarna",
         type: "toggle", default: "false",
-        note: "Activates credit/debit card, Apple Pay, and Google Pay at checkout.",
+        note: "Activates the Adyen Drop-in at checkout. Requires NEXT_PUBLIC_ADYEN_CLIENT_KEY to be set.",
       },
       {
         key: "paypal_enabled", label: "PayPal",
@@ -56,12 +56,12 @@ const SCHEMA: GroupDef[] = [
       {
         key: "klarna_enabled", label: "Klarna — Buy Now, Pay Later",
         type: "toggle", default: "false",
-        note: "Requires Stripe to also be enabled.",
+        note: "Klarna is included in the Adyen Drop-in when Adyen is enabled.",
       },
       {
-        key: "stripe_publishable_key", label: "Stripe Publishable Key",
-        type: "text", default: "", span: true, hint: "pk_live_…",
-        note: "Safe to store here — this key is public. Never enter your secret key.",
+        key: "adyen_client_key", label: "Adyen Client Key",
+        type: "text", default: "", span: true, hint: "test_XXXX… or live_XXXX…",
+        note: "Safe to store here — this is the public client key. Never enter an API key.",
       },
       {
         key: "paypal_client_id", label: "PayPal Client ID",
