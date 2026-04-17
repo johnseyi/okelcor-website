@@ -15,17 +15,24 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Car lookup not configured" }, { status: 503 });
   }
 
+  console.log("[years] Fetching years for:", { make, model });
+  console.log("[years] API key exists:", !!process.env.WHEEL_SIZE_API_KEY);
+
   try {
-    const res = await fetch(
-      `${BASE}/years/?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}&user_key=${WHEEL_SIZE_KEY}`,
-      { cache: "no-store" },
-    );
+    const url = `${BASE}/years/?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}&user_key=${WHEEL_SIZE_KEY}`;
+    const res = await fetch(url, { cache: "no-store" });
+
+    console.log("[years] API status:", res.status);
 
     if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      console.log("[years] Error body:", errText);
       return NextResponse.json({ error: "Failed to load years" }, { status: 502 });
     }
 
     const json = await res.json() as { data?: unknown[] };
+    console.log("[years] Raw data:", JSON.stringify(json));
+
     const raw  = Array.isArray(json.data) ? json.data : [];
 
     // Normalise: API may return integers or objects with a slug/name field
