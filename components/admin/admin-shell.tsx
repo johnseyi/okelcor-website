@@ -18,6 +18,7 @@ import {
   ChevronRight,
   UserCircle,
   Users,
+  TrendingUp,
 } from "lucide-react";
 import { logoutAdmin } from "@/app/admin/actions";
 
@@ -32,6 +33,7 @@ const NAV = [
   { label: "Hero Slides",    href: "/admin/hero-slides", icon: Layers,          roles: ["super_admin", "admin", "editor"] },
   { label: "Brands",         href: "/admin/brands",      icon: Star,            roles: ["super_admin", "admin", "editor"] },
   { label: "Settings",       href: "/admin/settings",    icon: Settings,        roles: ["super_admin", "admin", "editor"] },
+  { label: "Supplier Intel",  href: "/admin/supplier",    icon: TrendingUp,      roles: ["super_admin", "admin"] },
   { label: "Users",          href: "/admin/users",       icon: Users,           roles: ["super_admin"] },
   { label: "Profile",        href: "/admin/profile",     icon: UserCircle,      roles: null },
 ];
