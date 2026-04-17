@@ -1,2 +1,1 @@
-import AdyenCheckout from "@adyen/adyen-web";
-export { AdyenCheckout };
+export { AdyenCheckout } from "@adyen/adyen-web";
