@@ -16,21 +16,15 @@ interface LaravelSpecs {
   rims?:    string[];
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Size extraction ───────────────────────────────────────────────────────────
 
-/**
- * Walk the Wheel-Size search/by_model response and extract every tyre size
- * string we can find, normalised to "205/55R16" format.
- *
- * The API has shipped at least two response shapes over time; we handle both.
- */
 function extractSizes(data: unknown[]): string[] {
   const sizes = new Set<string>();
 
   const addFromTireSide = (tf: Record<string, unknown>) => {
     const full = tf.full_format as string | undefined;
     if (full && /^\d+\/\d+[Rr]\d+/.test(full)) {
-      sizes.add(full.split(" ")[0]); // strip speed-rating suffix if present
+      sizes.add(full.split(" ")[0]);
       return;
     }
     const w = tf.section_width, h = tf.aspect_ratio, d = tf.diameter;
@@ -52,7 +46,7 @@ function extractSizes(data: unknown[]): string[] {
       }
     }
 
-    // Shape B: entry.rims[].tires[].tire.name  (e.g. "205/55R16 91V")
+    // Shape B: entry.rims[].tires[].tire.name
     const rims = e.rims as unknown[] | undefined;
     if (Array.isArray(rims)) {
       for (const r of rims) {
@@ -61,9 +55,7 @@ function extractSizes(data: unknown[]): string[] {
         for (const rt of rimTires) {
           const tire = (rt as Record<string, unknown>).tire as Record<string, unknown> | undefined;
           const name = tire?.name as string | undefined;
-          if (name && /^\d+\/\d+[Rr]\d+/.test(name)) {
-            sizes.add(name.split(" ")[0]);
-          }
+          if (name && /^\d+\/\d+[Rr]\d+/.test(name)) sizes.add(name.split(" ")[0]);
         }
       }
     }
@@ -72,7 +64,8 @@ function extractSizes(data: unknown[]): string[] {
   return [...sizes];
 }
 
-/** Remove sizes not stocked in the product catalogue. Falls back to full list. */
+// ── Stock filter ──────────────────────────────────────────────────────────────
+
 function filterByStock(sizes: string[], specs: LaravelSpecs): string[] {
   const wSet = new Set(specs.widths  ?? []);
   const hSet = new Set(specs.heights ?? []);
@@ -95,19 +88,26 @@ function filterByStock(sizes: string[], specs: LaravelSpecs): string[] {
 
 export async function POST(req: NextRequest) {
   // 1. Parse + validate body
-  let make = "", model = "", year = 0;
+  let make = "", model = "", modification = "";
+  let year = 0;
   try {
-    const body = await req.json() as { make?: unknown; model?: unknown; year?: unknown };
-    make  = typeof body.make  === "string" ? body.make.trim()  : "";
-    model = typeof body.model === "string" ? body.model.trim() : "";
-    year  = typeof body.year  === "number" ? body.year
-          : typeof body.year  === "string" ? parseInt(body.year, 10) : 0;
+    const body = await req.json() as {
+      make?: unknown; model?: unknown; year?: unknown; modification?: unknown;
+    };
+    make         = typeof body.make         === "string" ? body.make.trim()         : "";
+    model        = typeof body.model        === "string" ? body.model.trim()        : "";
+    modification = typeof body.modification === "string" ? body.modification.trim() : "";
+    year         = typeof body.year         === "number" ? body.year
+                 : typeof body.year         === "string" ? parseInt(body.year, 10) : 0;
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  if (!make || !model || !year) {
-    return NextResponse.json({ error: "make, model, and year are required" }, { status: 400 });
+  if (!make || !model || !year || !modification) {
+    return NextResponse.json(
+      { error: "make, model, year, and modification are required" },
+      { status: 400 },
+    );
   }
 
   if (!WHEEL_SIZE_KEY) {
@@ -117,32 +117,29 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 2. Query Wheel-Size search/by_model across regions in parallel
-  // Valid region codes: eudm, usdm, jdm, audm, cadm — no "worldwide" option.
-  const REGIONS = ["eudm", "usdm", "jdm", "audm", "cadm"];
-
+  // 2. Query Wheel-Size with exact modification slug
   let allSizes: string[] = [];
   try {
-    const results = await Promise.allSettled(
-      REGIONS.map((region) =>
-        fetch(
-          `${BASE}/search/by_model/?make=${encodeURIComponent(make)}` +
-          `&model=${encodeURIComponent(model)}&year=${year}&region=${region}&user_key=${WHEEL_SIZE_KEY}`,
-          { cache: "no-store" },
-        ).then(async (res) => {
-          if (!res.ok) return [];
-          const json = await res.json() as { data?: unknown[] };
-          return Array.isArray(json.data) ? json.data : [];
-        }),
-      ),
-    );
+    const url =
+      `${BASE}/search/by_model/?make=${encodeURIComponent(make)}` +
+      `&model=${encodeURIComponent(model)}&year=${year}` +
+      `&modification=${encodeURIComponent(modification)}&user_key=${WHEEL_SIZE_KEY}`;
 
-    const combined: unknown[] = [];
-    for (const r of results) {
-      if (r.status === "fulfilled") combined.push(...r.value);
+    const res = await fetch(url, { cache: "no-store" });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      console.error("[car-finder] Wheel-Size error:", res.status, errText);
+      return NextResponse.json({
+        car: { make, model, year, modification },
+        sizes: [],
+        message: "No tyre data found for this vehicle. Try searching by size below.",
+      });
     }
 
-    allSizes = extractSizes(combined);
+    const json = await res.json() as { data?: unknown[] };
+    const data = Array.isArray(json.data) ? json.data : [];
+    allSizes = extractSizes(data);
   } catch (err) {
     console.error("[car-finder] fetch error:", err);
     return NextResponse.json(
@@ -153,7 +150,7 @@ export async function POST(req: NextRequest) {
 
   if (allSizes.length === 0) {
     return NextResponse.json({
-      car: { make, model, year },
+      car: { make, model, year, modification },
       sizes: [],
       message: "No tyre data found for this vehicle. Try searching by size below.",
     });
@@ -167,16 +164,15 @@ export async function POST(req: NextRequest) {
       const json = await specsRes.json() as { data?: LaravelSpecs };
       specs = json.data ?? {};
     }
-  } catch { /* ignore — filterByStock falls back gracefully */ }
+  } catch { /* ignore */ }
 
   const filtered = filterByStock(allSizes, specs);
   const sizes    = (filtered.length > 0 ? filtered : allSizes).slice(0, 12);
-
   const inStock  = filtered.length > 0;
   const count    = sizes.length;
 
   return NextResponse.json({
-    car: { make, model, year },
+    car: { make, model, year, modification },
     sizes,
     message: inStock
       ? `${count} OE tyre size${count !== 1 ? "s" : ""} in stock for this vehicle`
