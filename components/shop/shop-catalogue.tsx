@@ -56,7 +56,12 @@ const sel =
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function ShopCatalogue() {
+type Props = {
+  prefilledSize?: string;
+  onPrefilledSizeConsumed?: () => void;
+};
+
+export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed }: Props) {
   const { locale, t } = useLanguage();
 
   // ── Filter state ─────────────────────────────────────────────────────────────
@@ -88,6 +93,31 @@ export default function ShopCatalogue() {
 
   // AbortController ref so we can cancel in-flight fetches
   const abortRef = useRef<AbortController | null>(null);
+
+  // Triggers runSearch() one render after prefilledSize state is applied
+  const [pendingAutoSearch, setPendingAutoSearch] = useState(false);
+
+  // Consume prefilledSize: parse "205/55R16" → width / height / rim, then auto-search
+  useEffect(() => {
+    if (!prefilledSize) return;
+    const match = prefilledSize.match(/^(\d+)\/(\d+)[Rr](\d+)/);
+    if (match) {
+      setSelWidth(match[1]);
+      setSelHeight(match[2]);
+      setSelRim(match[3]);
+      setPendingAutoSearch(true);
+    }
+    onPrefilledSizeConsumed?.();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefilledSize]);
+
+  // Fire search after state from prefilledSize has settled
+  useEffect(() => {
+    if (!pendingAutoSearch) return;
+    setPendingAutoSearch(false);
+    runSearch();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingAutoSearch]);
 
   // Load brands + specs on mount
   useEffect(() => {

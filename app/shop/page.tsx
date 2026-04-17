@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import ShopHero from "@/components/shop/shop-hero";
-import ShopCatalogue from "@/components/shop/shop-catalogue";
+import ShopPageClient from "@/components/shop/shop-page-client";
 import FadeUp from "@/components/motion/fade-up";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +33,7 @@ export default function ShopPage() {
     <main>
       <Navbar />
       <ShopHero />
-      <FadeUp><ShopCatalogue /></FadeUp>
+      <FadeUp><ShopPageClient /></FadeUp>
       <Footer />
     </main>
   );
