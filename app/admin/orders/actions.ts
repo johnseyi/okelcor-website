@@ -15,21 +15,32 @@ async function getToken(): Promise<string> {
 
 type OrderStatus = "pending" | "confirmed" | "shipped" | "delivered" | "cancelled";
 
+type ShipmentFields = {
+  container_number?: string;
+  eta?: string;
+};
+
 export async function updateOrderStatus(
   id: number,
-  status: OrderStatus
+  status: OrderStatus,
+  shipment?: ShipmentFields
 ): Promise<{ error?: string }> {
   const token = await getToken();
+
+  const body: Record<string, string> = { status };
+  if (shipment?.container_number?.trim()) body.container_number = shipment.container_number.trim();
+  if (shipment?.eta)                      body.eta              = shipment.eta;
+
   let res: Response;
   try {
-    res = await fetch(`${API_URL}/admin/orders/${id}`, {
-      method: "PUT",
+    res = await fetch(`${API_URL}/admin/orders/${id}/status`, {
+      method: "PATCH",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify(body),
       cache: "no-store",
     });
   } catch {
@@ -38,7 +49,7 @@ export async function updateOrderStatus(
 
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
-    return { error: json.message || `Failed to update order status (HTTP ${res.status}).` };
+    return { error: json.message || `Failed to update order (HTTP ${res.status}).` };
   }
 
   revalidatePath("/admin/orders");

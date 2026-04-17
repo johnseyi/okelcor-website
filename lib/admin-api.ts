@@ -156,6 +156,9 @@ export type AdminOrderFull = AdminOrder & {
   country?: string;
   address?: string;
   notes?: string;
+  container_number?: string;
+  tracking_status?: string;
+  eta?: string;
   items: AdminOrderItem[];
   updated_at?: string;
 };
