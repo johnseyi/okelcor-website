@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// ── Env ───────────────────────────────────────────────────────────────────────
-
-const RAPIDAPI_KEY  = process.env.RAPIDAPI_KEY  ?? "";
-const RAPIDAPI_HOST = process.env.RAPIDAPI_HOST ?? "cars-by-api-ninjas.p.rapidapi.com";
+const WHEEL_SIZE_KEY = process.env.WHEEL_SIZE_API_KEY ?? "";
+const BASE = "https://api.wheel-size.com/v2";
 
 const LARAVEL_URL =
   process.env.API_URL ??
@@ -12,113 +10,83 @@ const LARAVEL_URL =
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type VehicleClass = "compact" | "sedan" | "suv" | "truck";
-
-interface CarApiEntry {
-  make?:            string;
-  model?:           string;
-  year?:            number;
-  class?:           string;
-  cylinders?:       number;
-  displacement?:    number;
-  drive?:           string;
-  fuel_type?:       string;
-  transmission?:    string;
-  combination_mpg?: number;
-}
-
 interface LaravelSpecs {
-  widths?:       string[];
-  heights?:      string[];
-  rims?:         string[];
-  load_indexes?: string[];
-  speed_ratings?: string[];
+  widths?:  string[];
+  heights?: string[];
+  rims?:    string[];
 }
-
-// ── Vehicle-class → size candidates ──────────────────────────────────────────
-//
-// Each class carries ordered candidate sizes from most to least common.
-// We intersect these against the sizes actually stocked (from /products/specs).
-
-const SIZE_MAP: Record<VehicleClass, string[]> = {
-  compact: [
-    "185/65R15", "195/65R15", "205/55R16", "195/55R16",
-    "205/60R16", "185/60R15", "195/60R15", "175/65R14",
-    "205/45R17", "215/45R17",
-  ],
-  sedan: [
-    "205/55R16", "215/55R17", "225/50R17", "205/60R16",
-    "215/60R16", "225/55R17", "205/65R15", "215/50R17",
-    "235/45R18", "225/45R18",
-  ],
-  suv: [
-    "225/65R17", "235/60R18", "245/60R18", "255/55R19",
-    "235/65R17", "265/60R18", "245/65R17", "255/60R18",
-    "275/55R19", "265/50R20",
-  ],
-  truck: [
-    "265/70R17", "275/65R18", "265/65R17", "285/65R18",
-    "255/70R17", "275/70R18", "245/75R16", "265/75R16",
-    "285/70R17", "305/65R18",
-  ],
-};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /**
- * Infer a broad vehicle class from the data the Cars API returns.
- * The `class` field (e.g. "compact car", "midsize car", "SUV", "pickup truck")
- * is the primary signal; drive, cylinders and displacement are fallbacks.
+ * Walk the Wheel-Size search/by_model response and extract every tyre size
+ * string we can find, normalised to "205/55R16" format.
+ *
+ * The API has shipped at least two response shapes over time; we handle both.
  */
-function inferVehicleClass(car: CarApiEntry): VehicleClass {
-  const cls         = (car.class        ?? "").toLowerCase();
-  const drive       = (car.drive        ?? "").toLowerCase();
-  const cylinders   = car.cylinders    ?? 4;
-  const displacement = car.displacement ?? 2.0;
+function extractSizes(data: unknown[]): string[] {
+  const sizes = new Set<string>();
 
-  if (cls.includes("pickup") || cls.includes("truck"))                     return "truck";
-  if (cls.includes("suv") || cls.includes("van") || cls.includes("mini")) return "suv";
+  const addFromTireSide = (tf: Record<string, unknown>) => {
+    const full = tf.full_format as string | undefined;
+    if (full && /^\d+\/\d+[Rr]\d+/.test(full)) {
+      sizes.add(full.split(" ")[0]); // strip speed-rating suffix if present
+      return;
+    }
+    const w = tf.section_width, h = tf.aspect_ratio, d = tf.diameter;
+    if (w && h && d) sizes.add(`${w}/${h}R${d}`);
+  };
 
-  // AWD / 4WD + bigger engine → SUV territory
-  if ((drive === "awd" || drive === "4wd") && (cylinders >= 6 || displacement >= 2.5))
-    return "suv";
+  for (const entry of data) {
+    const e = entry as Record<string, unknown>;
 
-  if (cls.includes("compact") || displacement < 1.8 || cylinders <= 3)    return "compact";
-  if (cls.includes("large")   || cylinders >= 8    || displacement >= 4.0) return "truck";
+    // Shape A: entry.tires[].tire_front / tire_rear
+    const tiresA = e.tires as unknown[] | undefined;
+    if (Array.isArray(tiresA)) {
+      for (const t of tiresA) {
+        const tt = t as Record<string, unknown>;
+        for (const side of ["tire_front", "tire_rear"]) {
+          const tf = tt[side] as Record<string, unknown> | undefined;
+          if (tf) addFromTireSide(tf);
+        }
+      }
+    }
 
-  return "sedan"; // midsize, full-size, sports, etc.
+    // Shape B: entry.rims[].tires[].tire.name  (e.g. "205/55R16 91V")
+    const rims = e.rims as unknown[] | undefined;
+    if (Array.isArray(rims)) {
+      for (const r of rims) {
+        const rimTires = (r as Record<string, unknown>).tires as unknown[] | undefined;
+        if (!Array.isArray(rimTires)) continue;
+        for (const rt of rimTires) {
+          const tire = (rt as Record<string, unknown>).tire as Record<string, unknown> | undefined;
+          const name = tire?.name as string | undefined;
+          if (name && /^\d+\/\d+[Rr]\d+/.test(name)) {
+            sizes.add(name.split(" ")[0]);
+          }
+        }
+      }
+    }
+  }
+
+  return [...sizes];
 }
 
-/** Parse a size string like "205/55R16" into its three numeric components. */
-function parseSize(size: string): { width: number; height: number; rim: number } | null {
-  const m = size.match(/^(\d+)\/(\d+)[Rr](\d+)$/);
-  return m ? { width: +m[1], height: +m[2], rim: +m[3] } : null;
-}
-
-/**
- * Intersect candidate sizes with what the Laravel /products/specs endpoint
- * reports as actually stocked. Falls back to the raw candidate list when
- * the specs endpoint is unavailable or returns no data.
- */
-function filterByStock(candidates: string[], specs: LaravelSpecs): string[] {
-  const hasSpecs =
-    specs.widths?.length   ||
-    specs.heights?.length  ||
-    specs.rims?.length;
-
-  if (!hasSpecs) return candidates;
-
+/** Remove sizes not stocked in the product catalogue. Falls back to full list. */
+function filterByStock(sizes: string[], specs: LaravelSpecs): string[] {
   const wSet = new Set(specs.widths  ?? []);
   const hSet = new Set(specs.heights ?? []);
   const rSet = new Set(specs.rims    ?? []);
 
-  return candidates.filter((size) => {
-    const p = parseSize(size);
-    if (!p) return false;
+  if (!wSet.size && !hSet.size && !rSet.size) return sizes;
+
+  return sizes.filter((size) => {
+    const m = size.match(/^(\d+)\/(\d+)[Rr](\d+)$/);
+    if (!m) return false;
     return (
-      (!wSet.size || wSet.has(String(p.width)))  &&
-      (!hSet.size || hSet.has(String(p.height))) &&
-      (!rSet.size || rSet.has(String(p.rim)))
+      (!wSet.size || wSet.has(m[1])) &&
+      (!hSet.size || hSet.has(m[2])) &&
+      (!rSet.size || rSet.has(m[3]))
     );
   });
 }
@@ -126,75 +94,65 @@ function filterByStock(candidates: string[], specs: LaravelSpecs): string[] {
 // ── Route handler ─────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  // 1. Parse + validate request body
+  // 1. Parse + validate body
   let make = "", model = "", year = 0;
   try {
     const body = await req.json() as { make?: unknown; model?: unknown; year?: unknown };
     make  = typeof body.make  === "string" ? body.make.trim()  : "";
     model = typeof body.model === "string" ? body.model.trim() : "";
     year  = typeof body.year  === "number" ? body.year
-          : typeof body.year  === "string" ? parseInt(body.year, 10)
-          : 0;
+          : typeof body.year  === "string" ? parseInt(body.year, 10) : 0;
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
   if (!make || !model || !year) {
-    return NextResponse.json(
-      { error: "make, model, and year are required" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "make, model, and year are required" }, { status: 400 });
   }
 
-  console.log("[car-finder] RAPIDAPI_KEY exists:", !!process.env.RAPIDAPI_KEY);
-  console.log("[car-finder] Request params:", { make, model, year });
-
-  if (!RAPIDAPI_KEY) {
+  if (!WHEEL_SIZE_KEY) {
     return NextResponse.json(
-      { error: "Car lookup is not configured (missing RAPIDAPI_KEY)" },
+      { error: "Car lookup is not configured (missing WHEEL_SIZE_API_KEY)" },
       { status: 503 },
     );
   }
 
-  // 2. Fetch car details from RapidAPI Cars by API-Ninjas
-  let carData: CarApiEntry | null = null;
+  // 2. Query Wheel-Size search/by_model
+  let allSizes: string[] = [];
   try {
-    const rapidUrl = `https://cars-by-api-ninjas.p.rapidapi.com/v1/cars?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}&year=${year}`;
-    console.log("[car-finder] RapidAPI URL:", rapidUrl);
+    const url =
+      `${BASE}/search/by_model/?make=${encodeURIComponent(make)}` +
+      `&model=${encodeURIComponent(model)}&year=${year}&user_key=${WHEEL_SIZE_KEY}`;
 
-    const rapidRes = await fetch(rapidUrl, {
-      headers: {
-        "X-RapidAPI-Key":  RAPIDAPI_KEY,
-        "X-RapidAPI-Host": RAPIDAPI_HOST,
-      },
-      cache: "no-store",
-    });
+    const res = await fetch(url, { cache: "no-store" });
 
-    console.log("[car-finder] RapidAPI status:", rapidRes.status);
-
-    const data = await rapidRes.json() as CarApiEntry[] | CarApiEntry;
-    console.log("[car-finder] RapidAPI data:", JSON.stringify(data));
-
-    if (rapidRes.ok) {
-      carData = Array.isArray(data) ? (data[0] ?? null) : data;
-    }
-  } catch (err) {
-    console.error("[car-finder] RapidAPI fetch error:", err);
-    // carData stays null — handled below
-  }
-
-  if (!carData) {
-    return NextResponse.json(
-      {
-        car: null,
-        suggested_sizes: [],
+    if (!res.ok) {
+      return NextResponse.json({
+        car: { make, model, year },
+        sizes: [],
         message: "No tyre data found for this vehicle. Try searching by size below.",
-      },
-      { status: 200 },
+      });
+    }
+
+    const json = await res.json() as { data?: unknown[] };
+    const data = Array.isArray(json.data) ? json.data : [];
+    allSizes = extractSizes(data);
+  } catch {
+    return NextResponse.json(
+      { error: "Could not reach the vehicle data service." },
+      { status: 503 },
     );
   }
 
-  // 3. Fetch stocked specs from Laravel (best-effort — won't block the response)
+  if (allSizes.length === 0) {
+    return NextResponse.json({
+      car: { make, model, year },
+      sizes: [],
+      message: "No tyre data found for this vehicle. Try searching by size below.",
+    });
+  }
+
+  // 3. Filter against stocked specs (best-effort)
   let specs: LaravelSpecs = {};
   try {
     const specsRes = await fetch(`${LARAVEL_URL}/products/specs`, { cache: "no-store" });
@@ -202,33 +160,19 @@ export async function POST(req: NextRequest) {
       const json = await specsRes.json() as { data?: LaravelSpecs };
       specs = json.data ?? {};
     }
-  } catch {
-    // specs stays {} — filterByStock falls back to raw candidates
-  }
+  } catch { /* ignore — filterByStock falls back gracefully */ }
 
-  // 4. Determine vehicle class and produce suggested sizes
-  const vehicleClass = inferVehicleClass(carData);
-  const candidates   = SIZE_MAP[vehicleClass];
-  const filtered     = filterByStock(candidates, specs);
-  // Return up to 8 sizes; prefer filtered list, fall back to raw candidates
-  const suggested_sizes = (filtered.length >= 2 ? filtered : candidates).slice(0, 8);
+  const filtered = filterByStock(allSizes, specs);
+  const sizes    = (filtered.length > 0 ? filtered : allSizes).slice(0, 12);
 
-  // 5. Return structured response
+  const inStock  = filtered.length > 0;
+  const count    = sizes.length;
+
   return NextResponse.json({
-    car: {
-      make:    carData.make        ?? make,
-      model:   carData.model       ?? model,
-      year:    carData.year        ?? year,
-      class:   carData.class       ?? null,
-      drive:   carData.drive       ?? null,
-      fuel_type:   carData.fuel_type   ?? null,
-      cylinders:   carData.cylinders   ?? null,
-      displacement: carData.displacement ?? null,
-      transmission: carData.transmission ?? null,
-      combination_mpg: carData.combination_mpg ?? null,
-    },
-    vehicle_class:  vehicleClass,
-    suggested_sizes,
-    message: `Showing common tyre sizes for this vehicle class`,
+    car: { make, model, year },
+    sizes,
+    message: inStock
+      ? `${count} OE tyre size${count !== 1 ? "s" : ""} in stock for this vehicle`
+      : `${count} OE tyre size${count !== 1 ? "s" : ""} found — click to search our catalogue`,
   });
 }
