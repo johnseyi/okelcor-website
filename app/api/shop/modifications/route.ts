@@ -16,17 +16,24 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Car lookup not configured" }, { status: 503 });
   }
 
+  console.log("[modifications] Fetching for:", { make, model, year });
+
   try {
     const res = await fetch(
       `${BASE}/modifications/?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}&year=${encodeURIComponent(year)}&user_key=${WHEEL_SIZE_KEY}`,
       { cache: "no-store" },
     );
 
+    console.log("[modifications] API status:", res.status);
+
     if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      console.log("[modifications] Error body:", errText);
       return NextResponse.json({ error: "Failed to load modifications" }, { status: 502 });
     }
 
     const json = await res.json() as { data?: unknown[] };
+    console.log("[modifications] Raw data:", JSON.stringify(json).slice(0, 1000));
     const raw  = Array.isArray(json.data) ? json.data : [];
 
     // Normalise to { slug, name } — the API returns objects with at minimum a slug field
@@ -45,6 +52,7 @@ export async function GET(req: NextRequest) {
       return { slug, name };
     }).filter((m) => m.slug);
 
+    console.log("[modifications] Mapped modifications:", JSON.stringify(modifications));
     return NextResponse.json({ modifications });
   } catch {
     return NextResponse.json({ error: "Could not reach the vehicle data service" }, { status: 503 });

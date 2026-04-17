@@ -59,6 +59,20 @@ function extractSizes(data: unknown[]): string[] {
         }
       }
     }
+
+    // Shape C: entry.wheels[].front.tire / entry.wheels[].rear.tire
+    const wheels = e.wheels as unknown[] | undefined;
+    if (Array.isArray(wheels)) {
+      for (const w of wheels) {
+        const ww = w as Record<string, unknown>;
+        for (const side of ["front", "rear"]) {
+          const face = ww[side] as Record<string, unknown> | undefined;
+          if (!face) continue;
+          const tire = (face.tire as string | undefined) ?? (face.tire_full as string | undefined);
+          if (tire && /^\d+\/\d+[Rr]\d+/.test(tire)) sizes.add(tire.split(" ")[0]);
+        }
+      }
+    }
   }
 
   return [...sizes];
@@ -117,6 +131,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  console.log("[car-finder] Received:", { make, model, year, modification });
+
   // 2. Query Wheel-Size with exact modification slug
   let allSizes: string[] = [];
   try {
@@ -125,7 +141,9 @@ export async function POST(req: NextRequest) {
       `&model=${encodeURIComponent(model)}&year=${year}` +
       `&modification=${encodeURIComponent(modification)}&user_key=${WHEEL_SIZE_KEY}`;
 
+    console.log("[car-finder] Wheel-Size URL:", url.replace(WHEEL_SIZE_KEY, "***"));
     const res = await fetch(url, { cache: "no-store" });
+    console.log("[car-finder] Response status:", res.status);
 
     if (!res.ok) {
       const errText = await res.text().catch(() => "");
@@ -138,8 +156,10 @@ export async function POST(req: NextRequest) {
     }
 
     const json = await res.json() as { data?: unknown[] };
+    console.log("[car-finder] Response data:", JSON.stringify(json).slice(0, 2000));
     const data = Array.isArray(json.data) ? json.data : [];
     allSizes = extractSizes(data);
+    console.log("[car-finder] Extracted sizes:", allSizes);
   } catch (err) {
     console.error("[car-finder] fetch error:", err);
     return NextResponse.json(
