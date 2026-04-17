@@ -23,7 +23,7 @@ type DeliveryData = {
 
 type DeliveryErrors = Partial<DeliveryData>;
 
-type AdyenSession = { id: string; sessionData: string };
+type AdyenSession = { id: string; sessionData: string; clientKey: string };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -262,7 +262,7 @@ export default function CheckoutFlow() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const checkout = await (AdyenCheckout as any)({
           environment: process.env.NEXT_PUBLIC_ADYEN_ENVIRONMENT ?? "test",
-          clientKey:   process.env.NEXT_PUBLIC_ADYEN_CLIENT_KEY ?? "",
+          clientKey:   adyenSession.clientKey,
           session: { id: adyenSession.id, sessionData: adyenSession.sessionData },
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onPaymentCompleted: (result: any) => {
@@ -369,7 +369,11 @@ export default function CheckoutFlow() {
           return;
         }
 
-        setAdyenSession({ id: data.id, sessionData: data.sessionData });
+        setAdyenSession({
+          id:          data.session_id,
+          sessionData: data.session_data,
+          clientKey:   data.client_key,
+        });
         // Drop-in mounts via useEffect above; keep submitting=true until mounted
       } catch {
         setSubmitError("Network error. Could not reach the payment service.");

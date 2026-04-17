@@ -34,6 +34,12 @@ type Props = {
   orderEta?: string;
 };
 
+type TrackingResponse = {
+  data?: TrackingData;
+  carrier?: string;
+  message?: string;
+};
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function formatEta(raw?: string): string {
@@ -70,8 +76,9 @@ function InfoChip({ icon, label, value }: { icon: React.ReactNode; label: string
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function ShipmentTracker({ containerNumber, orderEta }: Props) {
-  const [status, setStatus] = useState<Status>("loading");
-  const [data, setData]     = useState<TrackingData | null>(null);
+  const [status, setStatus]   = useState<Status>("loading");
+  const [data, setData]       = useState<TrackingData | null>(null);
+  const [carrier, setCarrier] = useState<string | null>(null);
 
   const fetchTracking = useCallback(async () => {
     setStatus("loading");
@@ -92,8 +99,10 @@ export default function ShipmentTracker({ containerNumber, orderEta }: Props) {
         return;
       }
 
-      const json = await res.json();
-      const payload: TrackingData = json.data ?? json;
+      const json: TrackingResponse = await res.json();
+      // carrier lives at top level; tracking fields are inside data
+      const payload: TrackingData = json.data ?? (json as unknown as TrackingData);
+      setCarrier(json.carrier ?? null);
 
       if (!hasTrackingData(payload)) {
         setStatus("no-data");
@@ -191,17 +200,29 @@ export default function ShipmentTracker({ containerNumber, orderEta }: Props) {
   return (
     <div className="flex flex-col gap-4">
 
-      {/* Container number row */}
-      <div>
-        <p className="mb-1.5 text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--muted)]">
-          Container Number
-        </p>
-        <div className="flex items-center gap-2 rounded-[10px] border border-black/[0.08] bg-white px-4 py-2.5">
-          <p className="flex-1 font-mono text-[0.9rem] font-bold tracking-wide text-[var(--foreground)]">
-            {containerNumber}
+      {/* Container number + carrier row */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
+        <div className="flex-1">
+          <p className="mb-1.5 text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--muted)]">
+            Container Number
           </p>
-          <CopyButton value={containerNumber} />
+          <div className="flex items-center gap-2 rounded-[10px] border border-black/[0.08] bg-white px-4 py-2.5">
+            <p className="flex-1 font-mono text-[0.9rem] font-bold tracking-wide text-[var(--foreground)]">
+              {containerNumber}
+            </p>
+            <CopyButton value={containerNumber} />
+          </div>
         </div>
+        {carrier && (
+          <div className="shrink-0">
+            <p className="mb-1.5 text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--muted)]">
+              Carrier
+            </p>
+            <div className="flex h-[42px] items-center rounded-[10px] border border-black/[0.08] bg-white px-4">
+              <p className="text-[0.9rem] font-semibold text-[var(--foreground)]">{carrier}</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Info chips grid */}
