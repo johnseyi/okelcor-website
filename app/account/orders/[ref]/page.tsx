@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ChevronLeft, Truck, Package } from "lucide-react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
-import CopyButton from "@/components/account/copy-button";
+import ShipmentTracker from "@/components/account/shipment-tracker";
 import { authOptions } from "@/lib/auth";
 import { StatusBadge, formatDate, type Order, type OrderStatus } from "../page";
 
@@ -210,36 +210,11 @@ export default async function OrderDetailPage({ params }: Props) {
               </p>
             </div>
 
-            {order.tracking_number ? (
-              <div className="flex flex-col gap-4">
-                {order.carrier && (
-                  <div>
-                    <p className="text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--muted)]">Carrier</p>
-                    <p className="mt-0.5 text-[0.95rem] font-semibold text-[var(--foreground)]">{order.carrier}</p>
-                  </div>
-                )}
-
-                <div>
-                  <p className="text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--muted)]">Tracking Number</p>
-                  <div className="mt-1.5 flex items-center gap-2 rounded-[10px] border border-black/[0.08] bg-white px-4 py-2.5">
-                    <p className="flex-1 font-mono text-[0.9rem] font-bold tracking-wide text-[var(--foreground)]">
-                      {order.tracking_number}
-                    </p>
-                    <CopyButton value={order.tracking_number} />
-                  </div>
-                </div>
-
-                {order.estimated_delivery && (
-                  <div>
-                    <p className="text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--muted)]">
-                      Estimated Delivery
-                    </p>
-                    <p className="mt-0.5 text-[0.95rem] font-semibold text-[var(--foreground)]">
-                      {formatDate(order.estimated_delivery)}
-                    </p>
-                  </div>
-                )}
-              </div>
+            {order.container_number ? (
+              <ShipmentTracker
+                containerNumber={order.container_number}
+                orderEta={order.eta}
+              />
             ) : (
               <div className="flex items-start gap-3 rounded-[12px] border border-black/[0.06] bg-white/70 px-5 py-4">
                 <Package size={18} strokeWidth={1.7} className="mt-0.5 shrink-0 text-[var(--muted)]" />

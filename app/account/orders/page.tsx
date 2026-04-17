@@ -34,6 +34,9 @@ export type Order = {
   carrier?: string;
   tracking_number?: string;
   estimated_delivery?: string;
+  container_number?: string;
+  tracking_status?: string;
+  eta?: string;
 };
 
 // ─── Status badge config ──────────────────────────────────────────────────────
