@@ -210,7 +210,7 @@ export default function ShipmentTracker({ containerNumber, orderEta }: Props) {
           </div>
         </div>
         <button
-          onClick={fetchTracking}
+          onClick={() => fetchTracking()}
           className="inline-flex w-fit items-center gap-1.5 rounded-full border border-black/[0.09] bg-white px-4 py-2 text-[0.82rem] font-semibold text-[var(--foreground)] transition hover:bg-[#f0f0f0]"
         >
           <RefreshCw size={13} strokeWidth={2.2} /> Check again
@@ -236,7 +236,7 @@ export default function ShipmentTracker({ containerNumber, orderEta }: Props) {
           </p>
         </div>
         <button
-          onClick={fetchTracking}
+          onClick={() => fetchTracking()}
           className="inline-flex w-fit items-center gap-1.5 rounded-full border border-black/[0.09] bg-white px-4 py-2 text-[0.82rem] font-semibold text-[var(--foreground)] transition hover:bg-[#f0f0f0]"
         >
           <RefreshCw size={13} strokeWidth={2.2} /> Retry
@@ -328,7 +328,7 @@ export default function ShipmentTracker({ containerNumber, orderEta }: Props) {
       {/* Refresh button */}
       <div>
         <button
-          onClick={fetchTracking}
+          onClick={() => fetchTracking()}
           className="inline-flex items-center gap-1.5 rounded-full border border-black/[0.09] bg-white px-4 py-2 text-[0.82rem] font-semibold text-[var(--foreground)] transition hover:bg-[#f0f0f0] active:scale-95"
         >
           <RefreshCw size={13} strokeWidth={2.2} /> Refresh tracking
