@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { RefreshCw, MapPin, Ship, Anchor, Calendar, Package, Clock } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { RefreshCw, MapPin, Ship, Anchor, Calendar, Package, Clock, Hourglass } from "lucide-react";
 import CopyButton from "@/components/account/copy-button";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type Status = "loading" | "no-data" | "error" | "ok";
+// "fetching" = 200 but ShipsGo hasn't pulled carrier data yet (data.status null)
+// "no-data"  = 404 / container not registered
+type Status = "loading" | "fetching" | "no-data" | "error" | "ok";
 
 type TrackingEvent = {
   date?: string;
@@ -75,13 +77,18 @@ function InfoChip({ icon, label, value }: { icon: React.ReactNode; label: string
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function ShipmentTracker({ containerNumber, orderEta }: Props) {
-  const [status, setStatus]   = useState<Status>("loading");
-  const [data, setData]       = useState<TrackingData | null>(null);
-  const [carrier, setCarrier] = useState<string | null>(null);
+const MAX_POLLS = 5;
+const POLL_INTERVAL_MS = 60_000;
 
-  const fetchTracking = useCallback(async () => {
-    setStatus("loading");
+export default function ShipmentTracker({ containerNumber, orderEta }: Props) {
+  const [status, setStatus]     = useState<Status>("loading");
+  const [data, setData]         = useState<TrackingData | null>(null);
+  const [carrier, setCarrier]   = useState<string | null>(null);
+  const [pollCount, setPollCount] = useState(0);
+  const pollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const fetchTracking = useCallback(async (silent = false) => {
+    if (!silent) setStatus("loading");
     try {
       const res = await fetch(`/api/tracking/${encodeURIComponent(containerNumber)}`, {
         cache: "no-store",
@@ -100,9 +107,16 @@ export default function ShipmentTracker({ containerNumber, orderEta }: Props) {
       }
 
       const json: TrackingResponse = await res.json();
-      // carrier lives at top level; tracking fields are inside data
       const payload: TrackingData = json.data ?? (json as unknown as TrackingData);
       setCarrier(json.carrier ?? null);
+
+      // ShipsGo returns 200 + message:"success" but data.status null while fetching
+      const isStillFetching = !payload.status && !hasTrackingData(payload);
+      if (isStillFetching) {
+        setStatus("fetching");
+        setData(null);
+        return;
+      }
 
       if (!hasTrackingData(payload)) {
         setStatus("no-data");
@@ -118,7 +132,18 @@ export default function ShipmentTracker({ containerNumber, orderEta }: Props) {
     }
   }, [containerNumber]);
 
+  // Initial load
   useEffect(() => { fetchTracking(); }, [fetchTracking]);
+
+  // Auto-poll every 60s when ShipsGo is still fetching carrier data (max 5 times)
+  useEffect(() => {
+    if (status !== "fetching" || pollCount >= MAX_POLLS) return;
+    pollTimer.current = setTimeout(() => {
+      setPollCount((n) => n + 1);
+      fetchTracking(true);
+    }, POLL_INTERVAL_MS);
+    return () => { if (pollTimer.current) clearTimeout(pollTimer.current); };
+  }, [status, pollCount, fetchTracking]);
 
   // ── Loading ──────────────────────────────────────────────────────────────────
 
@@ -127,6 +152,39 @@ export default function ShipmentTracker({ containerNumber, orderEta }: Props) {
       <div className="flex items-center gap-3 rounded-[12px] border border-black/[0.06] bg-white/70 px-5 py-5">
         <RefreshCw size={16} className="animate-spin text-[var(--primary)]" />
         <p className="text-[0.88rem] text-[var(--muted)]">Loading live tracking data…</p>
+      </div>
+    );
+  }
+
+  // ── ShipsGo is fetching carrier data (first lookup, 200 but status null) ──────
+
+  if (status === "fetching") {
+    const attemptsLeft = MAX_POLLS - pollCount;
+    return (
+      <div className="flex flex-col gap-3">
+        <div className="flex items-start gap-3 rounded-[12px] border border-blue-100 bg-blue-50 px-5 py-4">
+          <Hourglass size={17} strokeWidth={1.8} className="mt-0.5 shrink-0 text-blue-500" />
+          <div>
+            <p className="text-[0.88rem] font-semibold text-blue-900">
+              Tracking data is being fetched — please check back in a few minutes.
+            </p>
+            <p className="mt-1 text-[0.82rem] text-blue-700">
+              Container <span className="font-mono font-semibold">{containerNumber}</span> has been registered.
+              ShipsGo is retrieving live data from the shipping line.
+            </p>
+            {attemptsLeft > 0 && (
+              <p className="mt-1 text-[0.78rem] text-blue-500">
+                Auto-refreshing every minute ({attemptsLeft} attempt{attemptsLeft !== 1 ? "s" : ""} remaining).
+              </p>
+            )}
+          </div>
+        </div>
+        <button
+          onClick={() => { setPollCount(0); fetchTracking(); }}
+          className="inline-flex w-fit items-center gap-1.5 rounded-full border border-black/[0.09] bg-white px-4 py-2 text-[0.82rem] font-semibold text-[var(--foreground)] transition hover:bg-[#f0f0f0]"
+        >
+          <RefreshCw size={13} strokeWidth={2.2} /> Check now
+        </button>
       </div>
     );
   }
