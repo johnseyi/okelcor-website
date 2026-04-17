@@ -117,6 +117,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  console.log("[car-finder] Request params:", { make, model, year });
+  console.log("[car-finder] API key exists:", !!process.env.WHEEL_SIZE_API_KEY);
+
   // 2. Query Wheel-Size search/by_model
   let allSizes: string[] = [];
   try {
@@ -124,9 +127,15 @@ export async function POST(req: NextRequest) {
       `${BASE}/search/by_model/?make=${encodeURIComponent(make)}` +
       `&model=${encodeURIComponent(model)}&year=${year}&user_key=${WHEEL_SIZE_KEY}`;
 
+    console.log("[car-finder] Wheel-Size URL:", url);
+
     const res = await fetch(url, { cache: "no-store" });
 
+    console.log("[car-finder] Response status:", res.status);
+
     if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      console.log("[car-finder] Error body:", errText);
       return NextResponse.json({
         car: { make, model, year },
         sizes: [],
@@ -135,9 +144,14 @@ export async function POST(req: NextRequest) {
     }
 
     const json = await res.json() as { data?: unknown[] };
+    console.log("[car-finder] Response data:", JSON.stringify(json).slice(0, 2000));
+
     const data = Array.isArray(json.data) ? json.data : [];
+    console.log("[car-finder] data array length:", data.length);
     allSizes = extractSizes(data);
-  } catch {
+    console.log("[car-finder] extracted sizes:", allSizes);
+  } catch (err) {
+    console.error("[car-finder] fetch error:", err);
     return NextResponse.json(
       { error: "Could not reach the vehicle data service." },
       { status: 503 },
@@ -145,6 +159,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (allSizes.length === 0) {
+    console.log("[car-finder] No sizes extracted from response — returning empty");
     return NextResponse.json({
       car: { make, model, year },
       sizes: [],
