@@ -3,7 +3,7 @@ import Link from "next/link";
 import {
   Zap, BarChart3, Leaf, Wrench, CheckCircle2,
   Truck, Tractor, Bus, Anchor, Car, Factory,
-  ArrowRight, ChevronDown,
+  ArrowRight, ChevronDown, ShieldCheck, Download,
 } from "lucide-react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
@@ -306,6 +306,100 @@ export default function FetPage() {
           </p>
         </FadeUp>
         <AmortizationCalculator />
+      </Section>
+
+      {/* ── Proof & Certification ────────────────────────────────────────── */}
+      <Section className="bg-white">
+        <FadeUp>
+          <SectionEyebrow>Proof &amp; Certification</SectionEyebrow>
+          <h2 className="mb-10 text-3xl font-extrabold tracking-tight text-[#111111] md:text-4xl">
+            Certified. Tested. Verified.
+          </h2>
+        </FadeUp>
+
+        <div className="grid gap-6 md:grid-cols-2">
+
+          {/* ── Left — ISO Certificate ── */}
+          <div className="flex flex-col rounded-[20px] border border-[#e2e8e2] bg-white p-8 shadow-sm">
+            <div className="mb-5 inline-flex items-center gap-2 self-start rounded-full bg-[#0d2b1a] px-4 py-1.5">
+              <ShieldCheck size={13} strokeWidth={2.2} className="text-[#22c55e]" />
+              <span className="text-[0.72rem] font-bold uppercase tracking-[0.18em] text-[#22c55e]">
+                ISO 9001:2015 Certified
+              </span>
+            </div>
+
+            <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#dcfce7]">
+              <ShieldCheck size={30} strokeWidth={1.7} className="text-[#16a34a]" />
+            </div>
+
+            <div className="flex flex-col gap-4 text-[0.88rem]">
+              <div>
+                <p className="mb-0.5 text-[0.67rem] font-bold uppercase tracking-wider text-[#6b7280]">Company</p>
+                <p className="font-semibold text-[#111111]">Collaborate Together And Invest GmbH (CTI)</p>
+              </div>
+              <div>
+                <p className="mb-0.5 text-[0.67rem] font-bold uppercase tracking-wider text-[#6b7280]">Certified by</p>
+                <p className="font-semibold text-[#111111]">qm-solutions GmbH, Germany</p>
+              </div>
+              <div>
+                <p className="mb-0.5 text-[0.67rem] font-bold uppercase tracking-wider text-[#6b7280]">Valid until</p>
+                <p className="font-semibold text-[#111111]">30 January 2026</p>
+              </div>
+            </div>
+
+            <a
+              href="/documents/CTI-Certificate-ISO9001.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-auto flex items-center justify-center gap-2 rounded-full border border-[#22c55e] px-6 py-3 text-[0.88rem] font-semibold text-[#16a34a] transition hover:bg-[#22c55e] hover:text-white"
+            >
+              <Download size={14} strokeWidth={2.2} />
+              Download Certificate
+            </a>
+          </div>
+
+          {/* ── Right — Field Test Report ── */}
+          <div className="flex flex-col rounded-[20px] border border-[#e2e8e2] bg-white p-8 shadow-sm">
+            <h3 className="text-[1.4rem] font-extrabold leading-tight tracking-tight text-[#111111] md:text-[1.6rem]">
+              Independently Verified. Real Results.
+            </h3>
+            <p className="mt-2 text-[0.85rem] leading-6 text-[#6b7280]">
+              Field test conducted on a VW T5 van operated by Landesbaubehörde Stadthagen, a German regional state authority. January to October 2025.
+            </p>
+
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              {([
+                { stat: "11.52 → 9.92", unit: "l/100km", label: "Fuel consumption reduction" },
+                { stat: "13.9%",        unit: "",         label: "Verified fuel savings"       },
+                { stat: "€900–€1,300",  unit: "",         label: "Annual savings estimate"     },
+                { stat: "3–5 months",   unit: "",         label: "Full payback period"         },
+              ] as const).map(({ stat, unit, label }) => (
+                <div key={label} className="rounded-[14px] border border-[#e2e8e2] bg-[#f0f4f0] p-4">
+                  <p className="text-[1.2rem] font-extrabold leading-tight text-[#111111]">
+                    {stat}
+                    {unit && <span className="ml-1 text-[0.7rem] font-bold text-[#6b7280]">{unit}</span>}
+                  </p>
+                  <p className="mt-1 text-[0.71rem] font-medium text-[#6b7280]">{label}</p>
+                </div>
+              ))}
+            </div>
+
+            <a
+              href="/documents/FET-Test-Report-VW-T5.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-6 flex items-center justify-center gap-2 rounded-full bg-[#22c55e] px-6 py-3 text-[0.88rem] font-semibold text-white transition hover:bg-[#16a34a]"
+            >
+              <Download size={14} strokeWidth={2.2} />
+              Download Full Test Report
+            </a>
+
+            <p className="mt-4 text-center text-[0.72rem] leading-5 text-[#9ca3af]">
+              Tested under real operating conditions. Signed and certified by CTI GmbH, Lippstadt.
+            </p>
+          </div>
+
+        </div>
       </Section>
 
       {/* ── Bottom CTA ───────────────────────────────────────────────────── */}
