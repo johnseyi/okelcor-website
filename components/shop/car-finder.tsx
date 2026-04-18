@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Car, Ruler, Search, Loader2, AlertCircle, ChevronDown, Zap, ArrowRight } from "lucide-react";
+import { Car, Ruler, Search, Loader2, AlertCircle, Zap, ArrowRight } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -10,7 +10,7 @@ interface Option       { slug: string; name: string }
 interface FinderResult { car: { make: string; model: string; year: number; modification: string } | null; sizes: string[]; message: string; error?: string }
 
 type Props = { onSizeSelect: (size: string) => void };
-type Tab   = "car" | "size" | "fet";
+type Tab   = "car" | "fet";
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
 
@@ -171,7 +171,7 @@ export default function CarFinder({ onSizeSelect }: Props) {
             <button type="button" onClick={() => setActiveTab("car")} className={tabCls("car")}>
               <Car size={15} /> Search by Car
             </button>
-            <button type="button" onClick={() => { setActiveTab("size"); scrollToCatalogue(); }} className={tabCls("size")}>
+            <button type="button" onClick={scrollToCatalogue} className={tabCls("size")}>
               <Ruler size={15} /> Search by Size
             </button>
             <button type="button" onClick={() => setActiveTab("fet")} className={tabCls("fet")}>
@@ -323,19 +323,6 @@ export default function CarFinder({ onSizeSelect }: Props) {
                   )}
                 </div>
               )}
-            </div>
-          )}
-
-          {/* ── Search by Size ── */}
-          {activeTab === "size" && (
-            <div className="flex flex-col items-center gap-3 px-4 py-8 text-center sm:px-5">
-              <p className="text-[0.9rem] text-[#5c5e62]">
-                Use the size filters in the search bar below to find your tyres.
-              </p>
-              <button type="button" onClick={scrollToCatalogue}
-                className="flex items-center gap-1 text-[0.85rem] font-semibold text-[#f4511e] transition hover:underline">
-                Go to filters <ChevronDown size={15} />
-              </button>
             </div>
           )}
 
