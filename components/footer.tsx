@@ -101,7 +101,7 @@ export default function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="border-t border-black/[0.07] py-5">
+        <div className="border-t border-black/[0.07] py-6">
           <div className="flex flex-wrap items-center justify-between gap-3 text-[0.78rem] text-[var(--muted)]">
             <span>{t.footer.copyright}</span>
             <div className="flex flex-wrap gap-5">

@@ -75,7 +75,7 @@ export default function LogisticsPartners() {
                     />
                   </div>
                   <div className="min-w-0 border-l border-black/[0.07] pl-4">
-                    <p className="text-[0.88rem] font-extrabold text-[var(--foreground)]">
+                    <p className="text-[0.88rem] font-semibold text-[var(--foreground)]">
                       {p.name}
                     </p>
                     <p className="mt-0.5 text-[0.75rem] text-[var(--muted)]">

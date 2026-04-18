@@ -34,7 +34,7 @@ export default function CompanyStory() {
                   key={s.label}
                   className="rounded-[14px] bg-white/10 px-3 py-3 backdrop-blur-sm"
                 >
-                  <p className="text-xl font-extrabold text-white">{s.value}</p>
+                  <p className="text-xl font-bold text-white">{s.value}</p>
                   <p className="mt-0.5 text-[0.73rem] leading-4 text-white/80">
                     {s.label}
                   </p>

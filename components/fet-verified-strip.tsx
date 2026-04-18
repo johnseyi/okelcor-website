@@ -2,7 +2,7 @@ import { ShieldCheck } from "lucide-react";
 
 export default function FetVerifiedStrip() {
   return (
-    <section className="w-full bg-[#0d2b1a] py-5">
+    <section className="w-full bg-[#0d2b1a] py-8 md:py-10">
       <div className="tesla-shell flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
 
         {/* ISO badge */}

@@ -10,7 +10,7 @@ export default function CTASection() {
   const cardRef = useStagger<HTMLDivElement>({ stagger: 0.11, y: 18 });
 
   return (
-    <section className="w-full bg-[#f5f5f5] py-5">
+    <section className="w-full bg-[#f5f5f5] py-10 md:py-12">
       <div className="tesla-shell">
         <div
           ref={cardRef}

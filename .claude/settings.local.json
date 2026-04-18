@@ -32,7 +32,11 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(python3 --version which magick)",
+      "Bash(python3 -c \"from PIL import Image; img = Image.new\\('RGB', \\(16, 9\\), '#111111'\\); img.save\\('public/images/hero-poster.jpg', 'JPEG', quality=60\\)\")",
+      "Bash(node *)",
+      "Bash(git rm *)"
     ]
   }
 }
