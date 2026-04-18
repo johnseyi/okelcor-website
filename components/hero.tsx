@@ -60,6 +60,7 @@ export default function Hero({ slides: apiSlides }: HeroProps) {
   const depthOrbRef = useRef<HTMLDivElement>(null);
   const accentGlowRef = useRef<HTMLDivElement>(null);
 
+  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const prevIndexRef = useRef(0);
   const isFirstRender = useRef(true);
 
@@ -74,15 +75,26 @@ export default function Hero({ slides: apiSlides }: HeroProps) {
   useEffect(() => {
     if (isPaused) return;
 
-    const timer = window.setTimeout(() => {
+    const id = window.setInterval(() => {
       setIndex((prev) => {
         prevIndexRef.current = prev;
         return prev === slideCount - 1 ? 0 : prev + 1;
       });
     }, slideDuration);
 
-    return () => window.clearTimeout(timer);
+    return () => window.clearInterval(id);
   }, [isPaused, index, slideCount, slideDuration]);
+
+  // Pause / play the current video element when the slider is toggled
+  useEffect(() => {
+    const videoEl = videoRefs.current[index];
+    if (!videoEl) return;
+    if (isPaused) {
+      videoEl.pause();
+    } else {
+      videoEl.play().catch(() => {});
+    }
+  }, [isPaused, index]);
 
   const goTo = (next: number) => {
     prevIndexRef.current = index;
@@ -250,7 +262,7 @@ export default function Hero({ slides: apiSlides }: HeroProps) {
 
   return (
     <section ref={sectionRef} className="w-full pt-20">
-      <div className="relative h-[82vh] min-h-[460px] max-h-[700px] overflow-hidden sm:min-h-[520px] md:h-[77vh] md:min-h-[560px] md:max-h-[720px]">
+      <div className="relative min-h-[80vh] overflow-hidden">
         <div ref={bgContainerRef} className="absolute inset-0 will-change-transform" aria-hidden="true">
           {Array.from({ length: slideCount }, (_, i) => {
             const media = getSlideMedia(i);
@@ -263,6 +275,7 @@ export default function Hero({ slides: apiSlides }: HeroProps) {
               >
                 {media.type === "video" ? (
                   <video
+                    ref={(el) => { videoRefs.current[i] = el; }}
                     src={media.src}
                     autoPlay
                     muted
