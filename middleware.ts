@@ -25,10 +25,17 @@ function roleCanAccess(role: string, pathname: string): boolean {
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 
-const PROTECTED_ROUTES = ["/checkout", "/account"];
+const PROTECTED_ROUTES = ["/shop", "/checkout", "/account"];
 
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+
+  // Prefetch requests are speculative — never redirect them. The actual
+  // navigation will be checked. Redirecting prefetches causes Next.js to
+  // cache the redirect and replay it even after the cookie is present.
+  if (request.headers.get("Next-Router-Prefetch") === "1") {
+    return NextResponse.next();
+  }
 
   // ── Admin routes ──────────────────────────────────────────────────────────
   if (pathname.startsWith("/admin")) {
@@ -66,6 +73,7 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/shop/:path*",
     "/checkout/:path*",
     "/account/:path*",
     "/admin",
