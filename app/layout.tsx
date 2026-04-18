@@ -46,6 +46,11 @@ export const metadata: Metadata = {
     description:
       "Premium tyre sourcing solutions for distributors and wholesalers worldwide.",
   },
+  icons: {
+    icon: "/favicon2.png",
+    shortcut: "/favicon2.png",
+    apple: "/favicon2.png",
+  },
   robots: {
     index: true,
     follow: true,
