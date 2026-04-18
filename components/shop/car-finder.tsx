@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Car, Ruler, Search, Loader2, AlertCircle, ChevronDown } from "lucide-react";
+import Link from "next/link";
+import { Car, Ruler, Search, Loader2, AlertCircle, ChevronDown, Zap, ArrowRight } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -9,7 +10,7 @@ interface Option       { slug: string; name: string }
 interface FinderResult { car: { make: string; model: string; year: number; modification: string } | null; sizes: string[]; message: string; error?: string }
 
 type Props = { onSizeSelect: (size: string) => void };
-type Tab   = "car" | "size";
+type Tab   = "car" | "size" | "fet";
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
 
@@ -148,9 +149,13 @@ export default function CarFinder({ onSizeSelect }: Props) {
   // ── Derived ────────────────────────────────────────────────────────────────
   const canSearch  = !!make && !!model && !!year && !!modification && !isLoading;
   const noResults  = result && (result.error || result.sizes.length === 0);
-  const tabCls     = (tab: Tab) =>
+  const tabCls = (tab: Tab) =>
     `flex items-center gap-1.5 px-4 py-3.5 text-[0.81rem] font-semibold transition border-b-2 -mb-px sm:gap-2 sm:px-6 sm:py-4 sm:text-sm ${
-      activeTab === tab ? "border-[#f4511e] text-[#f4511e]" : "border-transparent text-[#5c5e62] hover:text-[#171a20]"
+      activeTab === tab
+        ? tab === "fet"
+          ? "border-[#22c55e] text-[#22c55e]"
+          : "border-[#f4511e] text-[#f4511e]"
+        : "border-transparent text-[#5c5e62] hover:text-[#171a20]"
     }`;
 
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -168,6 +173,9 @@ export default function CarFinder({ onSizeSelect }: Props) {
             </button>
             <button type="button" onClick={() => { setActiveTab("size"); scrollToCatalogue(); }} className={tabCls("size")}>
               <Ruler size={15} /> Search by Size
+            </button>
+            <button type="button" onClick={() => setActiveTab("fet")} className={tabCls("fet")}>
+              <Zap size={15} /> Fuel Eco Tech Shop
             </button>
           </div>
 
@@ -328,6 +336,58 @@ export default function CarFinder({ onSizeSelect }: Props) {
                 className="flex items-center gap-1 text-[0.85rem] font-semibold text-[#f4511e] transition hover:underline">
                 Go to filters <ChevronDown size={15} />
               </button>
+            </div>
+          )}
+
+          {/* ── Fuel Eco Tech Shop ── */}
+          {activeTab === "fet" && (
+            <div className="px-4 py-6 sm:px-5 sm:py-7">
+
+              {/* Header */}
+              <div className="mb-5">
+                <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-[#dcfce7] px-3 py-1">
+                  <Zap size={11} strokeWidth={2.5} className="text-[#16a34a]" />
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#166534]">Fuel Eco Tech</span>
+                </div>
+                <h3 className="text-[1rem] font-extrabold text-[#111111]">Fuel Eco Tech Products</h3>
+                <p className="mt-1 text-[0.82rem] leading-5 text-[#5c5e62]">
+                  Certified fuel efficiency technology for passenger cars, vans, trucks and heavy machinery
+                </p>
+              </div>
+
+              {/* 2×2 product grid */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {([
+                  { name: "FET Passenger Car",       desc: "For vehicles up to 2,000cc",       price: "From €249" },
+                  { name: "FET Van & SUV",            desc: "For vehicles up to 3,500kg",       price: "From €299" },
+                  { name: "FET Truck (up to 18t)",    desc: "For trucks and heavy vans",        price: "From €449" },
+                  { name: "FET Heavy Machinery (up to 40t)", desc: "For construction and fleet", price: "From €649" },
+                ] as const).map(({ name, desc, price }) => (
+                  <div
+                    key={name}
+                    className="flex flex-col rounded-xl border border-[#e2e8e2] bg-[#f0f4f0] p-4"
+                  >
+                    {/* Icon placeholder */}
+                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[#dcfce7]">
+                      <Zap size={18} strokeWidth={1.8} className="text-[#16a34a]" />
+                    </div>
+                    <p className="text-[0.88rem] font-extrabold leading-snug text-[#111111]">{name}</p>
+                    <p className="mt-0.5 text-[0.75rem] text-[#5c5e62]">{desc}</p>
+                    <p className="mt-2 text-[0.95rem] font-extrabold text-[#22c55e]">{price}</p>
+                    <Link
+                      href="/quote"
+                      className="mt-3 flex items-center justify-center gap-1.5 rounded-lg bg-[#f4511e] px-4 py-2 text-[0.78rem] font-semibold text-white transition hover:bg-[#d14f14]"
+                    >
+                      Request a Quote <ArrowRight size={12} strokeWidth={2.5} />
+                    </Link>
+                  </div>
+                ))}
+              </div>
+
+              {/* Footer note */}
+              <p className="mt-4 text-center text-[0.77rem] text-[#9ca3af]">
+                Full product catalogue coming soon. Contact us for bulk fleet pricing.
+              </p>
             </div>
           )}
 
