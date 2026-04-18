@@ -25,7 +25,7 @@ function roleCanAccess(role: string, pathname: string): boolean {
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 
-const PROTECTED_ROUTES = ["/shop", "/checkout", "/account", "/account/orders", "/account/profile"];
+const PROTECTED_ROUTES = ["/checkout", "/account"];
 
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
@@ -66,7 +66,6 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/shop/:path*",
     "/checkout/:path*",
     "/account/:path*",
     "/admin",
