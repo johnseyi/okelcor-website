@@ -105,7 +105,7 @@ function Field({
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-type CustomerType = "B2C" | "B2B";
+type CustomerType = "b2c" | "b2b";
 
 type FormState = {
   first_name: string;
@@ -125,7 +125,7 @@ type FormErrors = Partial<Record<keyof FormState, string>>;
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [customerType, setCustomerType] = useState<CustomerType>("B2C");
+  const [customerType, setCustomerType] = useState<CustomerType>("b2c");
   const [form, setForm] = useState<FormState>({
     first_name: "", last_name: "", email: "", password: "", confirm_password: "",
     phone: "", country: "", company_name: "", vat_number: "", industry: "", terms: false,
@@ -157,7 +157,7 @@ export default function RegisterPage() {
     else if (form.password.length < 8) errs.password = "Password must be at least 8 characters";
     if (!form.confirm_password) errs.confirm_password = "Please confirm your password";
     else if (form.password !== form.confirm_password) errs.confirm_password = "Passwords do not match";
-    if (customerType === "B2B" && !form.company_name.trim()) errs.company_name = "Company name is required";
+    if (customerType === "b2b" && !form.company_name.trim()) errs.company_name = "Company name is required";
     if (!form.terms) errs.terms = "You must accept the terms & conditions";
     return errs;
   };
@@ -189,6 +189,12 @@ export default function RegisterPage() {
     setApiError(null);
 
     try {
+      console.log("Registration payload:", {
+        customer_type: customerType,
+        first_name: form.first_name,
+        last_name: form.last_name,
+        email: form.email,
+      });
       await registerCustomer({
         first_name: form.first_name,
         last_name: form.last_name,
@@ -198,9 +204,9 @@ export default function RegisterPage() {
         phone: form.phone || undefined,
         country: form.country || undefined,
         customer_type: customerType,
-        company_name: customerType === "B2B" ? form.company_name : undefined,
-        vat_number: customerType === "B2B" && form.vat_number ? form.vat_number : undefined,
-        industry: customerType === "B2B" && form.industry ? form.industry : undefined,
+        company_name: customerType === "b2b" ? form.company_name : undefined,
+        vat_number: customerType === "b2b" && form.vat_number ? form.vat_number : undefined,
+        industry: customerType === "b2b" && form.industry ? form.industry : undefined,
       });
       setSubmitted(true);
     } catch (err: unknown) {
@@ -270,7 +276,7 @@ export default function RegisterPage() {
 
           {/* Account type toggle */}
           <div className="mb-7 flex rounded-[14px] bg-[#efefef] p-1">
-            {(["B2C", "B2B"] as CustomerType[]).map((type) => (
+            {(["b2c", "b2b"] as CustomerType[]).map((type) => (
               <button
                 key={type}
                 type="button"
@@ -281,7 +287,7 @@ export default function RegisterPage() {
                     : "text-[var(--muted)] hover:text-[var(--foreground)]"
                 }`}
               >
-                {type === "B2C" ? "Individual" : "Business"}
+                {type === "b2c" ? "Individual" : "Business"}
               </button>
             ))}
           </div>
@@ -340,7 +346,7 @@ export default function RegisterPage() {
             </Field>
 
             {/* B2B fields */}
-            {customerType === "B2B" && (
+            {customerType === "b2b" && (
               <>
                 <div className="border-t border-black/[0.06] pt-3">
                   <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--primary)]">Business Details</p>

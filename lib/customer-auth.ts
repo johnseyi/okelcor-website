@@ -7,7 +7,7 @@ export type Customer = {
   last_name: string;
   phone?: string;
   country?: string;
-  customer_type: "B2C" | "B2B";
+  customer_type: "b2c" | "b2b";
   email_verified: boolean;
   company_name?: string;
   vat_number?: string;
@@ -22,7 +22,7 @@ export type RegisterData = {
   password_confirmation: string;
   phone?: string;
   country?: string;
-  customer_type: "B2C" | "B2B";
+  customer_type: "b2c" | "b2b";
   company_name?: string;
   vat_number?: string;
   industry?: string;

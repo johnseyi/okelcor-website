@@ -145,7 +145,7 @@ export default async function AccountPage() {
     redirect("/login?callbackUrl=/account");
   }
 
-  const isB2B = customer.customer_type === "B2B";
+  const isB2B = customer.customer_type === "b2b";
   const displayName = [customer.first_name, customer.last_name].filter(Boolean).join(" ");
 
   return (

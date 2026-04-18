@@ -135,7 +135,7 @@ export default function LoginPage() {
       // Normal redirect
       const destination =
         callbackUrl ||
-        (data?.customer_type === "B2B" ? "/account/orders" : "/account");
+        (data?.customer_type === "b2b" ? "/account/orders" : "/account");
       router.push(destination);
     } catch (err: unknown) {
       setSubmitting(false);
