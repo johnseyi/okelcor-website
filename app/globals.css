@@ -325,19 +325,19 @@ a {
   padding: 0;
   border: none;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.40);
+  background: rgba(255, 255, 255, 0.35);
   transition:
     width 0.3s ease,
     background 0.3s ease;
 }
 
 .hero-dot:hover {
-  background: rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.60);
 }
 
 .hero-dot-active {
   width: 32px;
-  background: #f97316;
+  background: #ffffff;
   transform: none;
 }
 

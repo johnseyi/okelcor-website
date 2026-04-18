@@ -335,7 +335,7 @@ export default function Hero({ slides: apiSlides }: HeroProps) {
           <ChevronRight size={22} strokeWidth={2} />
         </button>
 
-        <div className="relative z-10 flex h-full flex-col justify-between px-5 pb-6 pt-8 text-center md:px-10 md:pb-8 md:pt-12">
+        <div className="relative z-10 flex h-full flex-col justify-center px-5 pb-6 pt-8 text-center md:px-10 md:pb-8 md:pt-12">
           <div className="flex flex-1 items-center justify-center">
             <div className="mx-auto w-full max-w-5xl">
               <div className="flex flex-col items-center">
@@ -405,30 +405,29 @@ export default function Hero({ slides: apiSlides }: HeroProps) {
             </div>
           </div>
 
-          <div className="flex w-full items-end justify-between">
+        </div>
+
+        {/* Play/Pause — absolute bottom-left */}
+        <button
+          type="button"
+          onClick={() => setIsPaused((prev) => !prev)}
+          className="hero-control-btn absolute bottom-6 left-6 z-20 hidden md:inline-flex"
+          aria-label={isPaused ? "Play slideshow" : "Pause slideshow"}
+        >
+          {isPaused ? <Play size={18} /> : <Pause size={18} />}
+        </button>
+
+        {/* Pagination dots — absolute bottom-center */}
+        <div className="absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3">
+          {Array.from({ length: slideCount }, (_, i) => (
             <button
+              key={i}
               type="button"
-              onClick={() => setIsPaused((prev) => !prev)}
-              className="hero-control-btn hidden md:inline-flex"
-              aria-label={isPaused ? "Play slideshow" : "Pause slideshow"}
-            >
-              {isPaused ? <Play size={18} /> : <Pause size={18} />}
-            </button>
-
-            <div className="mx-auto flex items-center gap-3">
-              {Array.from({ length: slideCount }, (_, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => goTo(i)}
-                  className={`hero-dot ${i === index ? "hero-dot-active" : ""}`}
-                  aria-label={`Go to slide ${i + 1}`}
-                />
-              ))}
-            </div>
-
-            <div className="hidden w-[42px] md:block" />
-          </div>
+              onClick={() => goTo(i)}
+              className={`hero-dot ${i === index ? "hero-dot-active" : ""}`}
+              aria-label={`Go to slide ${i + 1}`}
+            />
+          ))}
         </div>
       </div>
     </section>
