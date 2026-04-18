@@ -33,10 +33,15 @@ type SearchState = "idle" | "loading" | "done" | "error";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function getCookie(name: string): string {
-  if (typeof document === "undefined") return "";
-  const m = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
-  return m ? decodeURIComponent(m[1]) : "";
+async function getAdminToken(): Promise<string> {
+  try {
+    const res = await fetch("/api/admin/token");
+    if (!res.ok) return "";
+    const { token } = await res.json() as { token?: string };
+    return token ?? "";
+  } catch {
+    return "";
+  }
 }
 
 function buildExternalUrl(base: string, query: string): string {
@@ -247,7 +252,7 @@ export default function SupplierIntel({ products }: { products: AdminProduct[] }
     setEbayItems([]);
     setEbayError(null);
 
-    const token = getCookie("admin_token");
+    const token = await getAdminToken();
     try {
       const url = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1"}/admin/supplier/search?q=${encodeURIComponent(q)}`;
       const res = await fetch(url, {
@@ -275,7 +280,7 @@ export default function SupplierIntel({ products }: { products: AdminProduct[] }
     const q = query.trim();
     if (!q) return;
     setAlibabaLoading(true);
-    const token = getCookie("admin_token");
+    const token = await getAdminToken();
     try {
       const url = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1"}/admin/supplier/alibaba-link?q=${encodeURIComponent(q)}`;
       const res = await fetch(url, {
