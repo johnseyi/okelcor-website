@@ -45,7 +45,7 @@ import {
   Download,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useSession, signOut } from "next-auth/react";
+import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import { useCart } from "@/context/cart-context";
 import { useLanguage } from "@/context/language-context";
 import { useSearch } from "@/context/search-context";
@@ -68,8 +68,7 @@ export default function Navbar() {
   const { totalItems, openCart } = useCart();
   const { locale, setLocale, t } = useLanguage();
   const { openSearch } = useSearch();
-  const { data: session, status } = useSession();
-  const isAuthed = status === "authenticated";
+  const { customer, isAuthenticated: isAuthed, logout } = useCustomerAuth();
 
   type NavItem = { label: string; href: string };
 
@@ -497,7 +496,7 @@ export default function Navbar() {
                       <div className="px-4 pb-3 pt-4">
                         <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-black/40">Signed in as</p>
                         <p className="mt-1 truncate text-[0.875rem] font-semibold text-black">
-                          {session?.user?.email ?? "—"}
+                          {customer?.email ?? "—"}
                         </p>
                       </div>
 
@@ -515,17 +514,18 @@ export default function Navbar() {
                         </Link>
                         <button
                           type="button"
-                          onClick={() => { setOpenProfile(false); signOut({ callbackUrl: "/" }); }}
+                          onClick={() => { setOpenProfile(false); logout().then(() => { window.location.href = "/"; }); }}
                           className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[0.875rem] font-semibold text-black/70 transition hover:bg-black/[0.04] hover:text-black"
                         >
                           <LogOut size={16} strokeWidth={2} />
                           Sign Out
                         </button>
+
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <Link href="/auth" className="tesla-icon-btn" aria-label="Sign in">
+                  <Link href="/login" className="tesla-icon-btn" aria-label="Sign in">
                     <UserCircle2 size={21} strokeWidth={1.9} />
                   </Link>
                 )}
@@ -972,7 +972,7 @@ export default function Navbar() {
                             Signed in as
                           </div>
                           <div className="mt-0.5 truncate text-[0.95rem] font-semibold text-black">
-                            {session?.user?.email ?? "—"}
+                            {customer?.email ?? "—"}
                           </div>
                         </div>
                       </div>
@@ -989,7 +989,7 @@ export default function Navbar() {
                     </Link>
                     <button
                       type="button"
-                      onClick={() => { closeAll(); signOut({ callbackUrl: "/" }); }}
+                      onClick={() => { closeAll(); logout().then(() => { window.location.href = "/"; }); }}
                       className="tesla-mobile-meta-link w-full text-left"
                     >
                       <div className="flex items-center gap-4">
@@ -1002,7 +1002,7 @@ export default function Navbar() {
                   </>
                 ) : (
                   <Link
-                    href="/auth"
+                    href="/login"
                     onClick={closeAll}
                     className="tesla-mobile-meta-link"
                   >

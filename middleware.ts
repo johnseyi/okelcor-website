@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
 
-// Pages each role can access (beyond /admin dashboard which is always allowed)
+// ── Admin role table ──────────────────────────────────────────────────────────
+
 const ROLE_ROUTES: Record<string, string[]> = {
-  super_admin: [],  // unrestricted — only role that can access /admin/users
+  super_admin: [],
   admin: [
     "/admin/products", "/admin/articles", "/admin/orders", "/admin/quotes",
     "/admin/hero-slides", "/admin/brands", "/admin/settings", "/admin/profile",
@@ -18,27 +18,27 @@ const ROLE_ROUTES: Record<string, string[]> = {
 function roleCanAccess(role: string, pathname: string): boolean {
   if (pathname === "/admin" || pathname === "/admin/unauthorized") return true;
   const allowed = ROLE_ROUTES[role];
-  if (!allowed) return false;               // unknown role — deny
-  if (allowed.length === 0) return true;    // super_admin / admin — allow all
+  if (!allowed) return false;
+  if (allowed.length === 0) return true;
   return allowed.some((prefix) => pathname.startsWith(prefix));
 }
 
-export async function middleware(request: NextRequest) {
+// ── Middleware ────────────────────────────────────────────────────────────────
+
+const PROTECTED_ROUTES = ["/shop", "/checkout", "/account", "/account/orders", "/account/profile"];
+
+export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
-  // Admin routes
+  // ── Admin routes ──────────────────────────────────────────────────────────
   if (pathname.startsWith("/admin")) {
-    if (pathname === "/admin/login") {
-      return NextResponse.next();
-    }
+    if (pathname === "/admin/login") return NextResponse.next();
 
     const adminToken = request.cookies.get("admin_token")?.value;
-
     if (!adminToken) {
       return NextResponse.redirect(new URL("/admin/login", request.url));
     }
 
-    // Role-based access guard
     const role = request.cookies.get("admin_role")?.value ?? "";
     if (role && !roleCanAccess(role, pathname)) {
       return NextResponse.redirect(new URL("/admin/unauthorized", request.url));
@@ -47,19 +47,18 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Customer protected routes
-  const token = await getToken({
-    req: request,
-    secret: process.env.NEXTAUTH_SECRET,
-  });
+  // ── Customer protected routes ─────────────────────────────────────────────
+  const isProtected = PROTECTED_ROUTES.some((route) =>
+    pathname === route || pathname.startsWith(route + "/")
+  );
 
-  if (!token) {
-    const signInUrl = new URL("/auth", request.url);
-
-    // Use internal path instead of full absolute URL
-    signInUrl.searchParams.set("callbackUrl", `${pathname}${search}`);
-
-    return NextResponse.redirect(signInUrl);
+  if (isProtected) {
+    const token = request.cookies.get("customer_token")?.value;
+    if (!token) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("callbackUrl", `${pathname}${search}`);
+      return NextResponse.redirect(loginUrl);
+    }
   }
 
   return NextResponse.next();

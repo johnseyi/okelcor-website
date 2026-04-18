@@ -1,4 +1,3 @@
-import { getServerSession } from "next-auth";
 import { redirect, notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -6,7 +5,7 @@ import { ChevronLeft, Truck, Package } from "lucide-react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import ShipmentTracker from "@/components/account/shipment-tracker";
-import { authOptions } from "@/lib/auth";
+import { getCustomerFromCookie } from "@/lib/get-customer";
 import { StatusBadge, formatDate, type Order, type OrderStatus } from "../page";
 
 // ─── Timeline config ──────────────────────────────────────────────────────────
@@ -137,8 +136,8 @@ function StatusTimeline({ status }: { status: OrderStatus }) {
 
 export default async function OrderDetailPage({ params }: Props) {
   const { ref } = await params;
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) redirect(`/auth?callbackUrl=/account/orders/${ref}`);
+  const customer = await getCustomerFromCookie();
+  if (!customer) redirect(`/login?callbackUrl=/account/orders/${ref}`);
 
   const order = await fetchOrder(ref);
   if (!order) notFound();

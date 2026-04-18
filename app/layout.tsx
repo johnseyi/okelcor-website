@@ -9,7 +9,7 @@ import AnalyticsScript from "@/components/analytics-script";
 import { SearchProvider } from "@/context/search-context";
 import SearchModal from "@/components/search/search-modal";
 import { SITE_URL as SITE_URL_FALLBACK } from "@/lib/constants";
-import AuthSessionProvider from "@/components/auth/session-provider";
+import { CustomerAuthProvider } from "@/context/CustomerAuthContext";
 import { SiteSettingsProvider } from "@/context/site-settings-context";
 import { getSiteSettings } from "@/lib/site-settings";
 
@@ -67,7 +67,7 @@ export default async function RootLayout({
   return (
     <html lang="en" className="w-full">
       <body className="m-0 w-full p-0">
-        <AuthSessionProvider>
+        <CustomerAuthProvider>
           <SiteSettingsProvider settings={settings}>
             <LanguageProvider>
               <SearchProvider>
@@ -82,7 +82,7 @@ export default async function RootLayout({
               </SearchProvider>
             </LanguageProvider>
           </SiteSettingsProvider>
-        </AuthSessionProvider>
+        </CustomerAuthProvider>
       </body>
     </html>
   );

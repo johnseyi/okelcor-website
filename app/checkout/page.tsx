@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { getServerSession } from "next-auth";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import CheckoutFlow from "@/components/checkout/checkout-flow";
@@ -23,10 +22,11 @@ export const metadata: Metadata = {
  * NextAuth returns the user here after a successful sign-in.
  */
 export default async function CheckoutPage() {
-  const session = await getServerSession(authOptions);
+  const cookieStore = await cookies();
+  const token = cookieStore.get("customer_token")?.value;
 
-  if (!session) {
-    redirect("/auth?callbackUrl=/checkout");
+  if (!token) {
+    redirect("/login?callbackUrl=/checkout");
   }
 
   return (

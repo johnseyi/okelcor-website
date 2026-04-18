@@ -1,11 +1,10 @@
-import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronRight, Package } from "lucide-react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
-import { authOptions } from "@/lib/auth";
+import { getCustomerFromCookie } from "@/lib/get-customer";
 
 export const metadata: Metadata = {
   title: "My Orders",
@@ -51,7 +50,7 @@ export const STATUS_CONFIG: Record<OrderStatus, { label: string; cls: string }> 
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-async function fetchOrders(email: string): Promise<Order[]> {
+async function fetchOrders(token: string, email: string): Promise<Order[]> {
   const API_URL =
     process.env.API_URL ??
     process.env.NEXT_PUBLIC_API_URL ??
@@ -63,7 +62,10 @@ async function fetchOrders(email: string): Promise<Order[]> {
   try {
     const res = await fetch(url, {
       cache: "no-store",
-      headers: { Accept: "application/json" },
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
     });
 
     const json = await res.json();
@@ -105,10 +107,14 @@ export function StatusBadge({ status }: { status: OrderStatus }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function OrdersPage() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) redirect("/auth?callbackUrl=/account/orders");
+  const customer = await getCustomerFromCookie();
+  if (!customer) redirect("/login?callbackUrl=/account/orders");
 
-  const orders = await fetchOrders(session.user.email);
+  const { cookies } = await import("next/headers");
+  const cookieStore = await cookies();
+  const token = cookieStore.get("customer_token")?.value ?? "";
+
+  const orders = await fetchOrders(token, customer.email);
 
   return (
     <main className="min-h-screen bg-[#f5f5f5]">
@@ -125,7 +131,7 @@ export default async function OrdersPage() {
           <h1 className="text-2xl font-extrabold tracking-tight text-[var(--foreground)] md:text-3xl">
             My Orders
           </h1>
-          <p className="mt-1 text-[0.88rem] text-[var(--muted)]">{session.user.email}</p>
+          <p className="mt-1 text-[0.88rem] text-[var(--muted)]">{customer.email}</p>
         </div>
 
         {orders.length === 0 ? (
