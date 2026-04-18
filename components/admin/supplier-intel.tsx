@@ -239,7 +239,7 @@ export default function SupplierIntel({ products }: { products: AdminProduct[] }
     if (id === "") return;
     const p = products.find((x) => x.id === id);
     if (p) {
-      const q = [p.size, p.brand, p.name].filter(Boolean).join(" ").trim();
+      const q = [p.brand, p.size].filter(Boolean).join(" ").trim();
       setQuery(q);
     }
   };
