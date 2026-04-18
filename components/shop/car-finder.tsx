@@ -171,7 +171,7 @@ export default function CarFinder({ onSizeSelect }: Props) {
             <button type="button" onClick={() => setActiveTab("car")} className={tabCls("car")}>
               <Car size={15} /> Search by Car
             </button>
-            <button type="button" onClick={scrollToCatalogue} className={tabCls("size")}>
+            <button type="button" onClick={scrollToCatalogue} className="flex items-center gap-1.5 border-b-2 border-transparent px-4 py-3.5 text-[0.81rem] font-semibold text-[#5c5e62] transition hover:text-[#171a20] -mb-px sm:gap-2 sm:px-6 sm:py-4 sm:text-sm">
               <Ruler size={15} /> Search by Size
             </button>
             <button type="button" onClick={() => setActiveTab("fet")} className={tabCls("fet")}>
