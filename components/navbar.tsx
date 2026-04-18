@@ -30,9 +30,16 @@ import {
   X,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
   ShoppingCart,
   Search,
   Package,
+  Car,
+  Truck,
+  Tractor,
+  RotateCcw,
+  CheckCircle2,
+  Zap,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
@@ -77,6 +84,11 @@ export default function Navbar() {
   const [openLang, setOpenLang]             = useState(false);
   const [openMobileLang, setOpenMobileLang] = useState(false);
   const [openProfile, setOpenProfile]       = useState(false);
+  const [openShopMega, setOpenShopMega]     = useState(false);
+  const [openFetMega,  setOpenFetMega]      = useState(false);
+
+  const shopCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fetCloseTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── DOM refs ─────────────────────────────────────────────────────────────
   const headerRef           = useRef<HTMLElement>(null);
@@ -98,6 +110,8 @@ export default function Navbar() {
     setOpenLang(false);
     setOpenMobileLang(false);
     setOpenProfile(false);
+    setOpenShopMega(false);
+    setOpenFetMega(false);
   }, [pathname]);
 
   // ── Scroll lock for mobile overlays ──────────────────────────────────────
@@ -114,6 +128,26 @@ export default function Navbar() {
     setOpenLang(false);
     setOpenMobileLang(false);
     setOpenProfile(false);
+    setOpenShopMega(false);
+    setOpenFetMega(false);
+  };
+
+  const openShopMenu = () => {
+    if (shopCloseTimer.current) clearTimeout(shopCloseTimer.current);
+    setOpenFetMega(false);
+    setOpenShopMega(true);
+  };
+  const closeShopMenu = () => {
+    shopCloseTimer.current = setTimeout(() => setOpenShopMega(false), 120);
+  };
+
+  const openFetMenu = () => {
+    if (fetCloseTimer.current) clearTimeout(fetCloseTimer.current);
+    setOpenShopMega(false);
+    setOpenFetMega(true);
+  };
+  const closeFetMenu = () => {
+    fetCloseTimer.current = setTimeout(() => setOpenFetMega(false), 120);
   };
 
   // ── Escape key: close any open panel ─────────────────────────────────────
@@ -125,6 +159,8 @@ export default function Navbar() {
       setOpenLang(false);
       setOpenMobileLang(false);
       setOpenProfile(false);
+      setOpenShopMega(false);
+      setOpenFetMega(false);
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
@@ -330,6 +366,35 @@ export default function Navbar() {
               <div className="flex items-center rounded-2xl px-2 py-1">
                 {navItems.map((item) => {
                   const isActive = pathname === item.href;
+
+                  if (item.href === "/shop") {
+                    return (
+                      <div key="shop" onMouseEnter={openShopMenu} onMouseLeave={closeShopMenu}>
+                        <Link
+                          href="/shop"
+                          className={`tesla-nav-link inline-flex items-center gap-1 ${isActive ? "tesla-nav-link-active" : ""}`}
+                        >
+                          {item.label}
+                          <ChevronDown size={12} strokeWidth={2.5} className={`transition-transform duration-200 ${openShopMega ? "rotate-180" : ""}`} />
+                        </Link>
+                      </div>
+                    );
+                  }
+
+                  if (item.href === "/fet") {
+                    return (
+                      <div key="fet" onMouseEnter={openFetMenu} onMouseLeave={closeFetMenu}>
+                        <Link
+                          href="/fet"
+                          className={`tesla-nav-link inline-flex items-center gap-1 ${isActive ? "tesla-nav-link-active" : ""}`}
+                        >
+                          {item.label}
+                          <ChevronDown size={12} strokeWidth={2.5} className={`transition-transform duration-200 ${openFetMega ? "rotate-180" : ""}`} />
+                        </Link>
+                      </div>
+                    );
+                  }
+
                   return (
                     <Link
                       key={item.label}
@@ -539,6 +604,162 @@ export default function Navbar() {
                   )}
                 </button>
               ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Shop Mega Menu ────────────────────────────────────────────────── */}
+        <div
+          className={`absolute left-0 top-full z-50 w-full border-t border-black/[0.06] bg-white shadow-lg transition-opacity duration-200 ${openShopMega ? "opacity-100 visible" : "opacity-0 invisible"}`}
+          onMouseEnter={() => { if (shopCloseTimer.current) clearTimeout(shopCloseTimer.current); }}
+          onMouseLeave={closeShopMenu}
+        >
+          <div className="tesla-shell py-8">
+            <div className="grid grid-cols-3 gap-10">
+
+              {/* Col 1 — Tyre Type */}
+              <div>
+                <p className="mb-4 text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--primary)]">Tyre Type</p>
+                <div className="flex flex-col gap-0.5">
+                  {([
+                    { Icon: Car,       label: "PCR",  sub: "Passenger",   href: "/shop?type=PCR"  },
+                    { Icon: Truck,     label: "TBR",  sub: "Truck & Bus", href: "/shop?type=TBR"  },
+                    { Icon: Tractor,   label: "OTR",  sub: "Off-Road",    href: "/shop?type=OTR"  },
+                    { Icon: RotateCcw, label: "Used", sub: "Used Tyres",  href: "/shop?type=USED" },
+                  ] as const).map(({ Icon, label, sub, href }) => (
+                    <Link
+                      key={label}
+                      href={href}
+                      onClick={() => setOpenShopMega(false)}
+                      className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition hover:bg-black/[0.04]"
+                    >
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#f5f5f5]">
+                        <Icon size={16} strokeWidth={1.8} className="text-[#5c5e62]" />
+                      </div>
+                      <div>
+                        <p className="text-[0.88rem] font-bold text-[#171a20]">{label}</p>
+                        <p className="text-[0.74rem] text-[#5c5e62]">{sub}</p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+              {/* Col 2 — Top Brands */}
+              <div>
+                <p className="mb-4 text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--primary)]">Top Brands</p>
+                <div className="flex flex-wrap gap-2">
+                  {["Michelin", "Bridgestone", "Continental", "Goodyear", "Pirelli", "Dunlop", "Hankook", "Falken"].map((brand) => (
+                    <Link
+                      key={brand}
+                      href={`/shop?brand=${brand.toUpperCase()}`}
+                      onClick={() => setOpenShopMega(false)}
+                      className="rounded-full border border-black/[0.09] px-3 py-1.5 text-[0.78rem] font-semibold text-[#5c5e62] transition hover:border-[var(--primary)]/40 hover:bg-[#fff5f3] hover:text-[var(--primary)]"
+                    >
+                      {brand}
+                    </Link>
+                  ))}
+                </div>
+                <Link
+                  href="/shop"
+                  onClick={() => setOpenShopMega(false)}
+                  className="mt-4 inline-flex items-center gap-1 text-[0.8rem] font-semibold text-[var(--primary)] transition hover:underline"
+                >
+                  View all 31 brands <ChevronRight size={13} strokeWidth={2.5} />
+                </Link>
+              </div>
+
+              {/* Col 3 — Quick Search */}
+              <div>
+                <p className="mb-4 text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--primary)]">Find Your Tyre</p>
+                <div className="flex flex-col gap-2">
+                  <Link
+                    href="/shop?tab=car"
+                    onClick={() => setOpenShopMega(false)}
+                    className="flex items-center justify-between rounded-xl border border-black/[0.08] px-4 py-3 text-[0.88rem] font-semibold text-[#171a20] transition hover:border-[var(--primary)]/30 hover:bg-[#fff8f6]"
+                  >
+                    Search by Car <ChevronRight size={14} strokeWidth={2} />
+                  </Link>
+                  <Link
+                    href="/shop?tab=size"
+                    onClick={() => setOpenShopMega(false)}
+                    className="flex items-center justify-between rounded-xl border border-black/[0.08] px-4 py-3 text-[0.88rem] font-semibold text-[#171a20] transition hover:border-[var(--primary)]/30 hover:bg-[#fff8f6]"
+                  >
+                    Search by Size <ChevronRight size={14} strokeWidth={2} />
+                  </Link>
+                </div>
+                <p className="mt-4 text-[0.78rem] font-semibold text-[#5c5e62]">
+                  11,650+ tyres in stock
+                </p>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        {/* ── FET Mega Menu ─────────────────────────────────────────────────── */}
+        <div
+          className={`absolute left-0 top-full z-50 w-full border-t border-black/[0.06] bg-white shadow-lg transition-opacity duration-200 ${openFetMega ? "opacity-100 visible" : "opacity-0 invisible"}`}
+          onMouseEnter={() => { if (fetCloseTimer.current) clearTimeout(fetCloseTimer.current); }}
+          onMouseLeave={closeFetMenu}
+        >
+          <div className="tesla-shell py-8">
+            <div className="grid max-w-[740px] grid-cols-2 gap-12">
+
+              {/* Col 1 — Product Overview */}
+              <div>
+                <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-[#dcfce7] px-3 py-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#22c55e]" aria-hidden="true" />
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#166534]">Fuel Eco Tech</span>
+                </div>
+                <h3 className="mb-3 text-[1.1rem] font-extrabold leading-snug text-[#111111]">
+                  Save Fuel. Protect Your Engine.
+                </h3>
+                <ul className="mb-5 flex flex-col gap-2">
+                  {[
+                    "Up to 13.9% fuel reduction",
+                    "ISO 9001:2015 certified",
+                    "Payback in 3–5 months",
+                  ].map((point) => (
+                    <li key={point} className="flex items-center gap-2 text-[0.85rem] text-[#5c5e62]">
+                      <CheckCircle2 size={14} strokeWidth={2} className="shrink-0 text-[#22c55e]" />
+                      {point}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  href="/fet"
+                  onClick={() => setOpenFetMega(false)}
+                  className="inline-flex items-center gap-2 rounded-full bg-[#22c55e] px-5 py-2.5 text-[0.85rem] font-semibold text-white transition hover:bg-[#16a34a]"
+                >
+                  Learn More <ChevronRight size={13} strokeWidth={2.5} />
+                </Link>
+              </div>
+
+              {/* Col 2 — Quick Stats */}
+              <div>
+                <div className="mb-4 flex flex-col gap-2">
+                  {([
+                    { stat: "13.9%",       label: "Fuel Savings"   },
+                    { stat: "€900–€1,300", label: "Annual Savings" },
+                    { stat: "3–5 months",  label: "Payback Period" },
+                  ] as const).map(({ stat, label }) => (
+                    <div key={label} className="flex items-center gap-3 rounded-xl bg-[#f0f4f0] px-4 py-3">
+                      <Zap size={15} strokeWidth={2} className="shrink-0 text-[#22c55e]" />
+                      <span className="text-[0.93rem] font-extrabold text-[#111111]">{stat}</span>
+                      <span className="text-[0.8rem] text-[#5c5e62]">{label}</span>
+                    </div>
+                  ))}
+                </div>
+                <Link
+                  href="/quote"
+                  onClick={() => setOpenFetMega(false)}
+                  className="flex w-full items-center justify-center gap-2 rounded-full bg-[var(--primary)] px-5 py-2.5 text-[0.85rem] font-semibold text-white transition hover:bg-[#d44519]"
+                >
+                  Request a Quote <ChevronRight size={13} strokeWidth={2.5} />
+                </Link>
+              </div>
+
             </div>
           </div>
         </div>
