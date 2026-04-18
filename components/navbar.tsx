@@ -375,7 +375,7 @@ export default function Navbar() {
                           className={`tesla-nav-link inline-flex items-center gap-1 ${isActive ? "tesla-nav-link-active" : ""}`}
                         >
                           {item.label}
-                          <ChevronDown size={12} strokeWidth={2.5} className={`transition-transform duration-200 ${openShopMega ? "rotate-180" : ""}`} />
+                          <ChevronDown size={12} strokeWidth={2.5} className="hidden" aria-hidden="true" />
                         </Link>
                       </div>
                     );
@@ -389,7 +389,7 @@ export default function Navbar() {
                           className={`tesla-nav-link inline-flex items-center gap-1 ${isActive ? "tesla-nav-link-active" : ""}`}
                         >
                           {item.label}
-                          <ChevronDown size={12} strokeWidth={2.5} className={`transition-transform duration-200 ${openFetMega ? "rotate-180" : ""}`} />
+                          <ChevronDown size={12} strokeWidth={2.5} className="hidden" aria-hidden="true" />
                         </Link>
                       </div>
                     );
@@ -610,7 +610,7 @@ export default function Navbar() {
 
         {/* ── Shop Mega Menu ────────────────────────────────────────────────── */}
         <div
-          className={`absolute left-0 top-full z-50 w-full border-t border-black/[0.06] bg-white shadow-lg transition-opacity duration-200 ${openShopMega ? "opacity-100 visible" : "opacity-0 invisible"}`}
+          className={`absolute left-0 top-full z-50 w-full border-t border-black/[0.06] bg-white shadow-lg transition-[opacity,transform] duration-200 ease-out ${openShopMega ? "opacity-100 visible translate-y-0" : "opacity-0 invisible -translate-y-2"}`}
           onMouseEnter={() => { if (shopCloseTimer.current) clearTimeout(shopCloseTimer.current); }}
           onMouseLeave={closeShopMenu}
         >
@@ -699,7 +699,7 @@ export default function Navbar() {
 
         {/* ── FET Mega Menu ─────────────────────────────────────────────────── */}
         <div
-          className={`absolute left-0 top-full z-50 w-full border-t border-black/[0.06] bg-white shadow-lg transition-opacity duration-200 ${openFetMega ? "opacity-100 visible" : "opacity-0 invisible"}`}
+          className={`absolute left-0 top-full z-50 w-full border-t border-black/[0.06] bg-white shadow-lg transition-[opacity,transform] duration-200 ease-out ${openFetMega ? "opacity-100 visible translate-y-0" : "opacity-0 invisible -translate-y-2"}`}
           onMouseEnter={() => { if (fetCloseTimer.current) clearTimeout(fetCloseTimer.current); }}
           onMouseLeave={closeFetMenu}
         >
