@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Car, Ruler, Search, Loader2, AlertCircle, Zap, ArrowRight } from "lucide-react";
+import { Car, Ruler, Search, Loader2, AlertCircle, ChevronDown, Zap, ArrowRight } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
