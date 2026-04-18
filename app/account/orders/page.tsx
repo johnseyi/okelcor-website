@@ -108,7 +108,7 @@ export function StatusBadge({ status }: { status: OrderStatus }) {
 
 export default async function OrdersPage() {
   const customer = await getCustomerFromCookie();
-  if (!customer) redirect("/login?callbackUrl=/account/orders");
+  if (!customer) redirect("/login?redirect=/account/orders");
 
   const { cookies } = await import("next/headers");
   const cookieStore = await cookies();

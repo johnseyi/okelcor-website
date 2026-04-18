@@ -137,7 +137,7 @@ function StatusTimeline({ status }: { status: OrderStatus }) {
 export default async function OrderDetailPage({ params }: Props) {
   const { ref } = await params;
   const customer = await getCustomerFromCookie();
-  if (!customer) redirect(`/login?callbackUrl=/account/orders/${ref}`);
+  if (!customer) redirect(`/login?redirect=/account/orders/${ref}`);
 
   const order = await fetchOrder(ref);
   if (!order) notFound();

@@ -56,7 +56,7 @@ export function middleware(request: NextRequest) {
     const token = request.cookies.get("customer_token")?.value;
     if (!token) {
       const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("callbackUrl", `${pathname}${search}`);
+      loginUrl.searchParams.set("redirect", pathname);
       return NextResponse.redirect(loginUrl);
     }
   }
@@ -66,10 +66,8 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/shop",
     "/shop/:path*",
-    "/checkout",
-    "/account",
+    "/checkout/:path*",
     "/account/:path*",
     "/admin",
     "/admin/:path*",

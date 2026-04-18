@@ -86,8 +86,8 @@ function Field({
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "";
-  const { login } = useCustomerAuth();
+  const callbackUrl = searchParams.get("redirect") ?? searchParams.get("callbackUrl") ?? "";
+  const { login, refreshCustomer } = useCustomerAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -131,6 +131,9 @@ export default function LoginPage() {
         setSubmitting(false);
         return;
       }
+
+      // Populate auth context before navigating so the account page renders with data
+      await refreshCustomer();
 
       // Normal redirect
       const destination =

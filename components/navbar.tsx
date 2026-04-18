@@ -69,7 +69,7 @@ export default function Navbar() {
   const { totalItems, openCart } = useCart();
   const { locale, setLocale, t } = useLanguage();
   const { openSearch } = useSearch();
-  const { customer, isAuthenticated: isAuthed, logout } = useCustomerAuth();
+  const { customer, isAuthenticated: isAuthed, isLoading: authLoading, logout } = useCustomerAuth();
 
   type NavItem = { label: string; href: string };
 
@@ -471,7 +471,9 @@ export default function Navbar() {
                   <Globe size={20} strokeWidth={1.9} />
                 </button>
 
-                {isAuthed ? (
+                {authLoading ? (
+                  <div className="h-9 w-9 animate-pulse rounded-full bg-black/[0.06]" aria-hidden="true" />
+                ) : isAuthed ? (
                   <div className="relative">
                     <button
                       type="button"
@@ -971,7 +973,14 @@ export default function Navbar() {
                   <ChevronRight size={18} strokeWidth={2} />
                 </button>
 
-                {isAuthed ? (
+                {authLoading ? (
+                  <div className="tesla-mobile-meta-link cursor-default">
+                    <div className="flex items-center gap-4">
+                      <div className="h-6 w-6 animate-pulse rounded-full bg-black/[0.08]" />
+                      <div className="h-4 w-36 animate-pulse rounded bg-black/[0.08]" />
+                    </div>
+                  </div>
+                ) : isAuthed ? (
                   <>
                     <div className="tesla-mobile-meta-link cursor-default">
                       <div className="flex items-start gap-4">

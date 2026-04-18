@@ -26,7 +26,7 @@ export default async function CheckoutPage() {
   const token = cookieStore.get("customer_token")?.value;
 
   if (!token) {
-    redirect("/login?callbackUrl=/checkout");
+    redirect("/login?redirect=/checkout");
   }
 
   return (

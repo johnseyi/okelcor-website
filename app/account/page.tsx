@@ -136,13 +136,13 @@ export default async function AccountPage() {
   const token = cookieStore.get("customer_token")?.value;
 
   if (!token) {
-    redirect("/login?callbackUrl=/account");
+    redirect("/login?redirect=/account");
   }
 
   const customer = await getCustomerFromCookie();
 
   if (!customer) {
-    redirect("/login?callbackUrl=/account");
+    redirect("/login?redirect=/account");
   }
 
   const isB2B = customer.customer_type === "b2b";
