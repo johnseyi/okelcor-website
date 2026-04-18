@@ -987,6 +987,16 @@ export default function Navbar() {
                       </div>
                     </div>
                     <Link
+                      href="/account"
+                      onClick={closeAll}
+                      className="tesla-mobile-meta-link"
+                    >
+                      <div className="flex items-center gap-4">
+                        <LayoutDashboard size={22} strokeWidth={1.9} />
+                        <span className="text-[1rem] font-semibold text-black">My Account</span>
+                      </div>
+                    </Link>
+                    <Link
                       href="/account/orders"
                       onClick={closeAll}
                       className="tesla-mobile-meta-link"
