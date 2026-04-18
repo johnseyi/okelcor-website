@@ -49,6 +49,7 @@ export default function Hero({ slides: apiSlides }: HeroProps) {
   const [index, setIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [videoErrors, setVideoErrors] = useState<Set<number>>(new Set());
+  const [videoReady, setVideoReady] = useState<Set<number>>(new Set());
 
   const sectionRef = useRef<HTMLElement>(null);
   const bgContainerRef = useRef<HTMLDivElement>(null);
@@ -270,7 +271,7 @@ export default function Hero({ slides: apiSlides }: HeroProps) {
               <div
                 key={i}
                 ref={(el) => { bgRefs.current[i] = el; }}
-                className="absolute inset-0 scale-[1.06] overflow-hidden"
+                className="absolute inset-0 scale-[1.06] overflow-hidden bg-[#111]"
                 style={{ opacity: 0 }}
               >
                 {media.type === "video" ? (
@@ -281,8 +282,11 @@ export default function Hero({ slides: apiSlides }: HeroProps) {
                     muted
                     loop
                     playsInline
+                    preload="auto"
+                    poster="/images/hero-poster.jpg"
                     onError={() => handleVideoError(i)}
-                    className="absolute inset-0 h-full w-full object-cover"
+                    onLoadedData={() => setVideoReady((prev) => new Set(prev).add(i))}
+                    className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${videoReady.has(i) ? "opacity-100" : "opacity-0"}`}
                   />
                 ) : media.type === "image" ? (
                   <Image

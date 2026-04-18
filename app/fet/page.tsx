@@ -58,6 +58,7 @@ export default function FetPage() {
           muted
           loop
           playsInline
+          preload="auto"
           poster="/images/fet-hero-poster.jpg"
           className="absolute inset-0 h-full w-full object-cover"
           aria-hidden="true"
