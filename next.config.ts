@@ -16,18 +16,23 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
-        // Local Laravel dev server — allow all paths (storage, media, etc.)
         protocol: "http",
         hostname: "localhost",
         port: "8000",
       },
       {
-        // Production API server — allow all paths served by Laravel
         protocol: "https",
         hostname: "api.okelcor.de",
       },
       {
-        // Pinterest CDN — used by static article fallback images in data.ts
+        protocol: "https",
+        hostname: "api.takeovercreatives.com",
+      },
+      {
+        protocol: "https",
+        hostname: "static.wixstatic.com",
+      },
+      {
         protocol: "https",
         hostname: "i.pinimg.com",
       },

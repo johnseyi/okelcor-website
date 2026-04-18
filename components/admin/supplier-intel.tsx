@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import Image from "next/image";
 import {
   Search, Loader2, ExternalLink, AlertCircle,
   ShoppingBag, TrendingUp, TrendingDown, Minus,
@@ -77,13 +76,12 @@ function EbayCard({ item }: { item: EbayItem }) {
     <div className="flex flex-col overflow-hidden rounded-xl border border-black/[0.06] bg-white transition hover:shadow-md">
       {/* Image */}
       {item.image ? (
-        <div className="relative h-36 w-full shrink-0 bg-[#f8f8f8]">
-          <Image
+        <div className="h-36 w-full shrink-0 bg-[#f8f8f8]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src={item.image}
             alt={item.title ?? ""}
-            fill
-            className="object-contain p-2"
-            unoptimized
+            className="h-full w-full object-contain p-2"
           />
         </div>
       ) : (

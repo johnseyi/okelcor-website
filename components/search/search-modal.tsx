@@ -13,7 +13,6 @@
  */
 
 import { useEffect, useRef, useCallback } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { Search, X, ArrowRight } from "lucide-react";
 import { gsap, useGSAP, ease, prefersReducedMotion } from "@/lib/gsap";
@@ -68,14 +67,12 @@ function ResultItem({
       {/* Thumbnail */}
       <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-[10px] bg-[#efefef]">
         {result.image ? (
-          <Image
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
             src={result.image}
             alt={label}
-            fill
-            className="object-cover"
-            sizes="48px"
+            className="h-full w-full object-cover"
             loading="lazy"
-            unoptimized
           />
         ) : (
           <span className="flex h-full w-full items-center justify-center text-[0.6rem] font-bold uppercase tracking-widest text-[#aaa]">
