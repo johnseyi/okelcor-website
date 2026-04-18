@@ -40,6 +40,9 @@ import {
   RotateCcw,
   CheckCircle2,
   Zap,
+  MapPin,
+  ShieldCheck,
+  Download,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
@@ -84,11 +87,13 @@ export default function Navbar() {
   const [openLang, setOpenLang]             = useState(false);
   const [openMobileLang, setOpenMobileLang] = useState(false);
   const [openProfile, setOpenProfile]       = useState(false);
-  const [openShopMega, setOpenShopMega]     = useState(false);
-  const [openFetMega,  setOpenFetMega]      = useState(false);
+  const [openShopMega,  setOpenShopMega]  = useState(false);
+  const [openFetMega,   setOpenFetMega]   = useState(false);
+  const [openAboutMega, setOpenAboutMega] = useState(false);
 
-  const shopCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const fetCloseTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shopCloseTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fetCloseTimer   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const aboutCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── DOM refs ─────────────────────────────────────────────────────────────
   const headerRef           = useRef<HTMLElement>(null);
@@ -112,6 +117,7 @@ export default function Navbar() {
     setOpenProfile(false);
     setOpenShopMega(false);
     setOpenFetMega(false);
+    setOpenAboutMega(false);
   }, [pathname]);
 
   // ── Scroll lock for mobile overlays ──────────────────────────────────────
@@ -130,11 +136,13 @@ export default function Navbar() {
     setOpenProfile(false);
     setOpenShopMega(false);
     setOpenFetMega(false);
+    setOpenAboutMega(false);
   };
 
   const openShopMenu = () => {
     if (shopCloseTimer.current) clearTimeout(shopCloseTimer.current);
     setOpenFetMega(false);
+    setOpenAboutMega(false);
     setOpenShopMega(true);
   };
   const closeShopMenu = () => {
@@ -144,10 +152,21 @@ export default function Navbar() {
   const openFetMenu = () => {
     if (fetCloseTimer.current) clearTimeout(fetCloseTimer.current);
     setOpenShopMega(false);
+    setOpenAboutMega(false);
     setOpenFetMega(true);
   };
   const closeFetMenu = () => {
     fetCloseTimer.current = setTimeout(() => setOpenFetMega(false), 120);
+  };
+
+  const openAboutMenu = () => {
+    if (aboutCloseTimer.current) clearTimeout(aboutCloseTimer.current);
+    setOpenShopMega(false);
+    setOpenFetMega(false);
+    setOpenAboutMega(true);
+  };
+  const closeAboutMenu = () => {
+    aboutCloseTimer.current = setTimeout(() => setOpenAboutMega(false), 120);
   };
 
   // ── Escape key: close any open panel ─────────────────────────────────────
@@ -161,6 +180,7 @@ export default function Navbar() {
       setOpenProfile(false);
       setOpenShopMega(false);
       setOpenFetMega(false);
+      setOpenAboutMega(false);
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
@@ -390,6 +410,19 @@ export default function Navbar() {
                         >
                           {item.label}
                           <ChevronDown size={12} strokeWidth={2.5} className="hidden" aria-hidden="true" />
+                        </Link>
+                      </div>
+                    );
+                  }
+
+                  if (item.href === "/about") {
+                    return (
+                      <div key="about" onMouseEnter={openAboutMenu} onMouseLeave={closeAboutMenu}>
+                        <Link
+                          href="/about"
+                          className={`tesla-nav-link ${isActive ? "tesla-nav-link-active" : ""}`}
+                        >
+                          {item.label}
                         </Link>
                       </div>
                     );
@@ -758,6 +791,77 @@ export default function Navbar() {
                 >
                   Request a Quote <ChevronRight size={13} strokeWidth={2.5} />
                 </Link>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        {/* ── About Mega Menu ───────────────────────────────────────────────── */}
+        <div
+          className={`absolute left-0 top-full z-50 w-full border-t border-black/[0.06] bg-white shadow-lg transition-[opacity,transform] duration-200 ease-out ${openAboutMega ? "opacity-100 visible translate-y-0" : "opacity-0 invisible -translate-y-2"}`}
+          onMouseEnter={() => { if (aboutCloseTimer.current) clearTimeout(aboutCloseTimer.current); }}
+          onMouseLeave={closeAboutMenu}
+        >
+          <div className="tesla-shell py-8">
+            <div className="grid grid-cols-3 gap-10">
+
+              {/* Col 1 — Company */}
+              <div>
+                <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--primary)]">About Okelcor</p>
+                <p className="mb-4 text-[0.85rem] leading-6 text-[#5c5e62]">
+                  B2B and B2C tyre wholesale company headquartered in Munich, Germany. Supplying premium tyres to distributors and fleets across Europe, Africa and the Middle East.
+                </p>
+                <Link
+                  href="/about"
+                  onClick={() => setOpenAboutMega(false)}
+                  className="inline-flex items-center gap-1.5 text-[0.82rem] font-semibold text-[var(--primary)] transition hover:underline"
+                >
+                  Our Story <ChevronRight size={13} strokeWidth={2.5} />
+                </Link>
+              </div>
+
+              {/* Col 2 — Location */}
+              <div>
+                <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--primary)]">Our Office</p>
+                <div className="mb-4 flex gap-2.5">
+                  <MapPin size={15} strokeWidth={1.8} className="mt-0.5 shrink-0 text-[var(--primary)]" />
+                  <address className="not-italic text-[0.85rem] leading-6 text-[#171a20]">
+                    <span className="font-semibold">Okelcor GmbH</span><br />
+                    Landsberger Str. 155<br />
+                    80687 Munich, Germany
+                  </address>
+                </div>
+                <Link
+                  href="/contact"
+                  onClick={() => setOpenAboutMega(false)}
+                  className="inline-flex items-center gap-1.5 text-[0.82rem] font-semibold text-[var(--primary)] transition hover:underline"
+                >
+                  Contact Us <ChevronRight size={13} strokeWidth={2.5} />
+                </Link>
+              </div>
+
+              {/* Col 3 — Certifications */}
+              <div>
+                <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--primary)]">Certifications</p>
+                <div className="mb-4 flex items-start gap-3 rounded-xl border border-[#e2e8e2] bg-[#f0f4f0] p-4">
+                  <ShieldCheck size={28} strokeWidth={1.6} className="mt-0.5 shrink-0 text-[#16a34a]" />
+                  <div>
+                    <p className="text-[0.88rem] font-extrabold text-[#111111]">ISO 9001:2015</p>
+                    <p className="mt-0.5 text-[0.75rem] text-[#5c5e62]">Certified by qm-solutions GmbH, Germany</p>
+                    <p className="mt-0.5 text-[0.73rem] text-[#9ca3af]">Valid until January 2026</p>
+                  </div>
+                </div>
+                <a
+                  href="/documents/CTI-Certificate-ISO9001.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setOpenAboutMega(false)}
+                  className="inline-flex items-center gap-1.5 text-[0.82rem] font-semibold text-[var(--primary)] transition hover:underline"
+                >
+                  <Download size={13} strokeWidth={2.2} />
+                  Download Certificate
+                </a>
               </div>
 
             </div>
