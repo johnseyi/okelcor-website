@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Eye, EyeOff, CheckCircle2, Loader2 } from "lucide-react";
+import { Eye, EyeOff, CheckCircle2, XCircle, AlertTriangle, Loader2 } from "lucide-react";
 import Navbar from "@/components/navbar";
 import { registerCustomer } from "@/lib/customer-auth";
 
@@ -134,8 +134,7 @@ export default function RegisterPage() {
   const [apiError, setApiError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [validatingVat, setValidatingVat] = useState(false);
-  const [vatStatus, setVatStatus] = useState<"valid" | "invalid" | null>(null);
+  const [vatStatus, setVatStatus] = useState<"idle" | "loading" | "valid" | "invalid" | "unavailable">("idle");
 
   const set = (key: keyof FormState) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -144,6 +143,7 @@ export default function RegisterPage() {
         : e.target.value;
       setForm((prev) => ({ ...prev, [key]: value }));
       if (errors[key]) setErrors((prev) => ({ ...prev, [key]: undefined }));
+      if (key === "vat_number") setVatStatus("idle");
       setApiError(null);
     };
 
@@ -164,19 +164,24 @@ export default function RegisterPage() {
 
   const handleVatValidate = async () => {
     if (!form.vat_number.trim()) return;
-    setValidatingVat(true);
-    setVatStatus(null);
+    setVatStatus("loading");
     try {
-      const res = await fetch("/api/v1/vat/validate", {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+      const res = await fetch(`${API_URL}/vat/validate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ vat_number: form.vat_number }),
+        body: JSON.stringify({ vat_number: form.vat_number.trim() }),
       });
-      setVatStatus(res.ok ? "valid" : "invalid");
+      if (res.status === 502 || res.status === 503 || res.status === 504) {
+        setVatStatus("unavailable");
+        return;
+      }
+      const data = await res.json();
+      setVatStatus(data.data?.valid === true ? "valid" : "invalid");
     } catch {
-      setVatStatus("invalid");
+      setVatStatus("unavailable");
     } finally {
-      setValidatingVat(false);
+      // nothing
     }
   };
 
@@ -368,14 +373,30 @@ export default function RegisterPage() {
                     <button
                       type="button"
                       onClick={handleVatValidate}
-                      disabled={validatingVat || !form.vat_number.trim()}
-                      className="shrink-0 rounded-[12px] border border-black/[0.08] bg-white px-4 text-[0.82rem] font-semibold text-[var(--foreground)] transition hover:border-black/20 disabled:opacity-50"
+                      disabled={vatStatus === "loading" || !form.vat_number.trim()}
+                      className="shrink-0 rounded-[12px] border border-black/[0.08] bg-white px-4 text-[0.82rem] font-semibold text-[var(--foreground)] transition hover:bg-[#f0f0f0] disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      {validatingVat ? <Loader2 size={14} className="animate-spin" /> : "Validate"}
+                      {vatStatus === "loading" ? <Loader2 size={14} className="animate-spin" /> : "Validate"}
                     </button>
                   </div>
-                  {vatStatus === "valid" && <p className="mt-1 text-[0.75rem] text-green-600">VAT number is valid</p>}
-                  {vatStatus === "invalid" && <p className="mt-1 text-[0.75rem] text-red-500">VAT number could not be validated</p>}
+                  <p className="mt-1 text-[0.73rem] text-[var(--muted)]">
+                    Include country code — e.g. DE123456789, GB123456789, FR12345678901
+                  </p>
+                  {vatStatus === "valid" && (
+                    <p className="mt-1 flex items-center gap-1.5 text-[0.75rem] font-medium text-green-600">
+                      <CheckCircle2 size={13} strokeWidth={2} /> VAT number verified
+                    </p>
+                  )}
+                  {vatStatus === "invalid" && (
+                    <p className="mt-1 flex items-center gap-1.5 text-[0.75rem] font-medium text-red-500">
+                      <XCircle size={13} strokeWidth={2} /> VAT number could not be validated. Please check the number and country code.
+                    </p>
+                  )}
+                  {vatStatus === "unavailable" && (
+                    <p className="mt-1 flex items-center gap-1.5 text-[0.75rem] font-medium text-amber-600">
+                      <AlertTriangle size={13} strokeWidth={2} /> Validation unavailable — you can still proceed.
+                    </p>
+                  )}
                 </Field>
 
                 <Field label="Industry" error={errors.industry}>
