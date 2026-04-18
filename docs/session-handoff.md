@@ -60,7 +60,45 @@ Development environment: Windows 11, VS Code, Node.js / npm
 
 ---
 
-## Completed in Latest Session — Customer Auth, Account Pages & Design Audit (2026-04-18)
+## Completed in Latest Session — Auth Loading & Redirect Fixes (2026-04-18)
+
+### Auth Loading Delay & Flash Fixed
+
+**Problem:** On every page load the navbar briefly showed the login icon (unauthenticated state) before switching to the profile icon once the `/me` fetch resolved. The account page email/name also showed `—` or blank during that window.
+
+**Root cause:** The navbar was not checking `isLoading` from `useCustomerAuth()` — it immediately showed the unauthenticated state while the `/me` request was in-flight.
+
+**Changes:**
+
+| File | Change |
+|---|---|
+| `components/navbar.tsx` | Destructures `isLoading: authLoading` from `useCustomerAuth()`. Desktop: shows a `h-9 w-9 animate-pulse rounded-full bg-black/[0.06]` skeleton while loading instead of the login icon or profile button. Mobile drawer: shows a pulse bar skeleton instead of the auth section while loading. |
+| `app/login/page.tsx` | After a successful `login()` call, now calls `await refreshCustomer()` before `router.push()` so the auth context is fully populated before the account page renders. Reads the `redirect` param first, falls back to `callbackUrl` for backwards compatibility. |
+
+---
+
+### Middleware — `redirect` Param + Prefetch Skip
+
+**File:** `middleware.ts`
+
+Two changes:
+
+1. **`callbackUrl` → `redirect`:** Login redirect URL param renamed from `callbackUrl` to `redirect` (e.g. `/login?redirect=/shop`). All server-side redirects across `account`, `orders`, `checkout`, and `account/orders/[ref]` pages updated to match. Login page reads `redirect` first, falls back to `callbackUrl`.
+
+2. **Prefetch skip:** Next.js speculatively prefetches `<Link>` hrefs when a page loads. If middleware redirected a prefetch request (e.g. `/shop` prefetched before the cookie propagated), Next.js cached that redirect response and replayed it on the actual click — even after the user was logged in. Fix: middleware now returns `NextResponse.next()` immediately for requests with `Next-Router-Prefetch: 1` header. The actual navigation still hits the full cookie check.
+
+```ts
+// Skip prefetch requests — actual navigation will be checked
+if (request.headers.get("Next-Router-Prefetch") === "1") {
+  return NextResponse.next();
+}
+```
+
+**Protected routes:** `/shop`, `/checkout`, `/account` (and all sub-paths). `/shop` is intentionally protected — unauthenticated users are redirected to `/login?redirect=/shop`.
+
+---
+
+## Completed in Previous Session — Customer Auth, Account Pages & Design Audit (2026-04-18)
 
 ### NextAuth Removed — Replaced with Direct Laravel Cookie Auth
 
@@ -104,7 +142,7 @@ Development environment: Windows 11, VS Code, Node.js / npm
 
 **File:** `middleware.ts` — rewritten. No longer uses `getToken` from `next-auth/jwt`.
 
-Customer protected routes (`/shop`, `/checkout`, `/account`, `/account/*`) now check `request.cookies.get("customer_token")`. If missing → redirect to `/login?callbackUrl={path}`. Admin routes unchanged (still check `admin_token` cookie).
+Customer protected routes (`/shop`, `/checkout`, `/account`, `/account/*`) now check `request.cookies.get("customer_token")`. If missing → redirect to `/login?redirect={path}`. Admin routes unchanged (still check `admin_token` cookie). Prefetch requests are always passed through (see latest session notes).
 
 ---
 
@@ -287,7 +325,7 @@ See prior handoff entries for full detail on:
 
 | Section | Status |
 |---|---|
-| Navbar | Complete — logo, icon buttons, mobile drawer, language switcher, mega menus (Shop/FET/About), `useCustomerAuth` (NextAuth removed), My Account link in desktop + mobile |
+| Navbar | Complete — logo, icon buttons, mobile drawer, language switcher, mega menus (Shop/FET/About), `useCustomerAuth` (NextAuth removed), My Account link in desktop + mobile, loading skeleton while auth resolves |
 | Hero slider | Complete — GSAP parallax + crossfade, FET slot-based slide, per-slide duration, dots + play/pause |
 | Categories carousel | Complete |
 | Why Okelcor | Complete |
@@ -403,7 +441,7 @@ Browser                Next.js                    Laravel API
      ◄── cookie cleared ──────────────────────────────  │
 ```
 
-**Middleware:** Reads `customer_token` cookie synchronously (no async JWT decode). Redirects to `/login?callbackUrl={path}` for protected routes.
+**Middleware:** Reads `customer_token` cookie synchronously (no async JWT decode). Redirects to `/login?redirect={path}` for protected routes. Prefetch requests (`Next-Router-Prefetch: 1`) are always passed through to prevent Next.js caching stale redirects.
 
 **Server components** (checkout, orders, account): Use `getCustomerFromCookie()` from `lib/get-customer.ts` which reads the cookie server-side and calls Laravel directly.
 
