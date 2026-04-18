@@ -25,6 +25,7 @@ import {
   Globe,
   CircleHelp,
   UserCircle2,
+  LayoutDashboard,
   LogOut,
   Menu,
   X,
@@ -504,6 +505,14 @@ export default function Navbar() {
 
                       {/* Account links */}
                       <div className="p-2">
+                        <Link
+                          href="/account"
+                          onClick={() => setOpenProfile(false)}
+                          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[0.875rem] font-semibold text-black/70 transition hover:bg-black/[0.04] hover:text-black"
+                        >
+                          <LayoutDashboard size={16} strokeWidth={1.9} />
+                          My Account
+                        </Link>
                         <Link
                           href="/account/orders"
                           onClick={() => setOpenProfile(false)}
