@@ -9,12 +9,18 @@ export async function GET(request: NextRequest) {
   const search = request.nextUrl.search;
   const upstream = `${API_URL}/products${search}`;
 
+  // The Laravel /products endpoint requires auth — forward the customer token
+  const customerToken = request.cookies.get("customer_token")?.value;
+
   console.log("[api/shop/products] →", upstream.replace(API_URL, "<API>"));
 
   try {
     const res = await fetch(upstream, {
       cache: "no-store",
-      headers: { Accept: "application/json" },
+      headers: {
+        Accept: "application/json",
+        ...(customerToken ? { Authorization: `Bearer ${customerToken}` } : {}),
+      },
     });
 
     const raw = await res.text();
