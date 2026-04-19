@@ -14,7 +14,6 @@ export async function createUser(data: {
   name: string;
   email: string;
   role: string;
-  password: string;
 }): Promise<{ error?: string; id?: number }> {
   const token = await getToken();
   if (!token) return { error: "Not authenticated." };

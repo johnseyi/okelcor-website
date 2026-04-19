@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus, Pencil, Trash2, X, AlertCircle } from "lucide-react";
+import { Plus, Pencil, Trash2, X, AlertCircle, CheckCircle2, Mail } from "lucide-react";
 import { createUser, updateUser, deleteUser } from "@/app/admin/users/actions";
 import type { AdminUser } from "@/lib/admin-api";
 
@@ -63,7 +63,9 @@ export default function UsersManager({ users: initialUsers }: { users: AdminUser
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<string>("editor");
-  const [password, setPassword] = useState("");
+
+  // Create success notice
+  const [createSuccess, setCreateSuccess] = useState<string | null>(null);
 
   // Delete
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -73,12 +75,12 @@ export default function UsersManager({ users: initialUsers }: { users: AdminUser
   // ── Modal helpers ────────────────────────────────────────────────────────────
 
   const openCreate = () => {
-    setName(""); setEmail(""); setRole("editor"); setPassword("");
+    setName(""); setEmail(""); setRole("editor");
     setFormError(null); setModalMode("create"); setEditingUser(null); setModalOpen(true);
   };
 
   const openEdit = (user: AdminUser) => {
-    setName(user.name); setEmail(user.email); setRole(user.role); setPassword("");
+    setName(user.name); setEmail(user.email); setRole(user.role);
     setFormError(null); setModalMode("edit"); setEditingUser(user); setModalOpen(true);
   };
 
@@ -92,32 +94,28 @@ export default function UsersManager({ users: initialUsers }: { users: AdminUser
       setFormError("Name and email are required.");
       return;
     }
-    if (modalMode === "create" && !password.trim()) {
-      setFormError("Password is required when creating a user.");
-      return;
-    }
     setFormError(null);
     setSaving(true);
 
+    const createdEmail = email.trim();
+
     startTransition(async () => {
       if (modalMode === "create") {
-        const res = await createUser({
-          name: name.trim(),
-          email: email.trim(),
-          role,
-          password: password.trim(),
-        });
+        const res = await createUser({ name: name.trim(), email: createdEmail, role });
         if (res.error) { setFormError(res.error); setSaving(false); return; }
         setUsers((prev) => [
           ...prev,
-          { id: res.id ?? Date.now(), name: name.trim(), email: email.trim(), role, last_login_at: null },
+          { id: res.id ?? Date.now(), name: name.trim(), email: createdEmail, role, last_login_at: null },
         ]);
+        setSaving(false);
+        closeModal();
+        setCreateSuccess(createdEmail);
+        setTimeout(() => setCreateSuccess(null), 6000);
       } else if (editingUser) {
         const res = await updateUser(editingUser.id, {
           name: name.trim(),
           email: email.trim(),
           role,
-          password: password.trim() || undefined,
         });
         if (res.error) { setFormError(res.error); setSaving(false); return; }
         setUsers((prev) =>
@@ -127,10 +125,9 @@ export default function UsersManager({ users: initialUsers }: { users: AdminUser
               : u
           )
         );
+        setSaving(false);
+        closeModal();
       }
-
-      setSaving(false);
-      closeModal();
     });
   };
 
@@ -171,6 +168,13 @@ export default function UsersManager({ users: initialUsers }: { users: AdminUser
           Add User
         </button>
       </div>
+
+      {createSuccess && (
+        <div className="mb-4 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-[0.83rem] text-emerald-700">
+          <CheckCircle2 size={13} className="shrink-0" />
+          User created. Login details sent to <strong>{createSuccess}</strong>.
+        </div>
+      )}
 
       {deleteError && (
         <div className="mb-4 flex items-center justify-between rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-[0.83rem] text-red-700">
@@ -372,29 +376,13 @@ export default function UsersManager({ users: initialUsers }: { users: AdminUser
                 </select>
               </div>
 
-              {/* Password */}
-              <div>
-                <label className="mb-1.5 block text-[0.78rem] font-bold uppercase tracking-[0.1em] text-[#5c5e62]">
-                  Password{" "}
-                  {modalMode === "create" ? (
-                    <span className="text-red-500">*</span>
-                  ) : (
-                    <span className="font-normal normal-case tracking-normal text-[#aaa]">
-                      — leave blank to keep current
-                    </span>
-                  )}
-                </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder={
-                    modalMode === "create" ? "Temporary password" : "New password (optional)"
-                  }
-                  className={inputCls}
-                  required={modalMode === "create"}
-                />
-              </div>
+              {/* Password notice (create) */}
+              {modalMode === "create" && (
+                <div className="flex items-start gap-2.5 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-[0.82rem] text-blue-800">
+                  <Mail size={14} className="mt-0.5 shrink-0 text-blue-500" />
+                  <span>A temporary password will be sent to the user&apos;s email address.</span>
+                </div>
+              )}
 
               {/* Actions */}
               <div className="flex gap-3 pt-1">

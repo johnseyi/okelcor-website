@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -19,6 +19,7 @@ import {
   UserCircle,
   Users,
   TrendingUp,
+  KeyRound,
 } from "lucide-react";
 import { logoutAdmin } from "@/app/admin/actions";
 
@@ -43,6 +44,13 @@ const ROLE_LABELS: Record<string, string> = {
   admin:         "Admin",
   editor:        "Editor",
   order_manager: "Orders",
+};
+
+const ROLE_BADGE_COLORS: Record<string, string> = {
+  super_admin:   "bg-gray-900 text-white",
+  admin:         "bg-blue-100 text-blue-700",
+  editor:        "bg-emerald-100 text-emerald-700",
+  order_manager: "bg-amber-100 text-amber-700",
 };
 
 function getCookie(name: string): string {
@@ -136,16 +144,31 @@ function Sidebar({
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [role, setRole] = useState("");
-  const [adminName, setAdminName] = useState("");
+  const [sidebarOpen, setSidebarOpen]   = useState(false);
+  const [role, setRole]                 = useState("");
+  const [adminName, setAdminName]       = useState("");
+  const [displayName, setDisplayName]   = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef                     = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setRole(getCookie("admin_role"));
     setAdminName(getCookie("admin_name"));
+    setDisplayName(getCookie("admin_display_name") || getCookie("admin_name"));
   }, []);
 
-  // Login page — bare layout, no shell
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  // Bare layout for auth pages
   if (pathname === "/admin/login") {
     return <>{children}</>;
   }
@@ -199,17 +222,76 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             </h1>
           </div>
 
-          {/* Right: role badge + admin avatar */}
+          {/* Right: role badge + avatar dropdown */}
           <div className="flex items-center gap-3">
             {role && (
-              <span className="hidden rounded-full bg-[#f0f2f5] px-2.5 py-0.5 text-[0.72rem] font-semibold text-[#5c5e62] sm:block">
+              <span
+                className={`hidden rounded-full px-2.5 py-0.5 text-[0.72rem] font-semibold sm:block ${
+                  ROLE_BADGE_COLORS[role] ?? "bg-[#f0f2f5] text-[#5c5e62]"
+                }`}
+              >
                 {ROLE_LABELS[role] ?? role}
               </span>
             )}
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#E85C1A] text-[0.72rem] font-extrabold text-white">
-              {adminName
-                ? adminName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
-                : "A"}
+
+            {/* Avatar + dropdown */}
+            <div className="relative" ref={dropdownRef}>
+              <button
+                type="button"
+                onClick={() => setDropdownOpen((v) => !v)}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-[#E85C1A] text-[0.72rem] font-extrabold text-white transition hover:opacity-90"
+                aria-label="Account menu"
+              >
+                {(displayName || adminName)
+                  ? (displayName || adminName).split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
+                  : "A"}
+              </button>
+
+              {dropdownOpen && (
+                <div className="absolute right-0 top-10 z-50 w-52 overflow-hidden rounded-2xl border border-black/[0.08] bg-white shadow-lg">
+                  {/* Name header */}
+                  <div className="border-b border-black/[0.06] px-4 py-3">
+                    <p className="truncate text-[0.83rem] font-semibold text-[#1a1a1a]">
+                      {displayName || adminName || "Admin"}
+                    </p>
+                    <p className="truncate text-[0.72rem] text-[#5c5e62]">
+                      {ROLE_LABELS[role] ?? role}
+                    </p>
+                  </div>
+
+                  {/* Menu items */}
+                  <div className="py-1.5">
+                    <Link
+                      href="/admin/profile"
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2 text-[0.83rem] text-[#1a1a1a] transition hover:bg-[#f0f2f5]"
+                    >
+                      <UserCircle size={14} strokeWidth={1.8} />
+                      My Profile
+                    </Link>
+                    <Link
+                      href="/admin/change-password"
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2 text-[0.83rem] text-[#1a1a1a] transition hover:bg-[#f0f2f5]"
+                    >
+                      <KeyRound size={14} strokeWidth={1.8} />
+                      Change Password
+                    </Link>
+                  </div>
+
+                  <div className="border-t border-black/[0.06] py-1.5">
+                    <form action={logoutAdmin}>
+                      <button
+                        type="submit"
+                        className="flex w-full items-center gap-2.5 px-4 py-2 text-[0.83rem] text-red-600 transition hover:bg-red-50"
+                      >
+                        <LogOut size={14} strokeWidth={1.8} />
+                        Sign Out
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </header>

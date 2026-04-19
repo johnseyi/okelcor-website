@@ -54,31 +54,32 @@ export async function loginAdmin(
     maxAge: 60 * 60 * 24, // 24 hours
   });
 
-  // Store display name for the top bar (non-httpOnly so JS can read it if needed)
-  const adminName: string | undefined = json.data?.admin?.name;
-  if (adminName) {
-    cookieStore.set("admin_name", adminName, {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24,
-    });
-  }
+  const admin = json.data?.admin ?? {};
+
+  // Store display name — prefer display_name, then first_name, then name
+  const adminName: string | undefined = admin.name;
+  const displayName: string =
+    admin.display_name || admin.first_name || admin.name || "";
+  const cookieOpts = {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge: 60 * 60 * 24,
+  };
+
+  if (adminName)   cookieStore.set("admin_name",         adminName,   cookieOpts);
+  if (displayName) cookieStore.set("admin_display_name", displayName, cookieOpts);
 
   // Store role for nav filtering and middleware route guards (non-httpOnly)
-  const adminRole: string | undefined = json.data?.admin?.role;
-  if (adminRole) {
-    cookieStore.set("admin_role", adminRole, {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24,
-    });
+  const adminRole: string | undefined = admin.role;
+  if (adminRole) cookieStore.set("admin_role", adminRole, cookieOpts);
+
+  if (admin.must_change_password) {
+    redirect("/admin/change-password");
   }
 
-  const isFirstLogin = !json.data?.admin?.last_login_at;
+  const isFirstLogin = !admin.last_login_at;
   redirect(isFirstLogin ? "/admin/profile?first_login=1" : "/admin");
 }
 
@@ -92,6 +93,7 @@ export async function logoutAdmin(): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.delete("admin_token");
   cookieStore.delete("admin_name");
+  cookieStore.delete("admin_display_name");
   cookieStore.delete("admin_role");
   redirect("/admin/login");
 }

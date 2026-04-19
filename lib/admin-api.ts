@@ -232,6 +232,9 @@ export type AdminUser = {
 export type AdminProfile = {
   id: number;
   name: string;
+  first_name?: string;
+  last_name?: string;
+  display_name?: string;
   email: string;
   role: string;
   last_login_at: string | null;

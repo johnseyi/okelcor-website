@@ -10,10 +10,12 @@ async function getToken(): Promise<string | null> {
   return store.get("admin_token")?.value ?? null;
 }
 
-export async function updateProfile(
-  name: string,
-  email: string
-): Promise<{ error?: string }> {
+export async function updateProfile(data: {
+  first_name?: string;
+  last_name?: string;
+  display_name?: string;
+  name?: string;
+}): Promise<{ error?: string }> {
   const token = await getToken();
   if (!token) return { error: "Not authenticated." };
 
@@ -26,7 +28,7 @@ export async function updateProfile(
         Accept: "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ name, email }),
+      body: JSON.stringify(data),
       cache: "no-store",
     });
   } catch {
@@ -38,15 +40,18 @@ export async function updateProfile(
   if (res.status === 403) return { error: "You don't have permission to update this profile." };
   if (!res.ok) return { error: json.message || "Failed to update profile." };
 
-  // Refresh the admin_name cookie so the shell avatar updates on next load
+  // Refresh display cookies so the shell avatar updates
   const cookieStore = await cookies();
-  cookieStore.set("admin_name", name, {
+  const cookieOpts = {
     httpOnly: false,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    sameSite: "lax" as const,
     path: "/",
     maxAge: 60 * 60 * 24,
-  });
+  };
+  const displayVal = data.display_name || data.first_name || data.name || "";
+  if (displayVal) cookieStore.set("admin_display_name", displayVal, cookieOpts);
+  if (data.name)  cookieStore.set("admin_name", data.name, cookieOpts);
 
   revalidatePath("/admin/profile");
   return {};

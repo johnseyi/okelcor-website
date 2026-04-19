@@ -134,8 +134,10 @@ export default function ProfileUI({
 }) {
   // ── Profile edit state ──────────────────────────────────────────────────────
   const [editing, setEditing] = useState(false);
-  const [name, setName] = useState(profile.name);
-  const [email, setEmail] = useState(profile.email);
+  const [firstName, setFirstName]     = useState(profile.first_name ?? "");
+  const [lastName, setLastName]       = useState(profile.last_name ?? "");
+  const [displayName, setDisplayName] = useState(profile.display_name ?? "");
+  const [name]                        = useState(profile.name);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [profileSuccess, setProfileSuccess] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -158,11 +160,15 @@ export default function ProfileUI({
   // ── Handlers ────────────────────────────────────────────────────────────────
 
   const handleProfileSave = () => {
-    if (!name.trim() || !email.trim()) return;
     setProfileError(null);
     setSavingProfile(true);
     startProfileTransition(async () => {
-      const res = await updateProfile(name.trim(), email.trim());
+      const res = await updateProfile({
+        first_name:   firstName.trim() || undefined,
+        last_name:    lastName.trim()  || undefined,
+        display_name: displayName.trim() || undefined,
+        name:         name.trim()      || undefined,
+      });
       setSavingProfile(false);
       if (res.error) {
         setProfileError(res.error);
@@ -260,26 +266,53 @@ export default function ProfileUI({
 
           {editing ? (
             <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1.5 block text-[0.78rem] font-bold uppercase tracking-[0.1em] text-[#5c5e62]">
+                    First Name
+                  </label>
+                  <input
+                    type="text"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="First name"
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-[0.78rem] font-bold uppercase tracking-[0.1em] text-[#5c5e62]">
+                    Last Name
+                  </label>
+                  <input
+                    type="text"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Last name"
+                    className={inputCls}
+                  />
+                </div>
+              </div>
               <div>
                 <label className="mb-1.5 block text-[0.78rem] font-bold uppercase tracking-[0.1em] text-[#5c5e62]">
-                  Name
+                  Display Name
                 </label>
                 <input
                   type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="How your name appears in the panel"
                   className={inputCls}
                 />
               </div>
               <div>
                 <label className="mb-1.5 block text-[0.78rem] font-bold uppercase tracking-[0.1em] text-[#5c5e62]">
-                  Email
+                  Email <span className="font-normal normal-case tracking-normal text-[#aaa]">— read only</span>
                 </label>
                 <input
                   type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className={inputCls}
+                  value={profile.email}
+                  readOnly
+                  className={`${inputCls} cursor-not-allowed bg-[#f0f2f5] text-[#aaa]`}
                 />
               </div>
               <div className="flex gap-3 pt-1">
@@ -295,8 +328,10 @@ export default function ProfileUI({
                   type="button"
                   onClick={() => {
                     setEditing(false);
+                    setFirstName(profile.first_name ?? "");
+                    setLastName(profile.last_name ?? "");
+                    setDisplayName(profile.display_name ?? "");
                     setName(profile.name);
-                    setEmail(profile.email);
                     setProfileError(null);
                   }}
                   className="h-9 rounded-full border border-black/10 px-5 text-[0.83rem] font-semibold text-[#1a1a1a] transition hover:bg-[#f0f2f5]"
@@ -307,8 +342,16 @@ export default function ProfileUI({
             </div>
           ) : (
             <div className="space-y-4">
-              <InfoRow icon={<User size={15} />} label="Name" value={name || "—"} />
-              <InfoRow icon={<Mail size={15} />} label="Email" value={email || "—"} />
+              {(firstName || lastName) && (
+                <InfoRow icon={<User size={15} />} label="Name" value={`${firstName} ${lastName}`.trim() || "—"} />
+              )}
+              {displayName && (
+                <InfoRow icon={<User size={15} />} label="Display Name" value={displayName} />
+              )}
+              {!firstName && !lastName && !displayName && (
+                <InfoRow icon={<User size={15} />} label="Name" value={name || "—"} />
+              )}
+              <InfoRow icon={<Mail size={15} />} label="Email" value={profile.email || "—"} />
               <InfoRow
                 icon={<Shield size={15} />}
                 label="Role"
