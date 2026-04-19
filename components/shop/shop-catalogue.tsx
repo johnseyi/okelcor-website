@@ -86,6 +86,7 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed }
   const [isLoading,   setIsLoading]   = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [resultCount, setResultCount] = useState(0);
+  const [apiError,    setApiError]    = useState<string | null>(null);
 
   // ── Dynamic filter options ───────────────────────────────────────────────────
   const [brands,      setBrands]      = useState<string[]>([]);
@@ -179,19 +180,30 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed }
 
     setIsLoading(true);
     setHasSearched(true);
+    setApiError(null);
 
     fetch(`${PRODUCTS_API}?${params.toString()}`, {
       cache: "no-store",
       signal: controller.signal,
     })
-      .then((r) => r.json())
-      .then((json) => {
+      .then(async (r) => {
+        const json = await r.json();
+        if (!r.ok || json._proxy_error) {
+          // Proxy hit a network error or the upstream returned non-200
+          setApiError(json._proxy_error ?? `API error (HTTP ${r.status})`);
+          setProducts([]);
+          setResultCount(0);
+          return;
+        }
         const list = Array.isArray(json.data) ? json.data.map(toProduct) : [];
         setProducts(list);
         setResultCount(typeof json.meta?.total === "number" ? json.meta.total : list.length);
       })
       .catch((err) => {
-        if (err.name !== "AbortError") setProducts([]);
+        if (err.name !== "AbortError") {
+          setApiError("Could not reach the product catalogue. Please try again.");
+          setProducts([]);
+        }
       })
       .finally(() => setIsLoading(false));
   }, [searchText, priceMin, priceMax, selBrand, selWidth, selHeight, selRim, selSeason, selSpeed, selLoad, sortBy, locale]);
@@ -209,6 +221,7 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed }
     setHasSearched(false);
     setProducts([]);
     setResultCount(0);
+    setApiError(null);
   };
 
   const hasActiveFilters =
@@ -347,6 +360,22 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed }
             {isLoading ? (
               <div className="flex items-center justify-center py-24">
                 <Loader2 size={28} className="animate-spin text-[#9ca3af]" />
+              </div>
+            ) : apiError ? (
+              /* API / network error — something failed upstream */
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+                  <Search size={22} className="text-red-400" />
+                </div>
+                <p className="text-[0.95rem] font-semibold text-[#171a20]">Catalogue unavailable</p>
+                <p className="mt-1 max-w-[340px] text-[0.83rem] leading-6 text-[#5c5e62]">
+                  The product catalogue could not be reached right now. Please try again in a moment or contact support.
+                </p>
+                {process.env.NODE_ENV === "development" && (
+                  <p className="mt-2 max-w-[400px] rounded bg-red-50 px-3 py-1.5 text-[0.75rem] text-red-600">
+                    {apiError}
+                  </p>
+                )}
               </div>
             ) : (
               <>
