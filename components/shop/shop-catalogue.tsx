@@ -8,7 +8,11 @@ import { useLanguage } from "@/context/language-context";
 
 // ── API ───────────────────────────────────────────────────────────────────────
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+// Products are fetched through the Next.js proxy to avoid CORS issues.
+// Brands and specs also proxied — direct browser-to-API calls fail cross-origin.
+const PRODUCTS_API = "/api/shop/products";
+const BRANDS_API   = "/api/shop/brands";
+const SPECS_API    = "/api/shop/specs";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function toProduct(p: any): Product {
@@ -121,7 +125,7 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed }
 
   // Load brands + specs on mount
   useEffect(() => {
-    fetch(`${API_URL}/products/brands`, { cache: "no-store" })
+    fetch(BRANDS_API, { cache: "no-store" })
       .then((r) => r.json())
       .then((json) => {
         const list = Array.isArray(json.data)
@@ -131,7 +135,7 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed }
       })
       .catch(() => {});
 
-    fetch(`${API_URL}/products/specs`, { cache: "no-store" })
+    fetch(SPECS_API, { cache: "no-store" })
       .then((r) => r.json())
       .then((json) => {
         if (json.data?.widths?.length)        setWidths(json.data.widths);
@@ -176,7 +180,7 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed }
     setIsLoading(true);
     setHasSearched(true);
 
-    fetch(`${API_URL}/products?${params.toString()}`, {
+    fetch(`${PRODUCTS_API}?${params.toString()}`, {
       cache: "no-store",
       signal: controller.signal,
     })
