@@ -94,5 +94,18 @@ export async function changePassword(
   if (res.status === 403) return { error: "You don't have permission to perform this action." };
   if (!res.ok) return { error: json.message || "Failed to change password." };
 
+  // Backend returns updated user — clear the must_change_password banner flag
+  const user = json.data?.user ?? json.data ?? {};
+  if (user.must_change_password === false || user.must_change_password === undefined) {
+    const cookieStore = await cookies();
+    cookieStore.set("admin_must_change", "0", {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24,
+    });
+  }
+
   return {};
 }

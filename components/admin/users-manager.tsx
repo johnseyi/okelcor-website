@@ -236,7 +236,7 @@ export default function UsersManager({ users: initialUsers }: { users: AdminUser
                           ROLE_COLORS[user.role] ?? "bg-gray-100 text-gray-700"
                         }`}
                       >
-                        {ROLE_LABELS[user.role] ?? user.role}
+                        {user.role_label ?? ROLE_LABELS[user.role] ?? user.role}
                       </span>
                     </td>
 

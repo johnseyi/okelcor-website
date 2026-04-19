@@ -1,0 +1,24 @@
+// Canonical permissions map — mirrors the backend's ROLE_ACCESS table.
+export const ROLE_ACCESS: Record<string, string[]> = {
+  super_admin:   ["dashboard", "products", "orders", "quotes", "articles", "hero_slides", "brands", "settings", "users", "supplier"],
+  admin:         ["dashboard", "products", "orders", "quotes", "articles", "hero_slides", "brands", "settings", "supplier"],
+  editor:        ["dashboard", "articles", "hero_slides"],
+  order_manager: ["dashboard", "orders", "quotes"],
+};
+
+export function canAccess(role: string, section: string): boolean {
+  return ROLE_ACCESS[role]?.includes(section) ?? false;
+}
+
+// Maps pathname prefix → section key for route-guard checks.
+export const PATH_SECTION: Record<string, string> = {
+  "/admin/products":    "products",
+  "/admin/orders":      "orders",
+  "/admin/quotes":      "quotes",
+  "/admin/articles":    "articles",
+  "/admin/hero-slides": "hero_slides",
+  "/admin/brands":      "brands",
+  "/admin/settings":    "settings",
+  "/admin/users":       "users",
+  "/admin/supplier":    "supplier",
+};

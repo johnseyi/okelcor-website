@@ -331,7 +331,6 @@ export default function ProfileUI({
                     setFirstName(profile.first_name ?? "");
                     setLastName(profile.last_name ?? "");
                     setDisplayName(profile.display_name ?? "");
-                    setName(profile.name);
                     setProfileError(null);
                   }}
                   className="h-9 rounded-full border border-black/10 px-5 text-[0.83rem] font-semibold text-[#1a1a1a] transition hover:bg-[#f0f2f5]"
@@ -361,7 +360,7 @@ export default function ProfileUI({
                       ROLE_COLORS[profile.role] ?? "bg-gray-100 text-gray-700"
                     }`}
                   >
-                    {(ROLE_LABELS[profile.role] ?? profile.role) || "—"}
+                    {(profile.role_label ?? ROLE_LABELS[profile.role] ?? profile.role) || "—"}
                   </span>
                 }
               />

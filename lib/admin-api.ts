@@ -225,6 +225,7 @@ export type AdminUser = {
   name: string;
   email: string;
   role: string;
+  role_label?: string;
   last_login_at: string | null;
   created_at?: string;
 };
@@ -237,6 +238,8 @@ export type AdminProfile = {
   display_name?: string;
   email: string;
   role: string;
+  role_label?: string;
+  must_change_password?: boolean;
   last_login_at: string | null;
 };
 

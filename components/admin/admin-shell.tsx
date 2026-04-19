@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Package,
@@ -20,37 +20,40 @@ import {
   Users,
   TrendingUp,
   KeyRound,
+  AlertTriangle,
 } from "lucide-react";
 import { logoutAdmin } from "@/app/admin/actions";
+import { canAccess, PATH_SECTION } from "@/lib/admin-permissions";
 
-// ── Navigation items ──────────────────────────────────────────────────────────
+// ── Navigation ────────────────────────────────────────────────────────────────
 
 const NAV = [
-  { label: "Dashboard",      href: "/admin",             icon: LayoutDashboard, roles: null },
-  { label: "Products",       href: "/admin/products",    icon: Package,         roles: ["super_admin", "admin", "editor"] },
-  { label: "Articles",       href: "/admin/articles",    icon: FileText,        roles: ["super_admin", "admin", "editor"] },
-  { label: "Orders",         href: "/admin/orders",      icon: ShoppingCart,    roles: ["super_admin", "admin", "order_manager"] },
-  { label: "Quote Requests", href: "/admin/quotes",      icon: ClipboardList,   roles: ["super_admin", "admin", "order_manager"] },
-  { label: "Hero Slides",    href: "/admin/hero-slides", icon: Layers,          roles: ["super_admin", "admin", "editor"] },
-  { label: "Brands",         href: "/admin/brands",      icon: Star,            roles: ["super_admin", "admin", "editor"] },
-  { label: "Settings",       href: "/admin/settings",    icon: Settings,        roles: ["super_admin", "admin", "editor"] },
-  { label: "Supplier Intel",  href: "/admin/supplier",    icon: TrendingUp,      roles: ["super_admin", "admin"] },
-  { label: "Users",          href: "/admin/users",       icon: Users,           roles: ["super_admin"] },
-  { label: "Profile",        href: "/admin/profile",     icon: UserCircle,      roles: null },
-];
-
-const ROLE_LABELS: Record<string, string> = {
-  super_admin:   "Super Admin",
-  admin:         "Admin",
-  editor:        "Editor",
-  order_manager: "Orders",
-};
+  { label: "Dashboard",      href: "/admin",             icon: LayoutDashboard, section: "dashboard" },
+  { label: "Products",       href: "/admin/products",    icon: Package,         section: "products" },
+  { label: "Articles",       href: "/admin/articles",    icon: FileText,        section: "articles" },
+  { label: "Orders",         href: "/admin/orders",      icon: ShoppingCart,    section: "orders" },
+  { label: "Quote Requests", href: "/admin/quotes",      icon: ClipboardList,   section: "quotes" },
+  { label: "Hero Slides",    href: "/admin/hero-slides", icon: Layers,          section: "hero_slides" },
+  { label: "Brands",         href: "/admin/brands",      icon: Star,            section: "brands" },
+  { label: "Settings",       href: "/admin/settings",    icon: Settings,        section: "settings" },
+  { label: "Supplier Intel", href: "/admin/supplier",    icon: TrendingUp,      section: "supplier" },
+  { label: "Users",          href: "/admin/users",       icon: Users,           section: "users" },
+  { label: "Profile",        href: "/admin/profile",     icon: UserCircle,      section: null },
+] as const;
 
 const ROLE_BADGE_COLORS: Record<string, string> = {
   super_admin:   "bg-gray-900 text-white",
   admin:         "bg-blue-100 text-blue-700",
   editor:        "bg-emerald-100 text-emerald-700",
   order_manager: "bg-amber-100 text-amber-700",
+};
+
+// Fallback labels when API doesn't return role_label
+const ROLE_LABELS: Record<string, string> = {
+  super_admin:   "Super Admin",
+  admin:         "Admin",
+  editor:        "Editor",
+  order_manager: "Orders",
 };
 
 function getCookie(name: string): string {
@@ -64,17 +67,19 @@ function getCookie(name: string): string {
 function Sidebar({
   pathname,
   role,
+  roleLabel,
   onClose,
 }: {
   pathname: string;
   role: string;
+  roleLabel: string;
   onClose: () => void;
 }) {
   const isActive = (href: string) =>
     href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
 
-  const visibleNav = NAV.filter(({ roles }) =>
-    roles === null || roles.includes(role) || !role
+  const visibleNav = NAV.filter(({ section }) =>
+    section === null || canAccess(role, section)
   );
 
   return (
@@ -90,7 +95,7 @@ function Sidebar({
           priority
         />
         <span className="rounded-full bg-[#E85C1A]/15 px-2.5 py-0.5 text-[0.65rem] font-bold uppercase tracking-[0.18em] text-[#E85C1A]">
-          Admin
+          {roleLabel || "Admin"}
         </span>
       </div>
 
@@ -144,18 +149,37 @@ function Sidebar({
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router   = useRouter();
+
   const [sidebarOpen, setSidebarOpen]   = useState(false);
   const [role, setRole]                 = useState("");
+  const [roleLabel, setRoleLabel]       = useState("");
   const [adminName, setAdminName]       = useState("");
   const [displayName, setDisplayName]   = useState("");
+  const [mustChange, setMustChange]     = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef                     = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setRole(getCookie("admin_role"));
+    const r  = getCookie("admin_role");
+    const rl = getCookie("admin_role_label") || ROLE_LABELS[r] || r;
+    setRole(r);
+    setRoleLabel(rl);
     setAdminName(getCookie("admin_name"));
     setDisplayName(getCookie("admin_display_name") || getCookie("admin_name"));
+    setMustChange(getCookie("admin_must_change") === "1");
   }, []);
+
+  // Route guard — redirect to /admin/unauthorized if role can't access current section
+  useEffect(() => {
+    if (!role) return;
+    const section = Object.entries(PATH_SECTION).find(([path]) =>
+      pathname.startsWith(path)
+    )?.[1];
+    if (section && !canAccess(role, section)) {
+      router.replace("/admin/unauthorized");
+    }
+  }, [pathname, role, router]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -169,15 +193,16 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   }, []);
 
   // Bare layout for auth pages
-  if (pathname === "/admin/login") {
-    return <>{children}</>;
-  }
+  if (pathname === "/admin/login") return <>{children}</>;
 
-  // Derive active page label for the top bar
   const activePage =
     NAV.find(({ href }) =>
       href === "/admin" ? pathname === "/admin" : pathname.startsWith(href)
     )?.label ?? "Admin";
+
+  const avatarInitials = (displayName || adminName)
+    ? (displayName || adminName).split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
+    : "A";
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#f0f2f5]">
@@ -191,18 +216,39 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         />
       )}
 
-      {/* ── Sidebar — fixed on mobile, static on desktop ── */}
+      {/* ── Sidebar ── */}
       <aside
         className={[
           "fixed inset-y-0 left-0 z-30 w-60 transition-transform duration-300 ease-in-out lg:relative lg:z-auto lg:translate-x-0",
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
         ].join(" ")}
       >
-        <Sidebar pathname={pathname} role={role} onClose={() => setSidebarOpen(false)} />
+        <Sidebar
+          pathname={pathname}
+          role={role}
+          roleLabel={roleLabel}
+          onClose={() => setSidebarOpen(false)}
+        />
       </aside>
 
       {/* ── Main column ── */}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+
+        {/* Must-change-password banner */}
+        {mustChange && pathname !== "/admin/change-password" && (
+          <div className="flex shrink-0 items-center justify-between gap-4 border-b border-amber-200 bg-amber-50 px-4 py-2">
+            <div className="flex items-center gap-2 text-[0.83rem] text-amber-800">
+              <AlertTriangle size={14} className="shrink-0 text-amber-500" />
+              Your account is using a temporary password. Please change it now.
+            </div>
+            <Link
+              href="/admin/change-password"
+              className="shrink-0 text-[0.83rem] font-semibold text-amber-700 underline hover:text-amber-900"
+            >
+              Change password →
+            </Link>
+          </div>
+        )}
 
         {/* Top bar */}
         <header className="flex h-16 shrink-0 items-center justify-between border-b border-black/[0.07] bg-white px-4 lg:px-6">
@@ -217,9 +263,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             >
               <Menu size={20} strokeWidth={1.8} />
             </button>
-            <h1 className="text-[0.95rem] font-extrabold text-[#1a1a1a]">
-              {activePage}
-            </h1>
+            <h1 className="text-[0.95rem] font-extrabold text-[#1a1a1a]">{activePage}</h1>
           </div>
 
           {/* Right: role badge + avatar dropdown */}
@@ -230,7 +274,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                   ROLE_BADGE_COLORS[role] ?? "bg-[#f0f2f5] text-[#5c5e62]"
                 }`}
               >
-                {ROLE_LABELS[role] ?? role}
+                {roleLabel}
               </span>
             )}
 
@@ -242,24 +286,18 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                 className="flex h-8 w-8 items-center justify-center rounded-full bg-[#E85C1A] text-[0.72rem] font-extrabold text-white transition hover:opacity-90"
                 aria-label="Account menu"
               >
-                {(displayName || adminName)
-                  ? (displayName || adminName).split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
-                  : "A"}
+                {avatarInitials}
               </button>
 
               {dropdownOpen && (
                 <div className="absolute right-0 top-10 z-50 w-52 overflow-hidden rounded-2xl border border-black/[0.08] bg-white shadow-lg">
-                  {/* Name header */}
                   <div className="border-b border-black/[0.06] px-4 py-3">
                     <p className="truncate text-[0.83rem] font-semibold text-[#1a1a1a]">
                       {displayName || adminName || "Admin"}
                     </p>
-                    <p className="truncate text-[0.72rem] text-[#5c5e62]">
-                      {ROLE_LABELS[role] ?? role}
-                    </p>
+                    <p className="truncate text-[0.72rem] text-[#5c5e62]">{roleLabel}</p>
                   </div>
 
-                  {/* Menu items */}
                   <div className="py-1.5">
                     <Link
                       href="/admin/profile"

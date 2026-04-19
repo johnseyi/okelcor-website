@@ -71,9 +71,15 @@ export async function loginAdmin(
   if (adminName)   cookieStore.set("admin_name",         adminName,   cookieOpts);
   if (displayName) cookieStore.set("admin_display_name", displayName, cookieOpts);
 
-  // Store role for nav filtering and middleware route guards (non-httpOnly)
   const adminRole: string | undefined = admin.role;
   if (adminRole) cookieStore.set("admin_role", adminRole, cookieOpts);
+
+  // Store human-readable role label from API (e.g. "Super Admin")
+  const roleLabel: string | undefined = admin.role_label;
+  if (roleLabel) cookieStore.set("admin_role_label", roleLabel, cookieOpts);
+
+  // Track must_change_password so the shell can show a persistent banner
+  cookieStore.set("admin_must_change", admin.must_change_password ? "1" : "0", cookieOpts);
 
   if (admin.must_change_password) {
     redirect("/admin/change-password");
@@ -95,5 +101,7 @@ export async function logoutAdmin(): Promise<void> {
   cookieStore.delete("admin_name");
   cookieStore.delete("admin_display_name");
   cookieStore.delete("admin_role");
+  cookieStore.delete("admin_role_label");
+  cookieStore.delete("admin_must_change");
   redirect("/admin/login");
 }
