@@ -54,7 +54,7 @@ export async function loginAdmin(
     maxAge: 60 * 60 * 24, // 24 hours
   });
 
-  const admin = json.data?.admin ?? {};
+  const admin = json.data?.user ?? {};
 
   // Store display name — prefer display_name, then first_name, then name
   const adminName: string | undefined = admin.name;
