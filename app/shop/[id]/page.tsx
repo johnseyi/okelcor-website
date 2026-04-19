@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { cookies } from "next/headers";
 import type { Metadata } from "next";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
@@ -7,7 +8,7 @@ import ProductGallery from "@/components/shop/product-gallery";
 import ProductInfo from "@/components/shop/product-info";
 import ProductAccordion from "@/components/shop/product-accordion";
 import RelatedProducts from "@/components/shop/related-products";
-import { ALL_PRODUCTS, getProductById, getRelatedProducts, type Product } from "@/components/shop/data";
+import { getProductById, getRelatedProducts, type Product } from "@/components/shop/data";
 import { SITE_URL } from "@/lib/constants";
 import ProductViewTracker from "@/components/shop/product-view-tracker";
 import { apiFetch, type ApiProduct } from "@/lib/api";
@@ -30,11 +31,17 @@ function toProduct(p: ApiProduct): Product {
 // or updated at any time via the admin CMS.
 export const dynamic = "force-dynamic";
 
-async function fetchProduct(id: number, locale: string): Promise<Product | undefined> {
+async function getToken(): Promise<string | undefined> {
+  const cookieStore = await cookies();
+  return cookieStore.get("customer_token")?.value;
+}
+
+async function fetchProduct(id: number, locale: string, token?: string): Promise<Product | undefined> {
   try {
     const res = await apiFetch<ApiProduct>(`/products/${id}`, {
       locale,
       revalidate: false,
+      token,
     });
     return res.data ? toProduct(res.data) : undefined;
   } catch {
@@ -43,12 +50,13 @@ async function fetchProduct(id: number, locale: string): Promise<Product | undef
   }
 }
 
-async function fetchRelated(product: Product, locale: string, count = 3): Promise<Product[]> {
+async function fetchRelated(product: Product, locale: string, token?: string, count = 3): Promise<Product[]> {
   try {
     const res = await apiFetch<ApiProduct[]>("/products", {
       locale,
       revalidate: false,
-      params: { type: product.type }, // API requires at least one filter
+      params: { type: product.type },
+      token,
     });
     if (!res.data?.length) throw new Error("empty");
     return res.data
@@ -62,8 +70,8 @@ async function fetchRelated(product: Product, locale: string, count = 3): Promis
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const locale = await getServerLocale();
-  const product = await fetchProduct(Number(id), locale);
+  const [locale, token] = await Promise.all([getServerLocale(), getToken()]);
+  const product = await fetchProduct(Number(id), locale, token);
   if (!product) return { title: "Product Not Found" };
 
   const title = `${product.brand} ${product.name} ${product.size}`;
@@ -87,11 +95,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ProductDetailPage({ params }: Props) {
   const { id } = await params;
-  const locale = await getServerLocale();
-  const product = await fetchProduct(Number(id), locale);
+  const [locale, token] = await Promise.all([getServerLocale(), getToken()]);
+  const product = await fetchProduct(Number(id), locale, token);
   if (!product) notFound();
 
-  const related = await fetchRelated(product, locale);
+  const related = await fetchRelated(product, locale, token);
 
   const productSchema = {
     "@context": "https://schema.org",

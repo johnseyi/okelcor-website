@@ -150,13 +150,15 @@ export type ApiFetchOptions = {
   tags?: string[];
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
+  /** Bearer token — used when the endpoint requires customer authentication */
+  token?: string;
 };
 
 export async function apiFetch<T>(
   path: string,
   options: ApiFetchOptions = {}
 ): Promise<ApiResponse<T>> {
-  const { locale, params, revalidate, tags, method = "GET", body } = options;
+  const { locale, params, revalidate, tags, method = "GET", body, token } = options;
 
   // Build URL — always relative to the configured base
   const url = new URL(`${BASE_URL}${path}`);
@@ -179,6 +181,7 @@ export async function apiFetch<T>(
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     // no-store must be a top-level cache option — next: { revalidate: false } means

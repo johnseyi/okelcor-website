@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import type { Product } from "./data";
 
 export default function ProductGallery({ product }: { product: Product }) {
@@ -10,10 +11,13 @@ export default function ProductGallery({ product }: { product: Product }) {
     <div className="flex flex-col gap-3">
       {/* Main image */}
       <div className="relative aspect-square w-full overflow-hidden rounded-[22px] bg-[#efefef]">
-        <img
+        <Image
           src={product.images[selected]}
           alt={`${product.brand} ${product.name}`}
-          className="h-full w-full object-cover transition-opacity duration-300"
+          fill
+          sizes="(max-width: 768px) 100vw, 50vw"
+          priority
+          className="object-cover transition-opacity duration-300"
         />
         {/* Type badge */}
         <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[12px] font-semibold text-[var(--foreground)] shadow-sm backdrop-blur-sm">
@@ -35,11 +39,12 @@ export default function ProductGallery({ product }: { product: Product }) {
                 : "border-transparent opacity-60 hover:opacity-90"
             }`}
           >
-            <img
+            <Image
               src={img}
               alt={`Thumbnail ${i + 1}`}
-              loading="lazy"
-              className="h-full w-full object-cover"
+              fill
+              sizes="88px"
+              className="object-cover"
             />
           </button>
         ))}
