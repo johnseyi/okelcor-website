@@ -78,8 +78,12 @@ function Sidebar({
   const isActive = (href: string) =>
     href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
 
+  // Show all items when role hasn't loaded yet (empty string = cookie not read or
+  // not set for sessions that pre-date the admin_role cookie). This prevents a
+  // flash where only Profile appears on first render, and keeps existing
+  // authenticated sessions working if the cookie is absent.
   const visibleNav = NAV.filter(({ section }) =>
-    section === null || canAccess(role, section)
+    section === null || !role || canAccess(role, section)
   );
 
   return (
