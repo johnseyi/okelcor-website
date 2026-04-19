@@ -34,6 +34,7 @@ export type ProfileData = {
   phone?: string;
   country?: string;
   company_name?: string;
+  industry?: string;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

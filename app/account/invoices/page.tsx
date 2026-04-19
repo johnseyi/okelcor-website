@@ -1,0 +1,166 @@
+import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { ChevronRight, Receipt, Download, CheckCircle2, Clock, AlertCircle } from "lucide-react";
+import Navbar from "@/components/navbar";
+import Footer from "@/components/footer";
+import { getCustomerFromCookie } from "@/lib/get-customer";
+
+export const metadata: Metadata = {
+  title: "Invoices",
+  description: "Download and manage your Okelcor invoices.",
+};
+
+export const dynamic = "force-dynamic";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type InvoiceStatus = "paid" | "unpaid" | "overdue";
+
+type Invoice = {
+  id: number;
+  invoice_number: string;
+  issued_at: string;
+  due_at?: string;
+  amount: number;
+  status: InvoiceStatus;
+  pdf_url?: string;
+  order_ref?: string;
+};
+
+const STATUS_CONFIG: Record<InvoiceStatus, { label: string; cls: string; icon: React.ComponentType<{ size?: number; className?: string }> }> = {
+  paid:    { label: "Paid",    cls: "bg-green-50 text-green-700 border-green-200", icon: CheckCircle2 },
+  unpaid:  { label: "Unpaid",  cls: "bg-amber-50 text-amber-700 border-amber-200", icon: Clock },
+  overdue: { label: "Overdue", cls: "bg-red-50 text-red-600 border-red-200",       icon: AlertCircle },
+};
+
+// ─── Fetch ────────────────────────────────────────────────────────────────────
+
+async function fetchInvoices(token: string): Promise<Invoice[]> {
+  const API_URL =
+    process.env.API_URL ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    "http://localhost:8000/api/v1";
+  try {
+    const res = await fetch(`${API_URL}/auth/invoices`, {
+      cache: "no-store",
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return Array.isArray(json.data) ? json.data : [];
+  } catch {
+    return [];
+  }
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+export default async function InvoicesPage() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("customer_token")?.value;
+  if (!token) redirect("/login?redirect=/account/invoices");
+
+  const customer = await getCustomerFromCookie();
+  if (!customer) redirect("/login?redirect=/account/invoices");
+
+  const invoices = await fetchInvoices(token);
+
+  return (
+    <main className="min-h-screen bg-[#f5f5f5]">
+      <Navbar />
+
+      <div className="tesla-shell pb-16 pt-[96px]">
+
+        {/* Breadcrumb */}
+        <nav className="mb-6 flex items-center gap-1.5 text-[0.8rem] text-[var(--muted)]">
+          <Link href="/account" className="hover:text-[var(--foreground)]">My Account</Link>
+          <ChevronRight size={13} strokeWidth={2} />
+          <span className="text-[var(--foreground)] font-medium">Invoices</span>
+        </nav>
+
+        {/* Header */}
+        <div className="mb-6">
+          <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--primary)]">B2B</p>
+          <h1 className="text-2xl font-extrabold tracking-tight text-[var(--foreground)]">Invoices</h1>
+        </div>
+
+        {invoices.length === 0 ? (
+          /* Empty state */
+          <div className="flex flex-col items-center justify-center rounded-[22px] border border-black/[0.06] bg-white py-20 text-center shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#f5f5f5]">
+              <Receipt size={24} strokeWidth={1.5} className="text-[var(--muted)]" />
+            </div>
+            <p className="mt-4 text-[1rem] font-bold text-[var(--foreground)]">No invoices yet</p>
+            <p className="mt-1 max-w-[320px] text-[0.85rem] leading-6 text-[var(--muted)]">
+              Invoices for your orders will appear here once issued by our team.
+            </p>
+            <Link
+              href="/contact"
+              className="mt-6 rounded-full border border-black/[0.08] px-6 py-3 text-[0.88rem] font-semibold text-[var(--foreground)] transition hover:border-[var(--primary)]/40 hover:text-[var(--primary)]"
+            >
+              Contact support
+            </Link>
+          </div>
+        ) : (
+          /* Invoice list */
+          <div className="overflow-hidden rounded-[22px] border border-black/[0.06] bg-white shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
+            {/* Table header — desktop only */}
+            <div className="hidden border-b border-black/[0.05] px-6 py-3 sm:grid sm:grid-cols-[1fr_auto_auto_auto_auto] sm:gap-4">
+              {["Invoice", "Issued", "Due", "Amount", ""].map((h) => (
+                <p key={h} className="text-[0.72rem] font-bold uppercase tracking-[0.15em] text-[var(--muted)]">{h}</p>
+              ))}
+            </div>
+
+            {invoices.map((inv, i) => {
+              const s = STATUS_CONFIG[inv.status] ?? STATUS_CONFIG.unpaid;
+              const Icon = s.icon;
+              return (
+                <div
+                  key={inv.id}
+                  className={`flex flex-col gap-3 px-6 py-4 sm:grid sm:grid-cols-[1fr_auto_auto_auto_auto] sm:items-center sm:gap-4 ${i !== invoices.length - 1 ? "border-b border-black/[0.05]" : ""}`}
+                >
+                  <div>
+                    <p className="font-semibold text-[var(--foreground)]">{inv.invoice_number}</p>
+                    {inv.order_ref && (
+                      <p className="text-[0.78rem] text-[var(--muted)]">Order: {inv.order_ref}</p>
+                    )}
+                  </div>
+                  <p className="text-[0.85rem] text-[var(--muted)]">
+                    {new Date(inv.issued_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                  </p>
+                  <p className="text-[0.85rem] text-[var(--muted)]">
+                    {inv.due_at
+                      ? new Date(inv.due_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+                      : "—"}
+                  </p>
+                  <p className="font-bold text-[var(--foreground)]">€{inv.amount.toFixed(2)}</p>
+                  <div className="flex items-center gap-2">
+                    <span className={`flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[0.72rem] font-semibold ${s.cls}`}>
+                      <Icon size={11} />
+                      {s.label}
+                    </span>
+                    {inv.pdf_url && (
+                      <a
+                        href={inv.pdf_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex h-8 w-8 items-center justify-center rounded-full border border-black/[0.08] text-[var(--muted)] transition hover:border-[var(--primary)]/40 hover:text-[var(--primary)]"
+                        aria-label="Download PDF"
+                      >
+                        <Download size={13} strokeWidth={2} />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <Footer />
+    </main>
+  );
+}
