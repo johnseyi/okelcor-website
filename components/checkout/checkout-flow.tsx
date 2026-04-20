@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CheckCircle2, ChevronRight } from "lucide-react";
 import { useCart } from "@/context/cart-context";
 import { useLanguage } from "@/context/language-context";
+import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import ExpressCheckout from "./express-checkout";
 import OrderSummary from "./order-summary";
 import VatField from "@/components/vat-field";
@@ -220,6 +221,8 @@ function EmptyCartState() {
 export default function CheckoutFlow() {
   const { items, clearCart } = useCart();
   const { t } = useLanguage();
+  const { customer } = useCustomerAuth();
+  const showVatField = customer?.customer_type === "b2b";
   const c = t.checkout;
   const deliveryRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -383,9 +386,9 @@ export default function CheckoutFlow() {
     }
 
     // ── Manual fallback (no Adyen key configured) ─────────────────────────
-    const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+    // Proxy reads the httpOnly customer_token cookie and forwards it as Bearer
     try {
-      const res = await fetch(`${API_URL}/orders`, {
+      const res = await fetch("/api/customer/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(orderPayload()),
@@ -491,10 +494,12 @@ export default function CheckoutFlow() {
             </SectionCard>
           </div>
 
-          {/* VAT number */}
-          <SectionCard title="Business Details">
-            <VatField value={vatNumber} onChange={setVatNumber} />
-          </SectionCard>
+          {/* VAT number — b2b customers only */}
+          {showVatField && (
+            <SectionCard title="Business Details">
+              <VatField value={vatNumber} onChange={setVatNumber} />
+            </SectionCard>
+          )}
 
           {/* Delivery method */}
           <SectionCard title={c.sectionDeliveryMethod}>

@@ -5,6 +5,7 @@ import { Paperclip, CheckCircle2 } from "lucide-react";
 import { useLanguage } from "@/context/language-context";
 import { trackQuoteSubmit } from "@/lib/analytics";
 import VatField from "@/components/vat-field";
+import { useCustomerAuth } from "@/context/CustomerAuthContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -93,6 +94,9 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 export default function QuoteForm() {
   const { t } = useLanguage();
+  const { customer } = useCustomerAuth();
+  const showVatField = customer?.customer_type === "b2b";
+
   const [form, setForm] = useState<FormData>({
     fullName: "", companyName: "", email: "", phone: "",
     country: "", businessType: "",
@@ -148,10 +152,9 @@ export default function QuoteForm() {
     setSubmitting(true);
     setSubmitError(null);
 
-    const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
-
     try {
-      const res = await fetch(`${API_URL}/quote-requests`, {
+      // Proxy reads the httpOnly customer_token cookie and forwards it as Bearer
+      const res = await fetch("/api/customer/quote-requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -326,9 +329,11 @@ export default function QuoteForm() {
             </select>
           </Field>
 
-          <div className="col-span-full">
-            <VatField value={vatNumber} onChange={setVatNumber} />
-          </div>
+          {showVatField && (
+            <div className="col-span-full">
+              <VatField value={vatNumber} onChange={setVatNumber} />
+            </div>
+          )}
 
           {/* ── Product Request ── */}
           <SectionLabel>{t.quote.form.sectionProduct}</SectionLabel>
