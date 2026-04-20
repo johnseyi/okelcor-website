@@ -1,25 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
 
 // ── Admin role table ──────────────────────────────────────────────────────────
+// Keep in sync with lib/admin-permissions.ts ROLE_ACCESS map.
+// super_admin: empty array means "allow all".
 
 const ROLE_ROUTES: Record<string, string[]> = {
-  super_admin: [],
-  admin: [
+  super_admin:   [],
+  admin:         [
     "/admin/products", "/admin/articles", "/admin/orders", "/admin/quotes",
-    "/admin/hero-slides", "/admin/brands", "/admin/settings", "/admin/profile",
+    "/admin/hero-slides", "/admin/brands", "/admin/settings",
+    "/admin/users", "/admin/supplier",
   ],
-  editor: [
-    "/admin/products", "/admin/articles", "/admin/hero-slides",
-    "/admin/brands", "/admin/settings", "/admin/profile",
+  editor:        [
+    "/admin/articles", "/admin/hero-slides",
   ],
-  order_manager: ["/admin/orders", "/admin/quotes", "/admin/profile"],
+  order_manager: [
+    "/admin/orders", "/admin/quotes", "/admin/supplier",
+  ],
 };
 
+// Paths accessible to every authenticated admin regardless of role.
+const ADMIN_ALWAYS_ALLOWED = [
+  "/admin",
+  "/admin/unauthorized",
+  "/admin/profile",
+  "/admin/change-password",
+];
+
 function roleCanAccess(role: string, pathname: string): boolean {
-  if (pathname === "/admin" || pathname === "/admin/unauthorized") return true;
+  if (ADMIN_ALWAYS_ALLOWED.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
+    return true;
+  }
   const allowed = ROLE_ROUTES[role];
-  if (!allowed) return false;
-  if (allowed.length === 0) return true;
+  if (!allowed) return false;          // unknown role — deny
+  if (allowed.length === 0) return true; // super_admin — allow all
   return allowed.some((prefix) => pathname.startsWith(prefix));
 }
 
