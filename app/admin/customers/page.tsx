@@ -25,8 +25,8 @@ type ImportResult = {
   imported: number;
   skipped_no_email: number;
   skipped_duplicate: number;
-  b2b_created: number;
-  b2c_created: number;
+  b2b: number;
+  b2c: number;
   errors?: { row: number; message: string }[];
 };
 
@@ -35,12 +35,6 @@ type FilterTab = "all" | "b2b" | "b2c" | "wix";
 const PER_PAGE = 50;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function getCookie(name: string): string {
-  if (typeof document === "undefined") return "";
-  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
-  return match ? decodeURIComponent(match[1]) : "";
-}
 
 function formatDate(iso: string): string {
   try {
@@ -79,7 +73,6 @@ function WixTag() {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function CustomersPage() {
-  const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
   // ── Import state ─────────────────────────────────────────────────────────
   const fileRef = useRef<HTMLInputElement>(null);
@@ -110,9 +103,6 @@ export default function CustomersPage() {
   // ── Fetch customers ───────────────────────────────────────────────────────
 
   const fetchCustomers = useCallback(async () => {
-    const token = getCookie("admin_token");
-    if (!token) return;
-
     setLoading(true);
     setTableError(null);
 
@@ -126,20 +116,23 @@ export default function CustomersPage() {
     if (tab === "wix")  params.set("source", "wix");
 
     try {
-      const res = await fetch(`${API_URL}/admin/customers?${params}`, {
-        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-        cache: "no-store",
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      // Proxy reads the httpOnly admin_token cookie server-side
+      const res = await fetch(`/api/admin/customers?${params}`, { cache: "no-store" });
       const json = await res.json();
+      console.log("[Customers] API response:", json);
+      if (!res.ok) {
+        setTableError(json.error ?? `Error ${res.status} loading customers.`);
+        return;
+      }
       setCustomers(Array.isArray(json.data) ? json.data : []);
       setTotal(json.meta?.total ?? 0);
-    } catch {
+    } catch (err) {
+      console.error("[Customers] fetch error:", err);
       setTableError("Could not load customers. Check your connection.");
     } finally {
       setLoading(false);
     }
-  }, [API_URL, page, tab, debouncedSearch]);
+  }, [page, tab, debouncedSearch]);
 
   useEffect(() => { fetchCustomers(); }, [fetchCustomers]);
 
@@ -163,7 +156,8 @@ export default function CustomersPage() {
       if (!res.ok) {
         setImportError(json.error ?? json.message ?? "Import failed.");
       } else {
-        setImportResult(json);
+        // API wraps counts in json.data
+        setImportResult(json.data ?? json);
         setFile(null);
         if (fileRef.current) fileRef.current.value = "";
         fetchCustomers();
@@ -273,8 +267,8 @@ export default function CustomersPage() {
                 { label: "Imported",             value: importResult.imported },
                 { label: "Skipped (no email)",   value: importResult.skipped_no_email },
                 { label: "Skipped (duplicate)",  value: importResult.skipped_duplicate },
-                { label: "B2B accounts",         value: importResult.b2b_created },
-                { label: "B2C accounts",         value: importResult.b2c_created },
+                { label: "B2B accounts",         value: importResult.b2b },
+                { label: "B2C accounts",         value: importResult.b2c },
               ].map(({ label, value }) => (
                 <div key={label} className="rounded-lg bg-white px-3 py-2.5 text-center shadow-sm">
                   <p className="text-[1.15rem] font-extrabold text-[#1a1a1a]">{value}</p>
