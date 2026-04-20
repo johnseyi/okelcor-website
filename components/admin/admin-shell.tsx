@@ -132,19 +132,6 @@ function Sidebar({
           );
         })}
       </nav>
-
-      {/* Logout */}
-      <div className="shrink-0 border-t border-white/[0.08] p-3">
-        <form action={logoutAdmin}>
-          <button
-            type="submit"
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[0.875rem] font-medium text-white/50 transition-all hover:bg-white/[0.06] hover:text-white"
-          >
-            <LogOut size={16} strokeWidth={1.8} className="shrink-0" />
-            <span>Log out</span>
-          </button>
-        </form>
-      </div>
     </div>
   );
 }
@@ -287,10 +274,15 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
               <button
                 type="button"
                 onClick={() => setDropdownOpen((v) => !v)}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-[#E85C1A] text-[0.72rem] font-extrabold text-white transition hover:opacity-90"
+                className="flex items-center gap-2 rounded-full border border-black/[0.08] bg-white py-1 pl-1 pr-3 transition hover:bg-[#f0f2f5]"
                 aria-label="Account menu"
               >
-                {avatarInitials}
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#E85C1A] text-[0.68rem] font-extrabold text-white">
+                  {avatarInitials}
+                </span>
+                <span className="hidden max-w-[120px] truncate text-[0.82rem] font-semibold text-[#1a1a1a] sm:block">
+                  {displayName || adminName || "Admin"}
+                </span>
               </button>
 
               {dropdownOpen && (
