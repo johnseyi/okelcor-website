@@ -5,8 +5,6 @@ import type { Product } from "./data";
 import Reveal from "@/components/motion/reveal";
 import { StaggerParent, StaggerChild } from "@/components/motion/stagger";
 import { useLanguage } from "@/context/language-context";
-import { getProductImageUrl } from "@/lib/utils";
-
 const PLACEHOLDER = "/images/tyre-placeholder.png";
 
 export default function RelatedProducts({ products }: { products: Product[] }) {
@@ -34,7 +32,7 @@ export default function RelatedProducts({ products }: { products: Product[] }) {
               >
                 <div className="relative aspect-[4/3] overflow-hidden bg-[#e0e0e0]">
                   <img
-                    src={getProductImageUrl(product.image)}
+                    src={product.image || PLACEHOLDER}
                     alt={`${product.brand} ${product.name}`}
                     loading="lazy"
                     onError={(e) => { e.currentTarget.src = PLACEHOLDER; }}

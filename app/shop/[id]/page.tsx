@@ -13,6 +13,7 @@ import { SITE_URL } from "@/lib/constants";
 import ProductViewTracker from "@/components/shop/product-view-tracker";
 import { apiFetch, type ApiProduct } from "@/lib/api";
 import { getServerLocale } from "@/lib/locale";
+import { getProductImageUrl } from "@/lib/utils";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -26,15 +27,14 @@ function extractImagePath(entry: unknown): string {
 
 /** Map the API product shape → local Product shape used by all components. */
 function toProduct(p: ApiProduct): Product {
-  // Use || not ?? — empty string "" is falsy with || but not with ??
-  const img = p.primary_image || p.image_url || p.image || extractImagePath(p.images?.[0]) || "";
-  const imgs: string[] = p.images?.length
-    ? p.images.map(extractImagePath).filter(Boolean)
-    : (img ? [img] : []);
+  const rawPrimary = p.primary_image || p.image_url || p.image || extractImagePath(p.images?.[0]) || "";
+  const galleryPaths = (p.images ?? []).map(extractImagePath).filter(Boolean);
+  const allPaths = [rawPrimary, ...galleryPaths.filter((g) => g !== rawPrimary)].filter(Boolean);
   return {
     ...p,
-    image: img,
-    images: imgs,
+    primary_image: rawPrimary,
+    image:         getProductImageUrl(rawPrimary),
+    images:        allPaths.map(getProductImageUrl),
   };
 }
 

@@ -5,6 +5,7 @@ import { Search, Loader2, RotateCcw } from "lucide-react";
 import ProductGrid from "./product-grid";
 import { type Product } from "./data";
 import { useLanguage } from "@/context/language-context";
+import { getProductImageUrl } from "@/lib/utils";
 
 // ── API ───────────────────────────────────────────────────────────────────────
 
@@ -23,23 +24,25 @@ function extractImagePath(entry: any): string {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function toProduct(p: any): Product {
-  // Use || not ?? so empty strings fall through to the next candidate
-  const img = p.primary_image || p.image_url || p.image || extractImagePath(p.images?.[0]) || "";
+  const rawPrimary: string = p.primary_image || p.image_url || p.image || extractImagePath(p.images?.[0]) || "";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const imgs: string[] = p.images?.length ? p.images.map((x: any) => extractImagePath(x)).filter(Boolean) : (img ? [img] : []);
+  const galleryPaths: string[] = (p.images ?? []).map((x: any) => extractImagePath(x)).filter(Boolean);
+  // Primary first, then any gallery images that differ from primary
+  const allPaths = [rawPrimary, ...galleryPaths.filter((p) => p !== rawPrimary)].filter(Boolean);
   return {
-    id:          p.id,
-    brand:       p.brand        ?? "",
-    name:        p.name         ?? "",
-    size:        p.size         ?? "",
-    spec:        p.spec         ?? "",
-    season:      p.season       ?? "",
-    type:        p.type         ?? "",
-    price:       Number(p.price ?? 0),
-    sku:         p.sku          ?? "",
-    description: p.description  ?? "",
-    image:       img,
-    images:      imgs,
+    id:            p.id,
+    brand:         p.brand        ?? "",
+    name:          p.name         ?? "",
+    size:          p.size         ?? "",
+    spec:          p.spec         ?? "",
+    season:        p.season       ?? "",
+    type:          p.type         ?? "",
+    price:         Number(p.price ?? 0),
+    sku:           p.sku          ?? "",
+    description:   p.description  ?? "",
+    primary_image: rawPrimary,
+    image:         getProductImageUrl(rawPrimary),
+    images:        allPaths.map(getProductImageUrl),
   };
 }
 

@@ -7,7 +7,11 @@ export type Product = {
   season: string;
   type: string;
   price: number;
+  /** Raw relative path from API e.g. storage/products/continental_summer_primary.jpg */
+  primary_image?: string;
+  /** primary_image with full URL prepended — used by card/gallery as display source */
   image: string;
+  /** All gallery images as full URLs — primary_image first, then additional */
   images: string[];
   sku: string;
   description: string;

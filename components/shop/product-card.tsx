@@ -5,7 +5,6 @@ import type { Product } from "./data";
 export type { Product } from "./data";
 import { useLanguage } from "@/context/language-context";
 import { useDepthTilt } from "@/hooks/useDepthTilt";
-import { getProductImageUrl } from "@/lib/utils";
 
 const PLACEHOLDER = "/images/tyre-placeholder.png";
 
@@ -13,7 +12,8 @@ export default function ProductCard({ product, priority = false }: { product: Pr
   const { t } = useLanguage();
   const cardRef = useDepthTilt<HTMLDivElement>({ maxRotate: 6, maxShift: 9, scale: 1.012 });
 
-  const imageUrl = getProductImageUrl(product.image);
+  // product.image is pre-resolved to a full URL by toProduct()
+  const imageUrl = product.image || PLACEHOLDER;
 
   return (
     <div
