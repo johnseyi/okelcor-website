@@ -9,7 +9,6 @@ import TyreHighlightsSection from "@/components/tyre-highlights";
 import RexCertified from "@/components/rex-certified";
 import CTASection from "@/components/cta-section";
 import Footer from "@/components/footer";
-import FloatingBar from "@/components/floating-bar";
 import HeroSection from "@/components/home/hero-section";
 import CategoriesSection from "@/components/home/categories-section";
 import BrandsSection from "@/components/home/brands-section";
@@ -70,7 +69,6 @@ export default function Home() {
       <TyreHighlightsSection />
       <RexCertified />
       <CTASection />
-      <FloatingBar />
       <Footer />
     </main>
   );

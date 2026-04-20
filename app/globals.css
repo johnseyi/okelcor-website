@@ -460,3 +460,16 @@ select:focus-visible {
 .js-cursor-none * {
   cursor: none !important;
 }
+/* ── Crisp live chat widget ──────────────────────────────────────────────── */
+/* Ensure the launcher sits comfortably above the bottom edge on all devices */
+#crisp-chatbox {
+  z-index: 9999 !important;
+}
+
+/* On mobile give a bit more breathing room from the bottom edge */
+@media (max-width: 640px) {
+  #crisp-chatbox .crisp-client .cc-1no6 {
+    bottom: 16px !important;
+    right: 16px !important;
+  }
+}
