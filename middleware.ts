@@ -9,7 +9,7 @@ const ROLE_ROUTES: Record<string, string[]> = {
   admin:         [
     "/admin/products", "/admin/articles", "/admin/orders", "/admin/quotes",
     "/admin/hero-slides", "/admin/brands", "/admin/settings",
-    "/admin/users", "/admin/supplier",
+    "/admin/users", "/admin/supplier", "/admin/customers",
   ],
   editor:        [
     "/admin/articles", "/admin/hero-slides",

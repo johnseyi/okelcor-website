@@ -1,7 +1,7 @@
 // Canonical permissions map — mirrors the backend's ROLE_ACCESS table.
 export const ROLE_ACCESS: Record<string, string[]> = {
-  super_admin:   ["dashboard", "products", "orders", "quotes", "articles", "hero_slides", "brands", "categories", "media", "settings", "users", "supplier"],
-  admin:         ["dashboard", "products", "orders", "quotes", "articles", "hero_slides", "brands", "categories", "media", "settings", "users", "supplier"],
+  super_admin:   ["dashboard", "products", "orders", "quotes", "articles", "hero_slides", "brands", "categories", "media", "settings", "users", "supplier", "customers"],
+  admin:         ["dashboard", "products", "orders", "quotes", "articles", "hero_slides", "brands", "categories", "media", "settings", "users", "supplier", "customers"],
   editor:        ["dashboard", "articles", "hero_slides"],
   order_manager: ["dashboard", "orders", "quotes", "supplier"],
 };
@@ -21,4 +21,5 @@ export const PATH_SECTION: Record<string, string> = {
   "/admin/settings":    "settings",
   "/admin/users":       "users",
   "/admin/supplier":    "supplier",
+  "/admin/customers":   "customers",
 };

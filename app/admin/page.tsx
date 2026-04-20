@@ -6,6 +6,7 @@ import {
   FileText,
   TrendingUp,
   AlertCircle,
+  ContactRound,
 } from "lucide-react";
 import {
   adminSafeFetch,
@@ -136,22 +137,24 @@ export default async function AdminDashboard() {
     // Any other error (network down): fall through and render with null data.
   }
 
-  const [productsRes, ordersRes, quotesRes, articlesRes, recentOrdersRes, recentQuotesRes] =
+  const [productsRes, ordersRes, quotesRes, articlesRes, customersRes, recentOrdersRes, recentQuotesRes] =
     await Promise.all([
       adminSafeFetch<AdminProduct[]>("/products",       { params: { per_page: 1, is_active: 1  }, revalidate: false }),
       adminSafeFetch<AdminOrder[]>  ("/orders",         { params: { per_page: 1  }, revalidate: false }),
       adminSafeFetch<AdminQuote[]>  ("/quote-requests", { params: { per_page: 1  }, revalidate: false }),
       adminSafeFetch<AdminArticle[]>("/articles",       { params: { per_page: 1  }, revalidate: false }),
+      adminSafeFetch<unknown[]>     ("/admin/customers",{ params: { per_page: 1  }, revalidate: false }),
       adminSafeFetch<AdminOrder[]>  ("/orders",         { params: { per_page: 5, sort: "latest" }, revalidate: false }),
       adminSafeFetch<AdminQuote[]>  ("/quote-requests", { params: { per_page: 5, sort: "latest" }, revalidate: false }),
     ]);
 
   const anyFailed = [productsRes, ordersRes, quotesRes, articlesRes].some((r) => r === null);
 
-  const productCount  = getCount(productsRes);
-  const orderCount    = getCount(ordersRes);
-  const quoteCount    = getCount(quotesRes);
-  const articleCount  = getCount(articlesRes);
+  const productCount   = getCount(productsRes);
+  const orderCount     = getCount(ordersRes);
+  const quoteCount     = getCount(quotesRes);
+  const articleCount   = getCount(articlesRes);
+  const customerCount  = getCount(customersRes);
 
   const recentOrders: AdminOrder[] = Array.isArray(recentOrdersRes?.data)
     ? (recentOrdersRes.data as AdminOrder[])
@@ -178,7 +181,7 @@ export default async function AdminDashboard() {
       {anyFailed && <ApiWarning />}
 
       {/* Stat cards */}
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard
           label="Active Products"
           value={productCount ?? "—"}
@@ -202,6 +205,12 @@ export default async function AdminDashboard() {
           value={articleCount ?? "—"}
           icon={FileText}
           accent="bg-emerald-500"
+        />
+        <StatCard
+          label="Customers"
+          value={customerCount ?? "—"}
+          icon={ContactRound}
+          accent="bg-violet-500"
         />
       </div>
 
