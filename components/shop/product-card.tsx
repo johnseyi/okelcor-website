@@ -15,6 +15,11 @@ export default function ProductCard({ product, priority = false }: { product: Pr
 
   const imageUrl = getProductImageUrl(product.image);
 
+  // DEBUG — remove after confirming images load correctly
+  if (typeof window !== "undefined") {
+    console.log("[ProductCard] product.id:", product.id, "| raw image field:", product.image, "| constructed URL:", imageUrl);
+  }
+
   return (
     <div
       ref={cardRef}

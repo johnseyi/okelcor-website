@@ -23,6 +23,8 @@ function extractImagePath(entry: any): string {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function toProduct(p: any): Product {
+  // DEBUG — remove after confirming image fields
+  console.log("[toProduct] raw fields — primary_image:", p.primary_image, "| image_url:", p.image_url, "| image:", p.image, "| images[0]:", p.images?.[0]);
   const img = p.primary_image ?? p.image_url ?? p.image ?? extractImagePath(p.images?.[0]) ?? "";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const imgs: string[] = p.images?.length ? p.images.map((x: any) => extractImagePath(x)).filter(Boolean) : (img ? [img] : []);
