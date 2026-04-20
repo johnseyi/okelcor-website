@@ -10,73 +10,68 @@ const PLACEHOLDER = "/images/tyre-placeholder.png";
 
 export default function ProductCard({ product, priority = false }: { product: Product; priority?: boolean }) {
   const { t } = useLanguage();
-  const cardRef = useDepthTilt<HTMLDivElement>({ maxRotate: 6, maxShift: 9, scale: 1.012 });
+  const cardRef = useDepthTilt<HTMLDivElement>({ maxRotate: 4, maxShift: 6, scale: 1.008 });
 
-  // product.image is pre-resolved to a full URL by toProduct()
   const imageUrl = product.image || PLACEHOLDER;
 
   return (
     <div
       ref={cardRef}
-      className="group relative flex min-h-[360px] flex-col overflow-hidden rounded-[22px] border border-black/[0.05] bg-[#e8e8e8] shadow-[0_10px_30px_rgba(0,0,0,0.06)]"
+      className="group flex flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm transition-shadow duration-200 hover:shadow-md"
     >
-      {/* Full-card background image */}
-      <img
-        src={imageUrl}
-        alt={`${product.brand} ${product.name}`}
-        loading={priority ? "eager" : "lazy"}
-        onError={(e) => { e.currentTarget.src = PLACEHOLDER; }}
-        className="absolute inset-0 h-full w-full object-contain transition-transform duration-700 ease-in-out group-hover:scale-[1.05]"
-      />
+      {/* Image area — full tyre visible, no cropping */}
+      <div className="relative flex h-52 items-center justify-center bg-white p-4">
+        <img
+          src={imageUrl}
+          alt={`${product.brand} ${product.name}`}
+          loading={priority ? "eager" : "lazy"}
+          onError={(e) => { e.currentTarget.src = PLACEHOLDER; }}
+          className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-[1.04]"
+        />
+      </div>
 
-      {/* Glare overlay */}
-      <div
-        data-depth-glare
-        className="pointer-events-none absolute inset-[-18%] z-[1] rounded-full bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.16),transparent_56%)]"
-        aria-hidden="true"
-      />
+      {/* Content */}
+      <div className="flex flex-1 flex-col border-t border-gray-100 p-4">
+        {/* Brand + type badge */}
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--primary)]">
+            {product.brand}
+          </p>
+          <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[10px] font-semibold text-gray-500">
+            {product.type}
+          </span>
+        </div>
 
-      {/* Top shimmer line */}
-      <div className="pointer-events-none absolute inset-x-[14%] top-0 z-[2] h-px bg-gradient-to-r from-transparent via-white/90 to-transparent" />
-
-      {/* Type badge */}
-      <span className="absolute right-3 top-3 z-[3] rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-[var(--foreground)] shadow-sm backdrop-blur-sm">
-        {product.type}
-      </span>
-
-      {/* Info panel pinned to bottom with frosted background */}
-      <div className="relative z-[3] mt-auto border-t border-white/20 bg-white/88 p-5 backdrop-blur-md">
-        <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--primary)]">
-          {product.brand}
-        </p>
-        <h3 className="mt-1 text-[0.97rem] font-semibold leading-snug text-[var(--foreground)]">
+        {/* Product name — max 2 lines */}
+        <h3 className="mt-1.5 line-clamp-2 text-[0.95rem] font-bold leading-snug text-[var(--foreground)]">
           {product.name}
         </h3>
-        <p className="mt-0.5 text-[0.82rem] text-[var(--muted)]">
-          {product.size} · {product.spec}
+
+        {/* Size & spec */}
+        <p className="mt-1 text-[0.8rem] text-gray-400">
+          {product.size}{product.spec ? ` · ${product.spec}` : ""}
         </p>
 
-        <div className="mt-3 flex items-end justify-between gap-3">
-          <div>
-            <p className="text-[1.3rem] font-extrabold tracking-tight text-[var(--foreground)]">
-              €{product.price.toFixed(2)}
-            </p>
-            <p className="text-[0.75rem] text-[var(--muted)]">{t.shop.card.shipping}</p>
-          </div>
-          <div className="flex gap-2">
-            <Link
-              href={`/shop/${product.id}`}
-              className="flex h-[42px] items-center justify-center rounded-full bg-[var(--primary)] px-5 text-[0.85rem] font-semibold text-white shadow-[0_10px_24px_rgba(244,81,30,0.22)] transition hover:bg-[var(--primary-hover)]"
-            >
-              {t.shop.card.viewDetails}
-            </Link>
-            <Link
-              href="/quote"
-              className="flex h-[42px] items-center justify-center rounded-full border border-black/10 bg-white/80 px-4 text-[0.85rem] font-semibold text-[var(--foreground)] shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition hover:bg-white"
-            >
-              {t.shop.card.quote}
-            </Link>
-          </div>
+        {/* Price */}
+        <p className="mt-3 text-[1.25rem] font-extrabold tracking-tight text-[var(--foreground)]">
+          €{product.price.toFixed(2)}
+        </p>
+        <p className="text-[0.72rem] text-gray-400">{t.shop.card.shipping}</p>
+
+        {/* Actions */}
+        <div className="mt-4 flex gap-2">
+          <Link
+            href={`/shop/${product.id}`}
+            className="flex h-[40px] flex-1 items-center justify-center rounded-full bg-[var(--primary)] text-[0.82rem] font-semibold text-white shadow-[0_8px_20px_rgba(244,81,30,0.20)] transition hover:bg-[var(--primary-hover)]"
+          >
+            {t.shop.card.viewDetails}
+          </Link>
+          <Link
+            href="/quote"
+            className="flex h-[40px] items-center justify-center rounded-full border border-gray-200 bg-white px-4 text-[0.82rem] font-semibold text-[var(--foreground)] transition hover:border-gray-300 hover:bg-gray-50"
+          >
+            {t.shop.card.quote}
+          </Link>
         </div>
       </div>
     </div>
