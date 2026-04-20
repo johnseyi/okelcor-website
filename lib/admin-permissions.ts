@@ -1,9 +1,9 @@
 // Canonical permissions map — mirrors the backend's ROLE_ACCESS table.
 export const ROLE_ACCESS: Record<string, string[]> = {
-  super_admin:   ["dashboard", "products", "orders", "quotes", "articles", "hero_slides", "brands", "settings", "users", "supplier"],
-  admin:         ["dashboard", "products", "orders", "quotes", "articles", "hero_slides", "brands", "settings", "supplier"],
+  super_admin:   ["dashboard", "products", "orders", "quotes", "articles", "hero_slides", "brands", "categories", "media", "settings", "users", "supplier"],
+  admin:         ["dashboard", "products", "orders", "quotes", "articles", "hero_slides", "brands", "categories", "media", "settings", "users", "supplier"],
   editor:        ["dashboard", "articles", "hero_slides"],
-  order_manager: ["dashboard", "orders", "quotes"],
+  order_manager: ["dashboard", "orders", "quotes", "supplier"],
 };
 
 export function canAccess(role: string, section: string): boolean {
