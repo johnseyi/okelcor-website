@@ -12,6 +12,7 @@ import { SITE_URL as SITE_URL_FALLBACK } from "@/lib/constants";
 import { CustomerAuthProvider } from "@/context/CustomerAuthContext";
 import { SiteSettingsProvider } from "@/context/site-settings-context";
 import { getSiteSettings } from "@/lib/site-settings";
+import CrispChat from "@/components/crisp-chat";
 
 const SITE_URL = (() => {
   try {
@@ -78,6 +79,7 @@ export default async function RootLayout({
                   <CookieConsent />
                   <BackToTop />
                   <AnalyticsScript />
+                  <CrispChat />
                 </CartProvider>
               </SearchProvider>
             </LanguageProvider>
