@@ -79,7 +79,8 @@ export type ApiProduct = {
   image_url?: string | null;
   /** Some endpoints return the cover as bare `image` */
   image?: string | null;
-  images: string[];
+  /** Gallery — may be string paths or objects with a `path` field */
+  images: (string | { path?: string; url?: string; image_url?: string })[];
   sku: string;
   description: string;
 };

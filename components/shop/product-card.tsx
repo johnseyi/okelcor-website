@@ -1,15 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import type { Product } from "./data";
 export type { Product } from "./data";
 import { useLanguage } from "@/context/language-context";
 import { useDepthTilt } from "@/hooks/useDepthTilt";
+import { getProductImageUrl } from "@/lib/utils";
+
+const PLACEHOLDER = "/images/tyre-placeholder.png";
 
 export default function ProductCard({ product, priority = false }: { product: Product; priority?: boolean }) {
   const { t } = useLanguage();
   const cardRef = useDepthTilt<HTMLDivElement>({ maxRotate: 6, maxShift: 9, scale: 1.012 });
+
+  const imageUrl = getProductImageUrl(product.image);
 
   return (
     <div
@@ -17,16 +21,13 @@ export default function ProductCard({ product, priority = false }: { product: Pr
       className="group relative flex min-h-[360px] flex-col overflow-hidden rounded-[22px] border border-black/[0.05] bg-[#e8e8e8] shadow-[0_10px_30px_rgba(0,0,0,0.06)]"
     >
       {/* Full-card background image */}
-      {product.image && (
-        <Image
-          src={product.image}
-          alt={`${product.brand} ${product.name}`}
-          fill
-          sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
-          priority={priority}
-          className="object-contain transition-transform duration-700 ease-in-out group-hover:scale-[1.05]"
-        />
-      )}
+      <img
+        src={imageUrl}
+        alt={`${product.brand} ${product.name}`}
+        loading={priority ? "eager" : "lazy"}
+        onError={(e) => { e.currentTarget.src = PLACEHOLDER; }}
+        className="absolute inset-0 h-full w-full object-contain transition-transform duration-700 ease-in-out group-hover:scale-[1.05]"
+      />
 
       {/* Glare overlay */}
       <div

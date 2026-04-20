@@ -5,6 +5,9 @@ import type { Product } from "./data";
 import Reveal from "@/components/motion/reveal";
 import { StaggerParent, StaggerChild } from "@/components/motion/stagger";
 import { useLanguage } from "@/context/language-context";
+import { getProductImageUrl } from "@/lib/utils";
+
+const PLACEHOLDER = "/images/tyre-placeholder.png";
 
 export default function RelatedProducts({ products }: { products: Product[] }) {
   const { t } = useLanguage();
@@ -30,18 +33,13 @@ export default function RelatedProducts({ products }: { products: Product[] }) {
                 className="group flex flex-col overflow-hidden rounded-[22px] bg-[#efefef] transition-shadow hover:shadow-[0_8px_28px_rgba(0,0,0,0.10)]"
               >
                 <div className="relative aspect-[4/3] overflow-hidden bg-[#e0e0e0]">
-                  {product.image ? (
-                    <img
-                      src={product.image}
-                      alt={`${product.brand} ${product.name}`}
-                      loading="lazy"
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-[#d8d8d8] text-[0.65rem] font-bold uppercase tracking-widest text-[#aaa]">
-                      No image
-                    </div>
-                  )}
+                  <img
+                    src={getProductImageUrl(product.image)}
+                    alt={`${product.brand} ${product.name}`}
+                    loading="lazy"
+                    onError={(e) => { e.currentTarget.src = PLACEHOLDER; }}
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                  />
                   <span className="absolute right-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-[var(--foreground)] shadow-sm backdrop-blur-sm">
                     {product.type}
                   </span>

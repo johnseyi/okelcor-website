@@ -15,8 +15,17 @@ const BRANDS_API   = "/api/shop/brands";
 const SPECS_API    = "/api/shop/specs";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+function extractImagePath(entry: any): string {
+  if (!entry) return "";
+  if (typeof entry === "string") return entry;
+  return entry.path ?? entry.url ?? entry.image_url ?? "";
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function toProduct(p: any): Product {
-  const img = p.primary_image ?? p.image_url ?? p.image ?? p.images?.[0] ?? "";
+  const img = p.primary_image ?? p.image_url ?? p.image ?? extractImagePath(p.images?.[0]) ?? "";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const imgs: string[] = p.images?.length ? p.images.map((x: any) => extractImagePath(x)).filter(Boolean) : (img ? [img] : []);
   return {
     id:          p.id,
     brand:       p.brand        ?? "",
@@ -29,7 +38,7 @@ function toProduct(p: any): Product {
     sku:         p.sku          ?? "",
     description: p.description  ?? "",
     image:       img,
-    images:      p.images?.length ? p.images : (img ? [img] : []),
+    images:      imgs,
   };
 }
 

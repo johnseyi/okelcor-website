@@ -16,13 +16,23 @@ import { getServerLocale } from "@/lib/locale";
 
 type Props = { params: Promise<{ id: string }> };
 
+function extractImagePath(entry: unknown): string {
+  if (!entry) return "";
+  if (typeof entry === "string") return entry;
+  const obj = entry as Record<string, unknown>;
+  return (obj.path ?? obj.url ?? obj.image_url ?? "") as string;
+}
+
 /** Map the API product shape → local Product shape used by all components. */
 function toProduct(p: ApiProduct): Product {
-  const img = p.primary_image ?? p.image_url ?? p.image ?? p.images?.[0] ?? "";
+  const img = p.primary_image ?? p.image_url ?? p.image ?? extractImagePath(p.images?.[0]) ?? "";
+  const imgs: string[] = p.images?.length
+    ? p.images.map(extractImagePath).filter(Boolean)
+    : (img ? [img] : []);
   return {
     ...p,
     image: img,
-    images: p.images?.length ? p.images : (img ? [img] : []),
+    images: imgs,
   };
 }
 
