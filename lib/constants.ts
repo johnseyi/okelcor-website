@@ -23,5 +23,5 @@ export const COMPANY_ADDRESS_FULL = `${COMPANY_LEGAL_NAME} · ${COMPANY_ADDRESS_
 export const COMPANY_VAT_NUMBER      = "DE343138173";
 export const COMPANY_REGISTRATION_NR = "HR-NR.: 265378";
 export const COMPANY_DIRECTOR        = "Dr. Gerhard Padderatz";
-export const COMPANY_REPRESENTATIVE  = "Lojum Victor";
-export const COMPANY_REP_ADDRESS     = "Kampala, Uganda";
+export const COMPANY_REPRESENTATIVE  = "Solomon Okello";
+export const COMPANY_REP_ADDRESS     = "Munich, Germany";
