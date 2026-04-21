@@ -165,7 +165,7 @@ export default function Image() {
             letterSpacing: "0.04em",
           }}
         >
-          okelcor.de
+          okelcor.com
         </div>
       </div>
     ),

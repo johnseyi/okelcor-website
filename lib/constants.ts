@@ -2,7 +2,7 @@
 // Single source of truth for all company-specific values.
 // Update here and every consumer picks up the change automatically.
 
-export const SITE_URL = "https://okelcor.de";
+export const SITE_URL = "https://okelcor.com";
 
 export const COMPANY_NAME = "Okelcor";
 export const COMPANY_LEGAL_NAME = "Okelcor GmbH";

@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-        "HTTP-Referer": "https://okelcor.de",
+        "HTTP-Referer": "https://okelcor.com",
         "X-Title": "Okelcor Chat Assistant",
       },
       body: JSON.stringify(payload),
