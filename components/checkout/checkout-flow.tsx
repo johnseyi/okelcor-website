@@ -226,9 +226,10 @@ export default function CheckoutFlow() {
     items: items.map((item) => ({
       product: {
         id:    item.product.id,
-        brand: item.product.brand,
+        sku:   item.product.sku   || `ITEM-${item.product.id}`,
+        brand: item.product.brand || "N/A",
         name:  item.product.name,
-        size:  item.product.size,
+        size:  item.product.size  || "N/A",
         price: item.product.price,
       },
       quantity: item.quantity,
