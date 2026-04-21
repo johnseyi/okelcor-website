@@ -3,8 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, Pencil, Trash2, ToggleLeft, ToggleRight, ChevronLeft, ChevronRight, X } from "lucide-react";
-import { toggleProductActive, deleteProduct } from "@/app/admin/products/actions";
+import { Search, Pencil, Trash2, ToggleLeft, ToggleRight, ChevronLeft, ChevronRight, X, ShoppingBag } from "lucide-react";
+import { toggleProductActive, deleteProduct, listOnEbay, removeFromEbay } from "@/app/admin/products/actions";
 import type { AdminProduct } from "@/lib/admin-api";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -123,6 +123,7 @@ export default function ProductsTable({
   const [actionError, setActionError] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [ebayActionId, setEbayActionId] = useState<number | null>(null);
   const [, startTransition] = useTransition();
 
   // ── URL navigation ──────────────────────────────────────────────────────────
@@ -159,6 +160,19 @@ export default function ProductsTable({
       if (result.error) setActionError(result.error);
       else router.refresh();
       setTogglingId(null);
+    });
+  };
+
+  const handleEbayToggle = (product: AdminProduct) => {
+    setActionError(null);
+    setEbayActionId(product.id);
+    startTransition(async () => {
+      const result = product.ebay_listed
+        ? await removeFromEbay(product.id)
+        : await listOnEbay(product.id);
+      if (result.error) setActionError(result.error);
+      else router.refresh();
+      setEbayActionId(null);
     });
   };
 
@@ -258,7 +272,7 @@ export default function ProductsTable({
           <table className="w-full min-w-[780px] text-left">
             <thead>
               <tr className="border-b border-black/[0.06] bg-[#fafafa]">
-                {["Image", "SKU / Name", "Brand", "Type", "Size", "Price", "Status", "Actions"].map(
+                {["Image", "SKU / Name", "Brand", "Type", "Size", "Price", "Status", "eBay", "Actions"].map(
                   (h) => (
                     <th
                       key={h}
@@ -273,7 +287,7 @@ export default function ProductsTable({
             <tbody className="divide-y divide-black/[0.04]">
               {products.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-[0.875rem] text-[#5c5e62]">
+                  <td colSpan={9} className="px-4 py-12 text-center text-[0.875rem] text-[#5c5e62]">
                     No products found. Try adjusting your search or{" "}
                     <Link href="/admin/products/new" className="font-semibold text-[#E85C1A] underline">
                       add one
@@ -285,6 +299,7 @@ export default function ProductsTable({
                 products.map((product) => {
                   const active = product.is_active ?? true;
                   const isToggling = togglingId === product.id;
+                  const isEbayActing = ebayActionId === product.id;
                   return (
                     <tr key={product.id} className="group transition hover:bg-[#fafafa]">
                       {/* Thumbnail */}
@@ -338,6 +353,18 @@ export default function ProductsTable({
                         <ActiveBadge active={active} />
                       </td>
 
+                      {/* eBay status */}
+                      <td className="px-4 py-3">
+                        {product.ebay_listed ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[0.68rem] font-bold text-green-700">
+                            <ShoppingBag size={10} strokeWidth={2.5} />
+                            eBay Live
+                          </span>
+                        ) : (
+                          <span className="text-[0.72rem] text-[#aaa]">—</span>
+                        )}
+                      </td>
+
                       {/* Actions */}
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5">
@@ -363,6 +390,22 @@ export default function ProductsTable({
                             ) : (
                               <ToggleLeft size={16} />
                             )}
+                          </button>
+
+                          {/* eBay toggle */}
+                          <button
+                            type="button"
+                            onClick={() => handleEbayToggle(product)}
+                            disabled={isEbayActing}
+                            title={product.ebay_listed ? "Remove from eBay" : "List on eBay"}
+                            className={[
+                              "flex h-8 w-8 items-center justify-center rounded-lg transition disabled:opacity-40",
+                              product.ebay_listed
+                                ? "text-green-600 hover:bg-green-50 hover:text-green-700"
+                                : "text-[#5c5e62] hover:bg-green-50 hover:text-green-600",
+                            ].join(" ")}
+                          >
+                            <ShoppingBag size={14} strokeWidth={2} />
                           </button>
 
                           {/* Delete */}

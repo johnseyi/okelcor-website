@@ -252,6 +252,56 @@ export async function deleteProductImage(
   return {};
 }
 
+export async function listOnEbay(
+  id: number
+): Promise<{ error?: string }> {
+  const token = await getToken();
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/admin/products/${id}/ebay/list`, {
+      method: "POST",
+      headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+  } catch {
+    return { error: "Network error. Could not reach the server." };
+  }
+
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    return { error: json.message || `Failed to list product on eBay (HTTP ${res.status}).` };
+  }
+
+  revalidateProducts(id);
+  revalidatePath("/admin/ebay");
+  return {};
+}
+
+export async function removeFromEbay(
+  id: number
+): Promise<{ error?: string }> {
+  const token = await getToken();
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/admin/products/${id}/ebay/remove`, {
+      method: "DELETE",
+      headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+  } catch {
+    return { error: "Network error. Could not reach the server." };
+  }
+
+  if (!res.ok && res.status !== 204) {
+    const json = await res.json().catch(() => ({}));
+    return { error: json.message || `Failed to remove product from eBay (HTTP ${res.status}).` };
+  }
+
+  revalidateProducts(id);
+  revalidatePath("/admin/ebay");
+  return {};
+}
+
 export async function restoreProduct(
   id: number
 ): Promise<{ error?: string }> {

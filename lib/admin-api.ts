@@ -78,6 +78,7 @@ export type AdminProduct = {
   sku: string;
   description?: string;
   is_active?: boolean;
+  ebay_listed?: boolean;
   created_at?: string;
   deleted_at?: string | null;
 };

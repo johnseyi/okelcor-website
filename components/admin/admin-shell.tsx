@@ -22,6 +22,8 @@ import {
   TrendingUp,
   KeyRound,
   AlertTriangle,
+  ShoppingBag,
+  BarChart2,
 } from "lucide-react";
 import { logoutAdmin } from "@/app/admin/actions";
 import { canAccess, PATH_SECTION } from "@/lib/admin-permissions";
@@ -30,6 +32,7 @@ import { canAccess, PATH_SECTION } from "@/lib/admin-permissions";
 
 const NAV = [
   { label: "Dashboard",      href: "/admin",             icon: LayoutDashboard, section: "dashboard" },
+  { label: "Analytics",      href: "/admin/analytics",  icon: BarChart2,       section: "analytics" },
   { label: "Products",       href: "/admin/products",    icon: Package,         section: "products" },
   { label: "Articles",       href: "/admin/articles",    icon: FileText,        section: "articles" },
   { label: "Orders",         href: "/admin/orders",      icon: ShoppingCart,    section: "orders" },
@@ -41,6 +44,10 @@ const NAV = [
   { label: "Supplier Intel", href: "/admin/supplier",    icon: TrendingUp,      section: "supplier" },
   { label: "Users",          href: "/admin/users",       icon: Users,           section: "users" },
   { label: "Profile",        href: "/admin/profile",     icon: UserCircle,      section: null },
+] as const;
+
+const SALES_CHANNELS_NAV = [
+  { label: "eBay", href: "/admin/ebay", icon: ShoppingBag, section: "ebay" },
 ] as const;
 
 const ROLE_BADGE_COLORS: Record<string, string> = {
@@ -88,6 +95,10 @@ function Sidebar({
     section === null || !role || canAccess(role, section)
   );
 
+  const visibleSalesChannels = SALES_CHANNELS_NAV.filter(({ section }) =>
+    !role || canAccess(role, section)
+  );
+
   return (
     <div className="flex h-full flex-col bg-[#1a1a1a]">
       {/* Logo */}
@@ -133,6 +144,41 @@ function Sidebar({
             </Link>
           );
         })}
+
+        {/* Sales Channels section */}
+        {visibleSalesChannels.length > 0 && (
+          <>
+            <p className="mt-4 mb-1 px-3 text-[0.63rem] font-bold uppercase tracking-[0.18em] text-white/25">
+              Sales Channels
+            </p>
+            {visibleSalesChannels.map(({ label, href, icon: Icon }) => {
+              const active = isActive(href);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={onClose}
+                  className={[
+                    "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-[0.875rem] font-medium transition-all",
+                    active
+                      ? "bg-[#E85C1A] text-white shadow-sm"
+                      : "text-white/55 hover:bg-white/[0.06] hover:text-white",
+                  ].join(" ")}
+                >
+                  <Icon
+                    size={16}
+                    strokeWidth={active ? 2.2 : 1.8}
+                    className="shrink-0"
+                  />
+                  <span className="flex-1 truncate">{label}</span>
+                  {active && (
+                    <ChevronRight size={13} strokeWidth={2.5} className="shrink-0 opacity-60" />
+                  )}
+                </Link>
+              );
+            })}
+          </>
+        )}
       </nav>
     </div>
   );

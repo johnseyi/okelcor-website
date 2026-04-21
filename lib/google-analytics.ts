@@ -1,0 +1,189 @@
+import { BetaAnalyticsDataClient } from "@google-analytics/data";
+
+const propertyId = process.env.GA_PROPERTY_ID ?? "";
+
+function getClient() {
+  const clientEmail = process.env.GOOGLE_SA_CLIENT_EMAIL;
+  const privateKey = process.env.GOOGLE_SA_PRIVATE_KEY?.replace(/\\n/g, "\n");
+
+  if (!clientEmail || !privateKey || !propertyId) return null;
+
+  return new BetaAnalyticsDataClient({
+    credentials: { client_email: clientEmail, private_key: privateKey },
+  });
+}
+
+export type GaOverview = {
+  activeUsers: number;
+  sessions: number;
+  pageViews: number;
+  avgSessionDuration: number; // seconds
+  bounceRate: number;         // 0–100
+};
+
+export type GaDayPoint = {
+  date: string; // "YYYY-MM-DD"
+  sessions: number;
+  pageViews: number;
+};
+
+export type GaTopPage = {
+  path: string;
+  pageViews: number;
+};
+
+export type GaTrafficSource = {
+  source: string;
+  sessions: number;
+};
+
+export type GaCountry = {
+  country: string;
+  sessions: number;
+};
+
+// ── helpers ───────────────────────────────────────────────────────────────────
+
+function num(val: string | null | undefined): number {
+  return val ? Math.round(Number(val)) : 0;
+}
+
+function fmt(val: string | null | undefined): string {
+  return val ?? "(not set)";
+}
+
+// ── Overview metrics (last N days) ────────────────────────────────────────────
+
+export async function fetchGaOverview(days = 28): Promise<GaOverview | null> {
+  const client = getClient();
+  if (!client) return null;
+
+  try {
+    const [response] = await client.runReport({
+      property: `properties/${propertyId}`,
+      dateRanges: [{ startDate: `${days}daysAgo`, endDate: "today" }],
+      metrics: [
+        { name: "activeUsers" },
+        { name: "sessions" },
+        { name: "screenPageViews" },
+        { name: "averageSessionDuration" },
+        { name: "bounceRate" },
+      ],
+    });
+
+    const row = response.rows?.[0]?.metricValues ?? [];
+    return {
+      activeUsers:         num(row[0]?.value),
+      sessions:            num(row[1]?.value),
+      pageViews:           num(row[2]?.value),
+      avgSessionDuration:  num(row[3]?.value),
+      bounceRate:          Math.round(Number(row[4]?.value ?? 0) * 100),
+    };
+  } catch {
+    return null;
+  }
+}
+
+// ── Daily trend (last N days) ─────────────────────────────────────────────────
+
+export async function fetchGaDailyTrend(days = 28): Promise<GaDayPoint[]> {
+  const client = getClient();
+  if (!client) return [];
+
+  try {
+    const [response] = await client.runReport({
+      property: `properties/${propertyId}`,
+      dateRanges: [{ startDate: `${days}daysAgo`, endDate: "today" }],
+      dimensions: [{ name: "date" }],
+      metrics: [{ name: "sessions" }, { name: "screenPageViews" }],
+      orderBys: [{ dimension: { dimensionName: "date" } }],
+    });
+
+    return (response.rows ?? []).map((row) => {
+      const raw = row.dimensionValues?.[0]?.value ?? "";
+      const date = `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`;
+      return {
+        date,
+        sessions:  num(row.metricValues?.[0]?.value),
+        pageViews: num(row.metricValues?.[1]?.value),
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
+// ── Top pages ─────────────────────────────────────────────────────────────────
+
+export async function fetchGaTopPages(days = 28, limit = 10): Promise<GaTopPage[]> {
+  const client = getClient();
+  if (!client) return [];
+
+  try {
+    const [response] = await client.runReport({
+      property: `properties/${propertyId}`,
+      dateRanges: [{ startDate: `${days}daysAgo`, endDate: "today" }],
+      dimensions: [{ name: "pagePath" }],
+      metrics: [{ name: "screenPageViews" }],
+      orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }],
+      limit,
+    });
+
+    return (response.rows ?? []).map((row) => ({
+      path:      fmt(row.dimensionValues?.[0]?.value),
+      pageViews: num(row.metricValues?.[0]?.value),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// ── Traffic sources ───────────────────────────────────────────────────────────
+
+export async function fetchGaTrafficSources(days = 28, limit = 8): Promise<GaTrafficSource[]> {
+  const client = getClient();
+  if (!client) return [];
+
+  try {
+    const [response] = await client.runReport({
+      property: `properties/${propertyId}`,
+      dateRanges: [{ startDate: `${days}daysAgo`, endDate: "today" }],
+      dimensions: [{ name: "sessionDefaultChannelGroup" }],
+      metrics: [{ name: "sessions" }],
+      orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
+      limit,
+    });
+
+    return (response.rows ?? []).map((row) => ({
+      source:   fmt(row.dimensionValues?.[0]?.value),
+      sessions: num(row.metricValues?.[0]?.value),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// ── Top countries ─────────────────────────────────────────────────────────────
+
+export async function fetchGaCountries(days = 28, limit = 8): Promise<GaCountry[]> {
+  const client = getClient();
+  if (!client) return [];
+
+  try {
+    const [response] = await client.runReport({
+      property: `properties/${propertyId}`,
+      dateRanges: [{ startDate: `${days}daysAgo`, endDate: "today" }],
+      dimensions: [{ name: "country" }],
+      metrics: [{ name: "sessions" }],
+      orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
+      limit,
+    });
+
+    return (response.rows ?? []).map((row) => ({
+      country:  fmt(row.dimensionValues?.[0]?.value),
+      sessions: num(row.metricValues?.[0]?.value),
+    }));
+  } catch {
+    return [];
+  }
+}

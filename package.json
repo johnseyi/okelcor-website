@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@adyen/adyen-web": "^6.33.0",
+    "@google-analytics/data": "^5.2.1",
     "@gsap/react": "^2.1.2",
     "clsx": "^2.1.1",
     "crisp-sdk-web": "^1.1.0",
