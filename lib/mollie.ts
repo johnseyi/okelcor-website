@@ -1,12 +1,10 @@
 import { createMollieClient } from "@mollie/api-client";
 
-const apiKey = process.env.MOLLIE_API_KEY ?? "";
-
-if (!apiKey && process.env.NODE_ENV === "production") {
-  console.error("[Mollie] MOLLIE_API_KEY is not set.");
+export function getMollieClient() {
+  const apiKey = process.env.MOLLIE_API_KEY;
+  if (!apiKey) throw new Error("MOLLIE_API_KEY is not set.");
+  return createMollieClient({ apiKey });
 }
-
-export const mollieClient = createMollieClient({ apiKey });
 
 export function formatAmount(euros: number): string {
   return euros.toFixed(2);

@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
-import { mollieClient, formatAmount, SITE_URL } from "@/lib/mollie";
+import { getMollieClient, formatAmount, SITE_URL } from "@/lib/mollie";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
   // ── Step 3: create Mollie payment ─────────────────────────────────────────────
   try {
-    const payment = await mollieClient.payments.create({
+    const payment = await getMollieClient().payments.create({
       amount: {
         currency: "EUR",
         value: formatAmount(total),

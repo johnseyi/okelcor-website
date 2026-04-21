@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { mollieClient } from "@/lib/mollie";
+import { getMollieClient } from "@/lib/mollie";
 
 export async function GET(request: NextRequest) {
   const paymentId = request.nextUrl.searchParams.get("paymentId");
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const payment = await mollieClient.payments.get(paymentId);
+    const payment = await getMollieClient().payments.get(paymentId);
     return NextResponse.json({
       status:   payment.status,
       orderRef: (payment.metadata as Record<string, string>)?.orderRef ?? "",

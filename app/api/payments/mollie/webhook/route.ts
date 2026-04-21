@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { mollieClient } from "@/lib/mollie";
+import { getMollieClient } from "@/lib/mollie";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 const WEBHOOK_SECRET = process.env.MOLLIE_WEBHOOK_SECRET ?? "";
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
   // Fetch the payment from Mollie to verify status
   let payment;
   try {
-    payment = await mollieClient.payments.get(paymentId);
+    payment = await getMollieClient().payments.get(paymentId);
   } catch {
     return NextResponse.json({ error: "Could not fetch payment." }, { status: 502 });
   }
