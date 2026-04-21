@@ -32,7 +32,20 @@ export async function POST(request: NextRequest) {
   // payment_method comes from frontend (e.g. "creditcard", "ideal", "paypal")
   const paymentMethod = (body.payment_method as string) || "creditcard";
 
-  const normalisedBody = { ...body, delivery, payment_method: paymentMethod };
+  // Flatten items: { product: { id, brand, name, size, price }, quantity }
+  //             → { sku, brand, name, size, unit_price, quantity }
+  type RawItem = { product: Record<string, unknown>; quantity: number };
+  const rawItems = Array.isArray(body.items) ? (body.items as RawItem[]) : [];
+  const normalisedItems = rawItems.map((item) => ({
+    sku:        item.product.sku,
+    brand:      item.product.brand,
+    name:       item.product.name,
+    size:       item.product.size,
+    unit_price: item.product.price,
+    quantity:   item.quantity,
+  }));
+
+  const normalisedBody = { ...body, delivery, items: normalisedItems, payment_method: paymentMethod };
 
   // ── Step 1: create order in the backend ──────────────────────────────────────
   let orderRef: string;
@@ -66,9 +79,8 @@ export async function POST(request: NextRequest) {
   }
 
   // ── Step 2: calculate total ───────────────────────────────────────────────────
-  const items = Array.isArray(body.items) ? body.items as { quantity: number; product: { price: number } }[] : [];
   const fetAddon = body.fet_addon as { unit_price: number; quantity: number } | undefined;
-  const itemsTotal = items.reduce((sum, i) => sum + Number(i.product.price) * Number(i.quantity), 0);
+  const itemsTotal = rawItems.reduce((sum, i) => sum + Number(i.product.price) * Number(i.quantity), 0);
   const fetTotal   = fetAddon ? Number(fetAddon.unit_price) * Number(fetAddon.quantity) : 0;
   const total      = itemsTotal + fetTotal;
 

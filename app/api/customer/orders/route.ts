@@ -15,12 +15,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: "Invalid request body." }, { status: 400 });
   }
 
-  // Normalise delivery keys: camelCase → snake_case for Laravel
+  // Normalise delivery: camelCase → snake_case
   const rawDelivery = body.delivery as Record<string, string> | undefined;
-  if (rawDelivery) {
-    body = {
-      ...body,
-      delivery: {
+  const normDelivery = rawDelivery
+    ? {
         name:        rawDelivery.name,
         email:       rawDelivery.email,
         address:     rawDelivery.address,
@@ -28,9 +26,26 @@ export async function POST(request: NextRequest) {
         postal_code: rawDelivery.postal_code ?? rawDelivery.postalCode,
         country:     rawDelivery.country,
         phone:       rawDelivery.phone,
-      },
-    };
-  }
+      }
+    : undefined;
+
+  // Flatten items: nested product object → flat fields expected by Laravel
+  type RawItem = { product: Record<string, unknown>; quantity: number };
+  const rawItems = Array.isArray(body.items) ? (body.items as RawItem[]) : [];
+  const normItems = rawItems.map((item) => ({
+    sku:        item.product.sku,
+    brand:      item.product.brand,
+    name:       item.product.name,
+    size:       item.product.size,
+    unit_price: item.product.price,
+    quantity:   item.quantity,
+  }));
+
+  body = {
+    ...body,
+    ...(normDelivery ? { delivery: normDelivery } : {}),
+    items: normItems,
+  };
 
   try {
     const res = await fetch(`${API_URL}/orders`, {
