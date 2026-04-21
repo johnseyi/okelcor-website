@@ -15,6 +15,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
+  // ── Normalise delivery keys: camelCase → snake_case for Laravel ─────────────
+  const rawDelivery = body.delivery as Record<string, string> | undefined;
+  const delivery = rawDelivery
+    ? {
+        name:        rawDelivery.name,
+        email:       rawDelivery.email,
+        address:     rawDelivery.address,
+        city:        rawDelivery.city,
+        postal_code: rawDelivery.postal_code ?? rawDelivery.postalCode,
+        country:     rawDelivery.country,
+        phone:       rawDelivery.phone,
+      }
+    : undefined;
+
+  const normalisedBody = { ...body, delivery };
+
   // ── Step 1: create order in the backend ──────────────────────────────────────
   let orderRef: string;
   try {
@@ -25,7 +41,7 @@ export async function POST(request: NextRequest) {
         Accept: "application/json",
         ...(customerToken ? { Authorization: `Bearer ${customerToken}` } : {}),
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(normalisedBody),
       cache: "no-store",
     });
 
@@ -65,7 +81,7 @@ export async function POST(request: NextRequest) {
       webhookUrl: `${SITE_URL}/api/payments/mollie/webhook`,
       metadata: {
         orderRef,
-        customerEmail: (body.delivery as Record<string, string>)?.email ?? "",
+        customerEmail: delivery?.email ?? "",
       },
     });
 

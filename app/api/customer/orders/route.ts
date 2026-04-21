@@ -8,11 +8,28 @@ const API_URL =
 export async function POST(request: NextRequest) {
   const customerToken = request.cookies.get("customer_token")?.value;
 
-  let body: unknown;
+  let body: Record<string, unknown>;
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ message: "Invalid request body." }, { status: 400 });
+  }
+
+  // Normalise delivery keys: camelCase → snake_case for Laravel
+  const rawDelivery = body.delivery as Record<string, string> | undefined;
+  if (rawDelivery) {
+    body = {
+      ...body,
+      delivery: {
+        name:        rawDelivery.name,
+        email:       rawDelivery.email,
+        address:     rawDelivery.address,
+        city:        rawDelivery.city,
+        postal_code: rawDelivery.postal_code ?? rawDelivery.postalCode,
+        country:     rawDelivery.country,
+        phone:       rawDelivery.phone,
+      },
+    };
   }
 
   try {
