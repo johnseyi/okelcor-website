@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, ChevronRight, Lock, ShieldCheck } from "lucide-react";
+import { CheckCircle2, ChevronRight, Lock, ShieldCheck, Check } from "lucide-react";
 import { useCart } from "@/context/cart-context";
 import { useLanguage } from "@/context/language-context";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
@@ -26,6 +26,16 @@ type DeliveryErrors = Partial<DeliveryData>;
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const DELIVERY_COST = 0;
+
+const PAYMENT_METHODS = [
+  { id: "creditcard", label: "Credit / Debit Card", sub: "Visa, Mastercard, Amex" },
+  { id: "ideal",      label: "iDEAL",               sub: "Dutch bank transfer" },
+  { id: "paypal",     label: "PayPal",               sub: "Pay with PayPal" },
+  { id: "klarna",     label: "Klarna",               sub: "Pay later / instalments" },
+  { id: "bancontact", label: "Bancontact",            sub: "Belgian bank cards" },
+] as const;
+
+type PaymentMethodId = typeof PAYMENT_METHODS[number]["id"];
 
 const COUNTRIES = [
   "Germany", "United Kingdom", "Netherlands", "Belgium", "France",
@@ -182,6 +192,8 @@ export default function CheckoutFlow() {
   const [vatNumber, setVatNumber]           = useState("");
   const [submitting, setSubmitting]         = useState(false);
   const [submitError, setSubmitError]       = useState<string | null>(null);
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethodId | null>(null);
+  const [methodError, setMethodError]       = useState(false);
 
   const [fetAdded, setFetAdded]         = useState(false);
   const [fetQty, setFetQty]             = useState(1);
@@ -209,6 +221,7 @@ export default function CheckoutFlow() {
 
   const orderPayload = () => ({
     delivery,
+    payment_method: selectedMethod,
     vat_number: vatNumber.trim() || undefined,
     items: items.map((item) => ({
       product: {
@@ -237,9 +250,14 @@ export default function CheckoutFlow() {
       deliveryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
+    if (!selectedMethod) {
+      setMethodError(true);
+      return;
+    }
 
     setSubmitting(true);
     setSubmitError(null);
+    setMethodError(false);
 
     try {
       const res = await fetch("/api/payments/mollie/create", {
@@ -368,33 +386,59 @@ export default function CheckoutFlow() {
             />
           )}
 
-          {/* Payment section */}
+          {/* Payment method selection */}
           <SectionCard title={c.paymentMethod}>
-            <p className="mb-5 text-[0.88rem] leading-6 text-[var(--muted)]">
-              You will be redirected to Mollie&apos;s secure payment page to complete your purchase. All major payment methods are accepted.
+            <p className="mb-4 text-[0.88rem] leading-6 text-[var(--muted)]">
+              Select your preferred payment method. You will be redirected to Mollie&apos;s secure checkout to complete the payment.
             </p>
 
-            {/* Payment method icons */}
-            <div className="mb-5 flex flex-wrap items-center gap-2.5">
-              {["Visa", "Mastercard", "iDEAL", "PayPal", "Klarna", "Bancontact"].map((m) => (
-                <span
-                  key={m}
-                  className="rounded-[8px] border border-black/[0.08] bg-white px-3 py-1.5 text-[0.72rem] font-bold text-[#5c5e62] shadow-sm"
-                >
-                  {m}
-                </span>
-              ))}
+            <div className="flex flex-col gap-2.5">
+              {PAYMENT_METHODS.map((method) => {
+                const active = selectedMethod === method.id;
+                return (
+                  <button
+                    key={method.id}
+                    type="button"
+                    onClick={() => { setSelectedMethod(method.id); setMethodError(false); }}
+                    className={[
+                      "flex w-full items-center justify-between rounded-[14px] border-2 px-4 py-3.5 text-left transition",
+                      active
+                        ? "border-[var(--primary)] bg-[var(--primary)]/5"
+                        : "border-black/[0.08] bg-white hover:border-black/20",
+                    ].join(" ")}
+                  >
+                    <div>
+                      <p className={`text-[0.9rem] font-semibold ${active ? "text-[var(--primary)]" : "text-[var(--foreground)]"}`}>
+                        {method.label}
+                      </p>
+                      <p className="mt-0.5 text-[0.78rem] text-[var(--muted)]">{method.sub}</p>
+                    </div>
+                    <div className={[
+                      "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition",
+                      active ? "border-[var(--primary)] bg-[var(--primary)]" : "border-black/20",
+                    ].join(" ")}>
+                      {active && <Check size={11} strokeWidth={3} className="text-white" />}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
 
+            {methodError && (
+              <p className="mt-3 text-[0.78rem] font-semibold text-red-500">
+                Please select a payment method to continue.
+              </p>
+            )}
+
             {/* Trust badges */}
-            <div className="flex flex-wrap items-center gap-4 text-[0.75rem] text-[#5c5e62]">
+            <div className="mt-4 flex flex-wrap items-center gap-4 text-[0.75rem] text-[#5c5e62]">
               <span className="flex items-center gap-1.5">
                 <ShieldCheck size={14} className="text-green-500" />
                 256-bit SSL encryption
               </span>
               <span className="flex items-center gap-1.5">
                 <Lock size={14} className="text-green-500" />
-                PCI DSS compliant
+                PCI DSS compliant via Mollie
               </span>
             </div>
           </SectionCard>

@@ -29,7 +29,10 @@ export async function POST(request: NextRequest) {
       }
     : undefined;
 
-  const normalisedBody = { ...body, delivery };
+  // payment_method comes from frontend (e.g. "creditcard", "ideal", "paypal")
+  const paymentMethod = (body.payment_method as string) || "creditcard";
+
+  const normalisedBody = { ...body, delivery, payment_method: paymentMethod };
 
   // ── Step 1: create order in the backend ──────────────────────────────────────
   let orderRef: string;
@@ -47,8 +50,12 @@ export async function POST(request: NextRequest) {
 
     const orderJson = await orderRes.json().catch(() => ({}));
     if (!orderRes.ok) {
+      // Surface full Laravel validation errors for easier debugging
+      const detail = orderJson.errors
+        ? Object.values(orderJson.errors as Record<string, string[]>).flat().join(" | ")
+        : null;
       return NextResponse.json(
-        { error: orderJson.message ?? "Failed to create order." },
+        { error: detail ?? orderJson.message ?? "Failed to create order." },
         { status: orderRes.status }
       );
     }
@@ -70,6 +77,16 @@ export async function POST(request: NextRequest) {
   }
 
   // ── Step 3: create Mollie payment ─────────────────────────────────────────────
+  // Map our method names to Mollie's accepted method identifiers
+  const MOLLIE_METHODS: Record<string, string> = {
+    creditcard: "creditcard",
+    ideal:      "ideal",
+    paypal:     "paypal",
+    klarna:     "klarna",
+    bancontact: "bancontact",
+  };
+  const mollieMethod = MOLLIE_METHODS[paymentMethod];
+
   try {
     const payment = await getMollieClient().payments.create({
       amount: {
@@ -79,6 +96,9 @@ export async function POST(request: NextRequest) {
       description: `Order ${orderRef} — Okelcor`,
       redirectUrl: `${SITE_URL}/checkout/return?orderRef=${encodeURIComponent(orderRef)}`,
       webhookUrl: `${SITE_URL}/api/payments/mollie/webhook`,
+      // Pre-select the payment method on Mollie's hosted page
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ...(mollieMethod ? { method: mollieMethod as any } : {}),
       metadata: {
         orderRef,
         customerEmail: delivery?.email ?? "",
