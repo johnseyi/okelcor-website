@@ -99,34 +99,37 @@ export async function POST(request: NextRequest) {
   };
   const mollieMethod = MOLLIE_METHODS[paymentMethod];
 
+  const basePayload = {
+    amount: { currency: "EUR", value: formatAmount(total) },
+    description: `Order ${orderRef} — Okelcor`,
+    redirectUrl: `${SITE_URL}/checkout/return?orderRef=${encodeURIComponent(orderRef)}`,
+    webhookUrl:  `${SITE_URL}/api/payments/mollie/webhook`,
+    metadata: { orderRef, customerEmail: delivery?.email ?? "" },
+  };
+
   try {
-    const payment = await getMollieClient().payments.create({
-      amount: {
-        currency: "EUR",
-        value: formatAmount(total),
-      },
-      description: `Order ${orderRef} — Okelcor`,
-      redirectUrl: `${SITE_URL}/checkout/return?orderRef=${encodeURIComponent(orderRef)}`,
-      webhookUrl: `${SITE_URL}/api/payments/mollie/webhook`,
-      // Pre-select the payment method on Mollie's hosted page
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ...(mollieMethod ? { method: mollieMethod as any } : {}),
-      metadata: {
-        orderRef,
-        customerEmail: delivery?.email ?? "",
-      },
-    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const withMethod = mollieMethod ? { ...basePayload, method: mollieMethod as any } : basePayload;
+    let payment;
+    try {
+      payment = await getMollieClient().payments.create(withMethod);
+    } catch (methodErr) {
+      const msg = methodErr instanceof Error ? methodErr.message : "";
+      // If this specific method isn't enabled on the profile, fall back to
+      // Mollie's hosted method picker (no method pre-selected).
+      if (mollieMethod && msg.toLowerCase().includes("method")) {
+        payment = await getMollieClient().payments.create(basePayload);
+      } else {
+        throw methodErr;
+      }
+    }
 
     const checkoutUrl = payment._links.checkout?.href;
     if (!checkoutUrl) {
       return NextResponse.json({ error: "Mollie did not return a checkout URL." }, { status: 502 });
     }
 
-    return NextResponse.json({
-      checkoutUrl,
-      paymentId: payment.id,
-      orderRef,
-    });
+    return NextResponse.json({ checkoutUrl, paymentId: payment.id, orderRef });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Mollie payment creation failed.";
     return NextResponse.json({ error: msg }, { status: 502 });
