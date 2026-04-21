@@ -19,3 +19,9 @@ export const COMPANY_ADDRESS_COUNTRY = "Germany";
 
 /** Full one-line address for use in emails and structured data */
 export const COMPANY_ADDRESS_FULL = `${COMPANY_LEGAL_NAME} · ${COMPANY_ADDRESS_STREET} · ${COMPANY_ADDRESS_CITY}, ${COMPANY_ADDRESS_COUNTRY}`;
+
+export const COMPANY_VAT_NUMBER      = "DE343138173";
+export const COMPANY_REGISTRATION_NR = "HR-NR.: 265378";
+export const COMPANY_DIRECTOR        = "Dr. Gerhard Padderatz";
+export const COMPANY_REPRESENTATIVE  = "Lojum Victor";
+export const COMPANY_REP_ADDRESS     = "Kampala, Uganda";
