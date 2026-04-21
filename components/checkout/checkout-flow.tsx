@@ -1,12 +1,11 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, ChevronRight } from "lucide-react";
+import { CheckCircle2, ChevronRight, Lock, ShieldCheck } from "lucide-react";
 import { useCart } from "@/context/cart-context";
 import { useLanguage } from "@/context/language-context";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
-import ExpressCheckout from "./express-checkout";
 import OrderSummary from "./order-summary";
 import VatField from "@/components/vat-field";
 
@@ -23,8 +22,6 @@ type DeliveryData = {
 };
 
 type DeliveryErrors = Partial<DeliveryData>;
-
-type AdyenSession = { id: string; sessionData: string; clientKey: string };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -120,7 +117,7 @@ function FetUpsellCard({
   );
 }
 
-// ─── Small helpers ────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function Field({ label, htmlFor, error, children }: {
   label: string; htmlFor?: string; error?: string; children: React.ReactNode;
@@ -149,55 +146,7 @@ function SectionCard({ title, children }: { title: string; children: React.React
   );
 }
 
-// ─── Success state ────────────────────────────────────────────────────────────
-
-function SuccessState({ orderRef, mode }: { orderRef: string; mode: "live" | "manual" }) {
-  const { t } = useLanguage();
-  const c = t.checkout;
-  return (
-    <div className="flex min-h-[60vh] items-center justify-center px-4 py-16">
-      <div className="mx-auto max-w-[480px] rounded-[22px] bg-[#efefef] p-10 text-center">
-        <div className="flex justify-center">
-          <CheckCircle2 size={56} strokeWidth={1.5} className="text-green-500" />
-        </div>
-        <h2 className="mt-5 text-2xl font-extrabold tracking-tight text-[var(--foreground)]">
-          {c.successTitle}
-        </h2>
-        <p className="mt-2 text-[0.95rem] leading-7 text-[var(--muted)]">
-          {mode === "manual"
-            ? "Your order has been received. Our team will review it and contact you to arrange payment before dispatch."
-            : c.successBody}
-        </p>
-        {mode === "manual" && (
-          <div className="mt-4 rounded-[12px] border border-amber-200 bg-amber-50 px-4 py-3 text-left">
-            <p className="text-[0.78rem] leading-5 text-amber-700">
-              <strong className="text-amber-800">What happens next:</strong>{" "}
-              You will receive a confirmation email. A member of our team will reach out within 1 business day to confirm your order and arrange payment.
-            </p>
-          </div>
-        )}
-        <div className="mt-5 rounded-[14px] bg-white py-3 px-5">
-          <p className="text-[0.8rem] text-[var(--muted)]">{c.orderRef}</p>
-          <p className="mt-0.5 text-[1.15rem] font-extrabold tracking-wider text-[var(--foreground)]">
-            {orderRef}
-          </p>
-        </div>
-        <div className="mt-6 flex flex-col gap-2.5 sm:flex-row">
-          <Link href="/shop"
-            className="flex h-[46px] flex-1 items-center justify-center rounded-full bg-[var(--primary)] text-[0.9rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]">
-            {c.continueShopping}
-          </Link>
-          <Link href="/"
-            className="flex h-[46px] flex-1 items-center justify-center rounded-full border border-black/10 bg-white text-[0.9rem] font-semibold text-[var(--foreground)] transition hover:bg-[#f5f5f5]">
-            {c.backToHome}
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Empty cart state ─────────────────────────────────────────────────────────
+// ─── Empty cart ───────────────────────────────────────────────────────────────
 
 function EmptyCartState() {
   const { t } = useLanguage();
@@ -216,104 +165,42 @@ function EmptyCartState() {
   );
 }
 
-// ─── Main checkout component ──────────────────────────────────────────────────
+// ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function CheckoutFlow() {
   const { items, clearCart } = useCart();
-  const { t } = useLanguage();
-  const { customer } = useCustomerAuth();
-  const showVatField = customer?.customer_type === "b2b";
-  const c = t.checkout;
-  const deliveryRef = useRef<HTMLDivElement>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const dropinRef = useRef<any>(null);
+  const { t }                = useLanguage();
+  const { customer }         = useCustomerAuth();
+  const showVatField         = customer?.customer_type === "b2b";
+  const c                    = t.checkout;
+  const deliveryRef          = useRef<HTMLDivElement>(null);
 
   const [delivery, setDelivery] = useState<DeliveryData>({
     name: "", email: "", address: "", city: "", postalCode: "", country: "", phone: "",
   });
   const [deliveryErrors, setDeliveryErrors] = useState<DeliveryErrors>({});
-  const [vatNumber, setVatNumber] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [orderRef, setOrderRef] = useState("");
-  const [orderMode, setOrderMode] = useState<"live" | "manual">("manual");
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [adyenSession, setAdyenSession] = useState<AdyenSession | null>(null);
-  const [dropinMounted, setDropinMounted] = useState(false);
+  const [vatNumber, setVatNumber]           = useState("");
+  const [submitting, setSubmitting]         = useState(false);
+  const [submitError, setSubmitError]       = useState<string | null>(null);
 
   const [fetAdded, setFetAdded]         = useState(false);
   const [fetQty, setFetQty]             = useState(1);
   const [fetDismissed, setFetDismissed] = useState(false);
 
-  // Cleanup Drop-in on unmount
-  useEffect(() => {
-    return () => { dropinRef.current?.unmount(); };
-  }, []);
-
-  // Mount Adyen Drop-in once session is created
-  useEffect(() => {
-    if (!adyenSession) return;
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const { AdyenCheckout } = await import("@/lib/adyen-client");
-        if (cancelled) return;
-
-        dropinRef.current?.unmount();
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const checkout = await (AdyenCheckout as any)({
-          environment: process.env.NEXT_PUBLIC_ADYEN_ENVIRONMENT ?? "test",
-          clientKey:   adyenSession.clientKey,
-          session: { id: adyenSession.id, sessionData: adyenSession.sessionData },
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          onPaymentCompleted: (result: any) => {
-            if (result.resultCode === "Authorised") {
-              clearCart();
-              setOrderRef(result.merchantReference ?? adyenSession.id);
-              setOrderMode("live");
-              setSubmitted(true);
-            } else {
-              setSubmitError(`Payment ${result.resultCode}. Please try again.`);
-            }
-          },
-          onError: (error: Error) => {
-            setSubmitError(error.message ?? "Payment failed. Please try again.");
-          },
-        });
-
-        if (cancelled) return;
-        const dropin = checkout.create("dropin");
-        dropin.mount("#adyen-dropin");
-        dropinRef.current = dropin;
-        setDropinMounted(true);
-      } catch (err) {
-        if (!cancelled) {
-          setSubmitError((err as Error).message ?? "Could not load payment UI.");
-          setAdyenSession(null);
-        }
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, [adyenSession, clearCart]);
-
-  if (items.length === 0 && !submitted) return <EmptyCartState />;
-  if (submitted) return <SuccessState orderRef={orderRef} mode={orderMode} />;
+  if (items.length === 0) return <EmptyCartState />;
 
   // ── Validation ──────────────────────────────────────────────────────────────
 
   const validateDelivery = (): boolean => {
     const errs: DeliveryErrors = {};
-    if (!delivery.name.trim())     errs.name = c.errName;
-    if (!delivery.email.trim())    errs.email = c.errEmail;
+    if (!delivery.name.trim())        errs.name       = c.errName;
+    if (!delivery.email.trim())       errs.email      = c.errEmail;
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(delivery.email)) errs.email = c.errEmailInvalid;
-    if (!delivery.address.trim())  errs.address = c.errAddress;
-    if (!delivery.city.trim())     errs.city = c.errCity;
-    if (!delivery.postalCode.trim()) errs.postalCode = c.errPostalCode;
-    if (!delivery.country)         errs.country = c.errCountry;
-    if (!delivery.phone.trim())    errs.phone = c.errPhone;
+    if (!delivery.address.trim())     errs.address    = c.errAddress;
+    if (!delivery.city.trim())        errs.city       = c.errCity;
+    if (!delivery.postalCode.trim())  errs.postalCode = c.errPostalCode;
+    if (!delivery.country)            errs.country    = c.errCountry;
+    if (!delivery.phone.trim())       errs.phone      = c.errPhone;
     setDeliveryErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -343,7 +230,7 @@ export default function CheckoutFlow() {
     }),
   });
 
-  // ── Submit ──────────────────────────────────────────────────────────────────
+  // ── Submit → Mollie redirect ────────────────────────────────────────────────
 
   const handleSubmit = async () => {
     if (!validateDelivery()) {
@@ -354,68 +241,33 @@ export default function CheckoutFlow() {
     setSubmitting(true);
     setSubmitError(null);
 
-    const adyenKey = process.env.NEXT_PUBLIC_ADYEN_CLIENT_KEY;
-
-    if (adyenKey) {
-      // ── Adyen sessions flow ───────────────────────────────────────────────
-      try {
-        const res = await fetch("/api/payments/create-session", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(orderPayload()),
-        });
-        const data = await res.json();
-
-        if (!res.ok || data.error) {
-          setSubmitError(data.error ?? "Failed to initialise payment. Please try again.");
-          setSubmitting(false);
-          return;
-        }
-
-        setAdyenSession({
-          id:          data.session_id,
-          sessionData: data.session_data,
-          clientKey:   data.client_key,
-        });
-        // Drop-in mounts via useEffect above; keep submitting=true until mounted
-      } catch {
-        setSubmitError("Network error. Could not reach the payment service.");
-        setSubmitting(false);
-      }
-      return;
-    }
-
-    // ── Manual fallback (no Adyen key configured) ─────────────────────────
-    // Proxy reads the httpOnly customer_token cookie and forwards it as Bearer
     try {
-      const res = await fetch("/api/customer/orders", {
+      const res = await fetch("/api/payments/mollie/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(orderPayload()),
       });
       const data = await res.json();
 
-      if (!res.ok) {
-        setSubmitError(data.message ?? "Something went wrong. Please try again.");
+      if (!res.ok || data.error) {
+        setSubmitError(data.error ?? "Failed to create payment. Please try again.");
         setSubmitting(false);
         return;
       }
 
+      // Store paymentId in sessionStorage so the return page can verify status
+      sessionStorage.setItem("mollie_payment_id", data.paymentId);
+      sessionStorage.setItem("mollie_order_ref", data.orderRef);
+
       clearCart();
-      setOrderRef(data.data?.ref ?? "");
-      setOrderMode(data.data?.mode ?? "manual");
-      setSubmitted(true);
+
+      // Redirect to Mollie hosted checkout
+      window.location.href = data.checkoutUrl;
     } catch {
       setSubmitError("Network error. Please check your connection and try again.");
-    } finally {
       setSubmitting(false);
     }
   };
-
-  // Clear submitting spinner once Drop-in has mounted
-  useEffect(() => {
-    if (dropinMounted) setSubmitting(false);
-  }, [dropinMounted]);
 
   // ── Field helpers ───────────────────────────────────────────────────────────
 
@@ -444,14 +296,6 @@ export default function CheckoutFlow() {
 
         {/* ── Left column ── */}
         <div className="flex flex-col gap-5">
-
-          <ExpressCheckout onSelect={() => deliveryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })} />
-
-          <div className="flex items-center gap-4">
-            <div className="h-px flex-1 bg-black/[0.08]" />
-            <span className="text-[0.8rem] text-[var(--muted)]">{c.orContinueWith}</span>
-            <div className="h-px flex-1 bg-black/[0.08]" />
-          </div>
 
           {/* Delivery details */}
           <div ref={deliveryRef}>
@@ -494,7 +338,7 @@ export default function CheckoutFlow() {
             </SectionCard>
           </div>
 
-          {/* VAT number — b2b customers only */}
+          {/* VAT — b2b only */}
           {showVatField && (
             <SectionCard title="Business Details">
               <VatField value={vatNumber} onChange={setVatNumber} />
@@ -512,7 +356,7 @@ export default function CheckoutFlow() {
             </div>
           </SectionCard>
 
-          {/* FET upsell — above payment section */}
+          {/* FET upsell */}
           {!fetDismissed && (
             <FetUpsellCard
               added={fetAdded}
@@ -524,45 +368,66 @@ export default function CheckoutFlow() {
             />
           )}
 
-          {/* Payment — Adyen Drop-in */}
+          {/* Payment section */}
           <SectionCard title={c.paymentMethod}>
-            {!dropinMounted && !adyenSession && (
-              <p className="mb-2 text-[0.88rem] text-[var(--muted)]">
-                Complete your delivery details above, then click <strong>Continue to Payment</strong> to choose your payment method.
-              </p>
-            )}
-            {/* Drop-in mounts here — must stay in DOM */}
-            <div id="adyen-dropin" />
+            <p className="mb-5 text-[0.88rem] leading-6 text-[var(--muted)]">
+              You will be redirected to Mollie&apos;s secure payment page to complete your purchase. All major payment methods are accepted.
+            </p>
+
+            {/* Payment method icons */}
+            <div className="mb-5 flex flex-wrap items-center gap-2.5">
+              {["Visa", "Mastercard", "iDEAL", "PayPal", "Klarna", "Bancontact"].map((m) => (
+                <span
+                  key={m}
+                  className="rounded-[8px] border border-black/[0.08] bg-white px-3 py-1.5 text-[0.72rem] font-bold text-[#5c5e62] shadow-sm"
+                >
+                  {m}
+                </span>
+              ))}
+            </div>
+
+            {/* Trust badges */}
+            <div className="flex flex-wrap items-center gap-4 text-[0.75rem] text-[#5c5e62]">
+              <span className="flex items-center gap-1.5">
+                <ShieldCheck size={14} className="text-green-500" />
+                256-bit SSL encryption
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Lock size={14} className="text-green-500" />
+                PCI DSS compliant
+              </span>
+            </div>
           </SectionCard>
 
-          {/* Submit error */}
+          {/* Error */}
           {submitError && (
             <div className="rounded-[12px] border border-red-200 bg-red-50 px-4 py-3">
               <p className="text-[0.83rem] font-semibold text-red-700">{submitError}</p>
             </div>
           )}
 
-          {/* CTA button — hidden once Drop-in is mounted */}
-          {!dropinMounted && (
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={submitting}
-              className="flex h-[54px] w-full items-center justify-center rounded-full bg-[var(--primary)] text-[1rem] font-semibold text-white transition hover:bg-[var(--primary-hover)] disabled:opacity-60"
-            >
-              {submitting ? (
-                <span className="flex items-center gap-2">
-                  <svg className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                  </svg>
-                  {c.processing}
-                </span>
-              ) : (
-                "Continue to Payment"
-              )}
-            </button>
-          )}
+          {/* Pay button */}
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={submitting}
+            className="flex h-[54px] w-full items-center justify-center gap-2.5 rounded-full bg-[var(--primary)] text-[1rem] font-semibold text-white transition hover:bg-[var(--primary-hover)] disabled:opacity-60"
+          >
+            {submitting ? (
+              <>
+                <svg className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+                Redirecting to payment…
+              </>
+            ) : (
+              <>
+                <Lock size={17} strokeWidth={2.2} />
+                Pay securely with Mollie
+              </>
+            )}
+          </button>
 
           <p className="text-center text-[0.78rem] text-[var(--muted)]">
             {c.placeOrderNote}{" "}
@@ -572,7 +437,7 @@ export default function CheckoutFlow() {
           </p>
         </div>
 
-        {/* ── Right column: order summary (sticky) ── */}
+        {/* ── Right column ── */}
         <div className="lg:sticky lg:top-[96px]">
           <OrderSummary
             deliveryCost={DELIVERY_COST}

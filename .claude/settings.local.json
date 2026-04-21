@@ -37,7 +37,9 @@
       "Bash(python3 -c \"from PIL import Image; img = Image.new\\('RGB', \\(16, 9\\), '#111111'\\); img.save\\('public/images/hero-poster.jpg', 'JPEG', quality=60\\)\")",
       "Bash(node *)",
       "Bash(git rm *)",
-      "Bash(xargs grep *)"
+      "Bash(xargs grep *)",
+      "Bash(mkdir -p \"C:/Users/user/Desktop/Projects/okelcor-website/app/api/admin/products/[id]/ebay/list\")",
+      "Bash(mkdir -p \"C:/Users/user/Desktop/Projects/okelcor-website/app/api/admin/products/[id]/ebay/remove\")"
     ]
   }
 }
