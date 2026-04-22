@@ -83,6 +83,7 @@ export type ApiProduct = {
   images: (string | { path?: string; url?: string; image_url?: string })[];
   sku: string;
   description: string;
+  in_stock?: boolean;
 };
 
 /**

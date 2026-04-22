@@ -15,6 +15,7 @@ export type Product = {
   images: string[];
   sku: string;
   description: string;
+  in_stock?: boolean;
 };
 
 // ── Tyre image library ────────────────────────────────────────────────────────

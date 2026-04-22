@@ -20,6 +20,8 @@ export default function ProductInfo({ product }: { product: Product }) {
     setTimeout(() => setAdded(false), 2000);
   };
 
+  const inStock = product.in_stock !== false;
+
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
     `Hi, I would like to request a quote for: ${product.brand} ${product.name} ${product.size} (SKU: ${product.sku}) — Qty: ${qty}`
   )}`;
@@ -53,6 +55,14 @@ export default function ProductInfo({ product }: { product: Product }) {
       <p className="mt-1 text-[0.82rem] text-[var(--muted)]">
         SKU: <span className="font-medium text-[var(--foreground)]">{product.sku}</span>
       </p>
+
+      {/* Stock status */}
+      {!inStock && (
+        <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1 text-[0.78rem] font-bold text-red-600">
+          <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+          Out of Stock
+        </span>
+      )}
 
       {/* Price */}
       <div className="mt-5 border-t border-black/[0.07] pt-5">
@@ -97,7 +107,8 @@ export default function ProductInfo({ product }: { product: Product }) {
         <button
           type="button"
           onClick={handleAddToCart}
-          className={`flex h-[50px] w-full items-center justify-center gap-2 rounded-full text-[0.95rem] font-semibold text-white transition ${
+          disabled={!inStock}
+          className={`flex h-[50px] w-full items-center justify-center gap-2 rounded-full text-[0.95rem] font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50 ${
             added
               ? "bg-green-600 hover:bg-green-700"
               : "bg-[var(--primary)] hover:bg-[var(--primary-hover)]"
@@ -111,7 +122,7 @@ export default function ProductInfo({ product }: { product: Product }) {
           ) : (
             <>
               <ShoppingCart size={18} strokeWidth={2} />
-              {t.shop.info.addToCart}
+              {inStock ? t.shop.info.addToCart : "Out of Stock"}
             </>
           )}
         </button>

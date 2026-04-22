@@ -26,8 +26,13 @@ export default function ProductCard({ product, priority = false }: { product: Pr
           alt={`${product.brand} ${product.name}`}
           loading={priority ? "eager" : "lazy"}
           onError={(e) => { e.currentTarget.src = PLACEHOLDER; }}
-          className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-[1.04]"
+          className={`h-full w-full object-contain transition-transform duration-500 group-hover:scale-[1.04] ${product.in_stock === false ? "opacity-50" : ""}`}
         />
+        {product.in_stock === false && (
+          <span className="absolute left-2 top-2 rounded-full bg-red-600 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow">
+            Out of Stock
+          </span>
+        )}
       </div>
 
       {/* Content */}
