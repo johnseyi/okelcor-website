@@ -43,6 +43,7 @@ function toProduct(p: any): Product {
     primary_image: rawPrimary,
     image:         getProductImageUrl(rawPrimary),
     images:        allPaths.map(getProductImageUrl),
+    in_stock:      p.in_stock ?? true,
   };
 }
 
