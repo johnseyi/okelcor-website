@@ -1,43 +1,27 @@
 "use client";
 
-/**
- * components/analytics-script.tsx
- *
- * Consent-aware Google Analytics 4 loader.
- *
- * Behaviour:
- *   1. Initialises the dataLayer and sets GA4 consent defaults to "denied"
- *      BEFORE the main gtag.js script loads (GDPR-safe by default).
- *   2. Loads gtag.js after the page is interactive (non-blocking).
- *   3. Listens to the site-wide CONSENT_EVENT. When the user accepts
- *      cookies, consent is upgraded to "granted" and GA4 starts collecting.
- *   4. On mount, checks localStorage for a prior consent decision so
- *      returning visitors who already accepted are immediately enabled.
- *
- * Requires env var: NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
- * If the var is absent the component renders nothing and is completely inert.
- */
-
 import Script from "next/script";
 import { useEffect } from "react";
 import { getConsent, CONSENT_EVENT } from "@/lib/cookie-consent";
 
-const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
+const GA_ID  = process.env.NEXT_PUBLIC_GA_ID;
+const ADS_ID = process.env.NEXT_PUBLIC_GOOGLE_ADS_ID;
+const TAG_ID = process.env.NEXT_PUBLIC_GOOGLE_TAG_ID;
 
-/** Headless component — syncs our cookie-consent state into GA4 consent API. */
 function ConsentSync() {
   useEffect(() => {
     const sync = () => {
       if (typeof window.gtag !== "function") return;
-      const consent = getConsent();
+      const granted = getConsent() === "accepted" ? "granted" : "denied";
       window.gtag("consent", "update", {
-        analytics_storage: consent === "accepted" ? "granted" : "denied",
+        analytics_storage:   granted,
+        ad_storage:          granted,
+        ad_user_data:        granted,
+        ad_personalization:  granted,
       });
     };
 
-    // Sync on mount: handles returning visitors who already decided.
     sync();
-
     window.addEventListener(CONSENT_EVENT, sync);
     return () => window.removeEventListener(CONSENT_EVENT, sync);
   }, []);
@@ -46,33 +30,38 @@ function ConsentSync() {
 }
 
 export default function AnalyticsScript() {
-  if (!GA_ID) return null;
+  if (!GA_ID && !ADS_ID) return null;
+
+  const primaryId = GA_ID ?? ADS_ID!;
+
+  const extraConfigs = [
+    GA_ID  ? `gtag('config', '${GA_ID}',  { send_page_view: true });` : "",
+    ADS_ID ? `gtag('config', '${ADS_ID}');` : "",
+    TAG_ID ? `gtag('config', '${TAG_ID}');` : "",
+  ]
+    .filter(Boolean)
+    .join("\n        ");
 
   return (
     <>
-      {/* ConsentSync handles the runtime consent ↔ gtag bridge */}
       <ConsentSync />
 
-      {/*
-        Inline init: runs before gtag.js so consent defaults are in place
-        before GA4 fires any events. strategy="beforeInteractive" hoists
-        this into <head> in the Next.js App Router.
-      */}
-      <Script id="ga4-consent-init" strategy="beforeInteractive">{`
+      <Script id="gtag-consent-init" strategy="beforeInteractive">{`
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
         gtag('js', new Date());
         gtag('consent', 'default', {
-          analytics_storage: 'denied',
-          ad_storage: 'denied',
+          analytics_storage:  'denied',
+          ad_storage:         'denied',
+          ad_user_data:       'denied',
+          ad_personalization: 'denied',
           wait_for_update: 500
         });
-        gtag('config', '${GA_ID}', { send_page_view: true });
+        ${extraConfigs}
       `}</Script>
 
-      {/* Main GA4 script — loads after hydration, non-blocking */}
       <Script
-        src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+        src={`https://www.googletagmanager.com/gtag/js?id=${primaryId}`}
         strategy="afterInteractive"
       />
     </>

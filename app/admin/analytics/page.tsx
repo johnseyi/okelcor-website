@@ -9,6 +9,9 @@ import {
   BarChart2,
   ExternalLink,
   AlertCircle,
+  ShoppingCart,
+  CheckCircle2,
+  Tag,
 } from "lucide-react";
 import {
   adminApiFetch,
@@ -173,6 +176,103 @@ function NotConfigured() {
   );
 }
 
+// ── Google Ads panel ─────────────────────────────────────────────────────────
+
+const ADS_CONVERSIONS = [
+  { name: "Purchase",      icon: ShoppingCart, color: "bg-emerald-500" },
+  { name: "Add to cart",   icon: ShoppingCart, color: "bg-blue-500" },
+  { name: "Shopping Cart", icon: ShoppingCart, color: "bg-violet-500" },
+  { name: "Checkout",      icon: CheckCircle2, color: "bg-amber-500" },
+];
+
+function GoogleAdsPanel() {
+  const adsId = process.env.NEXT_PUBLIC_GOOGLE_ADS_ID;
+  const tagId = process.env.NEXT_PUBLIC_GOOGLE_TAG_ID;
+  const customerId = process.env.NEXT_PUBLIC_GOOGLE_ADS_CUSTOMER_ID ?? "597-727-6742";
+  const configured = !!adsId;
+
+  return (
+    <div className="mb-8 overflow-hidden rounded-2xl bg-white shadow-sm">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-black/[0.06] px-5 py-4">
+        <div className="flex items-center gap-2.5">
+          <Tag size={15} className="text-[#5c5e62]" />
+          <p className="text-[0.9rem] font-extrabold text-[#1a1a1a]">Google Ads</p>
+        </div>
+        <a
+          href={`https://ads.google.com/aw/overview?__e=${customerId.replace(/-/g, "")}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 rounded-xl border border-black/[0.09] bg-white px-3.5 py-2 text-[0.8rem] font-semibold text-[#1a1a1a] transition hover:bg-[#f0f2f5]"
+        >
+          <ExternalLink size={13} strokeWidth={2} />
+          Open Google Ads
+        </a>
+      </div>
+
+      <div className="p-5">
+        {/* Tag status + IDs */}
+        <div className="mb-5 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-xl bg-[#fafafa] px-4 py-3">
+            <p className="text-[0.72rem] font-bold uppercase tracking-[0.14em] text-[#5c5e62]">Customer ID</p>
+            <p className="mt-1 font-mono text-[0.9rem] font-semibold text-[#1a1a1a]">{customerId}</p>
+          </div>
+          <div className="rounded-xl bg-[#fafafa] px-4 py-3">
+            <p className="text-[0.72rem] font-bold uppercase tracking-[0.14em] text-[#5c5e62]">Conversion ID</p>
+            <p className="mt-1 font-mono text-[0.9rem] font-semibold text-[#1a1a1a]">{adsId ?? "—"}</p>
+          </div>
+          <div className="rounded-xl bg-[#fafafa] px-4 py-3">
+            <p className="text-[0.72rem] font-bold uppercase tracking-[0.14em] text-[#5c5e62]">Google Tag ID</p>
+            <p className="mt-1 font-mono text-[0.9rem] font-semibold text-[#1a1a1a]">{tagId ?? "—"}</p>
+          </div>
+        </div>
+
+        {/* Tag status banner */}
+        {configured ? (
+          <div className="mb-5 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+            <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-emerald-600" />
+            <div>
+              <p className="text-[0.83rem] font-semibold text-emerald-800">Tag active on okelcor.com</p>
+              <p className="mt-0.5 text-[0.78rem] text-emerald-700">
+                The Google Ads tag is installed and firing. The &quot;URGENT — Tag stopped sending data&quot; warning in Google Ads will clear automatically within 48 hours of the tag firing on the new domain.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="mb-5 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <AlertCircle size={16} className="mt-0.5 shrink-0 text-amber-600" />
+            <div>
+              <p className="text-[0.83rem] font-semibold text-amber-800">Tag not configured</p>
+              <p className="mt-0.5 text-[0.78rem] text-amber-700">
+                Add <code className="rounded bg-amber-100 px-1">NEXT_PUBLIC_GOOGLE_ADS_ID=AW-10996107897</code> and{" "}
+                <code className="rounded bg-amber-100 px-1">NEXT_PUBLIC_GOOGLE_TAG_ID=GT-NNSJHW4C</code> to Vercel env vars.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Conversion events */}
+        <p className="mb-3 text-[0.72rem] font-bold uppercase tracking-[0.14em] text-[#5c5e62]">
+          Active Conversions — imported via GA4
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {ADS_CONVERSIONS.map(({ name, icon: Icon, color }) => (
+            <div key={name} className="flex items-center gap-3 rounded-xl border border-black/[0.06] px-4 py-3">
+              <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${color}`}>
+                <Icon size={14} strokeWidth={2} className="text-white" />
+              </div>
+              <div>
+                <p className="text-[0.83rem] font-semibold text-[#1a1a1a]">{name}</p>
+                <p className="text-[0.72rem] text-emerald-600">Tracking</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function AnalyticsPage() {
@@ -278,6 +378,9 @@ export default async function AnalyticsPage() {
           </div>
         </div>
       )}
+
+      {/* Google Ads panel */}
+      <GoogleAdsPanel />
 
       {/* Lower grid */}
       <div className="grid gap-6 lg:grid-cols-3">
