@@ -8,4 +8,4 @@ Disallow: /imprint
 Disallow: /auth
 Disallow: /checkout
 
-Sitemap: https://okelcor.de/sitemap.xml
+Sitemap: https://www.okelcor.com/sitemap.xml
