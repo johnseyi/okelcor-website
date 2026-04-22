@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Upload, Search, ChevronLeft, ChevronRight,
-  FileText, AlertCircle, CheckCircle2, Loader2,
+  FileText, AlertCircle, CheckCircle2, Loader2, Mail, Send,
 } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -28,6 +28,13 @@ type ImportResult = {
   b2b: number;
   b2c: number;
   errors?: { row: number; message: string }[];
+};
+
+type EmailResult = {
+  sent: number;
+  failed: number;
+  total: number;
+  test_mode: boolean;
 };
 
 type FilterTab = "all" | "b2b" | "b2c" | "wix";
@@ -80,6 +87,12 @@ export default function CustomersPage() {
   const [importing, setImporting]     = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+
+  // ── Migration email state ─────────────────────────────────────────────────
+  const [emailSending, setEmailSending]     = useState(false);
+  const [emailResult, setEmailResult]       = useState<EmailResult | null>(null);
+  const [emailError, setEmailError]         = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen]       = useState(false);
 
   // ── Table state ──────────────────────────────────────────────────────────
   const [customers, setCustomers]   = useState<Customer[]>([]);
@@ -166,6 +179,33 @@ export default function CustomersPage() {
       setImportError("Network error. Could not reach the import service.");
     } finally {
       setImporting(false);
+    }
+  };
+
+  // ── Migration email handler ───────────────────────────────────────────────
+
+  const sendMigrationEmail = async (testMode: boolean) => {
+    setEmailSending(true);
+    setEmailError(null);
+    setEmailResult(null);
+    setConfirmOpen(false);
+
+    try {
+      const res = await fetch("/api/admin/customers/migration-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ test_mode: testMode }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setEmailError(json.error ?? "Failed to send migration emails.");
+      } else {
+        setEmailResult(json);
+      }
+    } catch {
+      setEmailError("Network error. Could not reach the email service.");
+    } finally {
+      setEmailSending(false);
     }
   };
 
@@ -279,6 +319,143 @@ export default function CustomersPage() {
           </div>
         )}
       </div>
+
+      {/* ── Platform Migration Email card ── */}
+      <div className="mb-8 rounded-2xl bg-white p-6 shadow-sm">
+        <div className="mb-5 flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#171a20]">
+            <Mail size={18} strokeWidth={1.8} className="text-white" />
+          </div>
+          <div>
+            <p className="font-extrabold text-[#1a1a1a]">Platform Migration Email</p>
+            <p className="mt-0.5 text-[0.83rem] text-[#5c5e62]">
+              Notify all registered customers about the new platform at{" "}
+              <span className="font-semibold text-[#1a1a1a]">okelcor.com</span> and
+              prompt them to set a password to access their account.
+            </p>
+          </div>
+        </div>
+
+        {/* Info strip */}
+        <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <p className="text-[0.83rem] text-amber-800">
+            <strong>Before sending to all customers:</strong> use the test button below to
+            verify the email looks correct at{" "}
+            <span className="font-mono text-[0.78rem]">johngraphics18@gmail.com</span>.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          {/* Test send */}
+          <button
+            type="button"
+            disabled={emailSending}
+            onClick={() => sendMigrationEmail(true)}
+            className="flex h-[42px] items-center gap-2 rounded-full border border-[#E85C1A] px-5 text-[0.875rem] font-semibold text-[#E85C1A] transition hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {emailSending ? (
+              <Loader2 size={15} className="animate-spin" />
+            ) : (
+              <Send size={15} />
+            )}
+            Send Test Email
+          </button>
+
+          {/* Send to all — opens confirm modal */}
+          <button
+            type="button"
+            disabled={emailSending}
+            onClick={() => { setConfirmOpen(true); setEmailError(null); setEmailResult(null); }}
+            className="flex h-[42px] items-center gap-2 rounded-full bg-[#E85C1A] px-6 text-[0.875rem] font-semibold text-white transition hover:bg-[#d44d10] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {emailSending ? (
+              <>
+                <Loader2 size={15} className="animate-spin" />
+                Sending…
+              </>
+            ) : (
+              <>
+                <Mail size={15} />
+                Send to All Customers
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Email error */}
+        {emailError && (
+          <div className="mt-4 flex items-center gap-2.5 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+            <AlertCircle size={15} className="shrink-0 text-red-500" />
+            <p className="text-[0.83rem] text-red-700">{emailError}</p>
+          </div>
+        )}
+
+        {/* Email results */}
+        {emailResult && (
+          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+            <div className="mb-3 flex items-center gap-2">
+              <CheckCircle2 size={15} className="shrink-0 text-emerald-600" />
+              <p className="text-[0.875rem] font-semibold text-emerald-800">
+                {emailResult.test_mode
+                  ? "Test email sent to johngraphics18@gmail.com"
+                  : "Migration emails sent successfully"}
+              </p>
+            </div>
+            {!emailResult.test_mode && (
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { label: "Sent",   value: emailResult.sent },
+                  { label: "Failed", value: emailResult.failed },
+                  { label: "Total",  value: emailResult.total },
+                ].map(({ label, value }) => (
+                  <div key={label} className="rounded-lg bg-white px-3 py-2.5 text-center shadow-sm">
+                    <p className="text-[1.15rem] font-extrabold text-[#1a1a1a]">{value}</p>
+                    <p className="text-[0.7rem] text-[#5c5e62]">{label}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── Confirm send-all modal ── */}
+      {confirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl">
+            <div className="mb-1 flex h-12 w-12 items-center justify-center rounded-xl bg-[#E85C1A]">
+              <Mail size={22} className="text-white" />
+            </div>
+            <h2 className="mt-4 text-[1.1rem] font-extrabold text-[#1a1a1a]">
+              Send to all customers?
+            </h2>
+            <p className="mt-2 text-[0.875rem] text-[#5c5e62] leading-relaxed">
+              This will send the platform migration email to{" "}
+              <strong className="text-[#1a1a1a]">every registered customer</strong> in
+              the database. This action cannot be undone.
+            </p>
+            <p className="mt-3 text-[0.83rem] text-amber-700 bg-amber-50 rounded-lg px-3 py-2.5">
+              Make sure you have sent and reviewed the test email first.
+            </p>
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setConfirmOpen(false)}
+                className="flex-1 h-[42px] rounded-full border border-black/[0.1] text-[0.875rem] font-semibold text-[#5c5e62] transition hover:bg-[#f0f2f5]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => sendMigrationEmail(false)}
+                className="flex-1 h-[42px] rounded-full bg-[#E85C1A] text-[0.875rem] font-semibold text-white transition hover:bg-[#d44d10]"
+              >
+                Yes, Send Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Customers table ── */}
       <div className="overflow-hidden rounded-2xl bg-white shadow-sm">

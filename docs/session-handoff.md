@@ -488,43 +488,57 @@ app/template.tsx     ← GSAP page fade + ScrollTrigger.refresh() on every route
 
 ---
 
-## Known Issues / Pre-Launch Checklist
+## Completed in Session — Domain Migration & Customer Email Blast (2026-04-22/23)
 
-### Required Before Go-Live
+### Domain: okelcor.de → okelcor.com
 
-1. **Imprint page** — Fill 3 amber ⚠ placeholders in `app/imprint/page.tsx`: HRB number, Managing Director name, VAT ID.
+The website is now live at **okelcor.com**. All okelcor.de email references updated:
 
-2. **Production env vars:**
-   ```
-   RESEND_API_KEY=re_xxxx
-   FROM_EMAIL=Okelcor Website <noreply@okelcor.de>
-   CONTACT_EMAIL=info@okelcor.de
-   QUOTE_EMAIL=quotes@okelcor.de
-   NEXT_PUBLIC_BASE_URL=https://okelcor.de
-   NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
-   API_URL=https://api.okelcor.de/api/v1
-   NEXT_PUBLIC_API_URL=https://api.okelcor.de/api/v1
-   NEXT_PUBLIC_ADYEN_CLIENT_KEY=test_xxxx
-   NEXT_PUBLIC_ADYEN_ENVIRONMENT=test   # → "live" for production
-   WHEEL_SIZE_API_KEY=your_key
-   ```
-   Note: `NEXTAUTH_SECRET` and `NEXTAUTH_URL` no longer required.
+- `lib/constants.ts` — `COMPANY_EMAIL` → `info@okelcor.com`, `COMPANY_NOREPLY_EMAIL` → `noreply@okelcor.com`
+- `components/admin/settings-panel.tsx` — contact/quote email defaults → `info@okelcor.com`
+- `lib/translations.ts` — all 7 `errGeneric` messages (EN/DE/FR/ES) → `info@okelcor.com`
+- `app/sitemap.ts` — added `/fet` route (priority 0.8)
+- `next.config.ts` — already had `api.okelcor.com` image hostname (no change needed)
 
-3. **FET video** — Place at `public/videos/fet-hero.mp4`. Fallback gradient shows until then.
+**Note:** Domain-level redirect (okelcor.de → okelcor.com) must be configured at the DNS/hosting provider — not possible from within Next.js.
+
+### Admin — Platform Migration Email
+
+Allows admins to notify all registered customers about the new platform and prompt password setup.
+
+#### New: `app/api/admin/customers/migration-email/route.ts`
+- `POST` with `{ test_mode: true }` → sends to `johngraphics18@gmail.com` only
+- `POST` with `{ test_mode: false }` → paginates all customers, batches 100 per Resend `batch.send()` call
+- Returns `{ sent, failed, total, test_mode }`
+- Requires `admin_token` cookie (same auth as all admin routes)
+
+#### Updated: `app/admin/customers/page.tsx`
+New "Platform Migration Email" card with:
+- Description + amber warning banner (test first)
+- **Send Test Email** button → test mode send
+- **Send to All Customers** button → opens confirmation modal
+- Confirmation modal with cancel/confirm
+- Result cards showing sent/failed/total counts
+
+Email template: dark Okelcor header, migration announcement, "Set Your Password →" CTA to `/forgot-password`, "What's new" feature list, branded footer.
+
+---
+
+## Known Issues / Remaining Tasks
 
 ### Medium Priority
 
-4. **Adyen live credentials** — Switch `NEXT_PUBLIC_ADYEN_ENVIRONMENT=live` and update client key.
+1. **Adyen live credentials** — Switch `NEXT_PUBLIC_ADYEN_ENVIRONMENT=live` and update client key.
 
-5. **FET sitemap entry** — Add `/fet` to `app/sitemap.ts` static routes (priority 0.8).
+2. **Admin existing sessions after RBAC** — Users who logged in before `admin_role` cookie was introduced will see all nav items. They need to log out and back in once.
 
-6. **Admin existing sessions after RBAC** — Users who logged in before the `admin_role` cookie was introduced will see all nav items (the `!role` fallback). They need to log out and back in once to get their role cookie populated and RBAC to take effect.
+3. **DNS redirect** — Configure okelcor.de → okelcor.com redirect at DNS/hosting level.
 
 ### Low Priority
 
-7. **Newsletter backend** — `components/newsletter-strip.tsx` shows success UI but does not POST to any endpoint.
+4. **Newsletter backend** — `components/newsletter-strip.tsx` shows success UI but does not POST to any endpoint.
 
-8. **Unused public assets** — Old placeholder SVGs in `public/brands/` safe to delete.
+5. **Unused public assets** — Old placeholder SVGs in `public/brands/` safe to delete.
 
 ---
 

@@ -7,8 +7,8 @@ export const SITE_URL = "https://okelcor.com";
 export const COMPANY_NAME = "Okelcor";
 export const COMPANY_LEGAL_NAME = "Okelcor GmbH";
 
-export const COMPANY_EMAIL = "info@okelcor.de";
-export const COMPANY_NOREPLY_EMAIL = "noreply@okelcor.de";
+export const COMPANY_EMAIL = "support@okelcor.de";
+export const COMPANY_NOREPLY_EMAIL = "noreply@okelcor.com";
 
 export const COMPANY_PHONE = "+49 (0) 89 / 545 583 60";
 export const COMPANY_FAX = "+49 (0) 89 / 545 583 33";
