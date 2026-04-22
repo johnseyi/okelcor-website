@@ -93,6 +93,7 @@ export default function CustomersPage() {
   const [emailResult, setEmailResult]       = useState<EmailResult | null>(null);
   const [emailError, setEmailError]         = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen]       = useState(false);
+  const [emailProgress, setEmailProgress]   = useState<{ sent: number; total: number } | null>(null);
 
   // ── Table state ──────────────────────────────────────────────────────────
   const [customers, setCustomers]   = useState<Customer[]>([]);
@@ -188,6 +189,7 @@ export default function CustomersPage() {
     setEmailSending(true);
     setEmailError(null);
     setEmailResult(null);
+    setEmailProgress(null);
     setConfirmOpen(false);
 
     try {
@@ -196,11 +198,46 @@ export default function CustomersPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ test_mode: testMode }),
       });
-      const json = await res.json();
+
       if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
         setEmailError(json.error ?? "Failed to send migration emails.");
-      } else {
+        return;
+      }
+
+      // Test mode returns plain JSON
+      if (testMode) {
+        const json = await res.json();
         setEmailResult(json);
+        return;
+      }
+
+      // Full send streams SSE progress events
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data.error) setEmailError(data.error);
+            if (!data.done) {
+              setEmailProgress({ sent: data.sent, total: data.total });
+            } else {
+              setEmailResult({ sent: data.sent, failed: data.failed, total: data.total, test_mode: false });
+              setEmailProgress(null);
+            }
+          } catch { /* ignore malformed chunk */ }
+        }
       }
     } catch {
       setEmailError("Network error. Could not reach the email service.");
@@ -368,10 +405,10 @@ export default function CustomersPage() {
             onClick={() => { setConfirmOpen(true); setEmailError(null); setEmailResult(null); }}
             className="flex h-[42px] items-center gap-2 rounded-full bg-[#E85C1A] px-6 text-[0.875rem] font-semibold text-white transition hover:bg-[#d44d10] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {emailSending ? (
+            {emailSending && !emailProgress ? (
               <>
                 <Loader2 size={15} className="animate-spin" />
-                Sending…
+                Starting…
               </>
             ) : (
               <>
@@ -381,6 +418,29 @@ export default function CustomersPage() {
             )}
           </button>
         </div>
+
+        {/* Live progress bar */}
+        {emailSending && emailProgress && (
+          <div className="mt-5">
+            <div className="mb-1.5 flex items-center justify-between">
+              <p className="text-[0.83rem] font-semibold text-[#1a1a1a]">
+                Sending emails…
+              </p>
+              <p className="text-[0.83rem] text-[#5c5e62]">
+                {emailProgress.sent} / {emailProgress.total}
+              </p>
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-[#f0f2f5]">
+              <div
+                className="h-full rounded-full bg-[#E85C1A] transition-all duration-500"
+                style={{ width: `${Math.round((emailProgress.sent / emailProgress.total) * 100)}%` }}
+              />
+            </div>
+            <p className="mt-1.5 text-[0.75rem] text-[#5c5e62]">
+              {Math.round((emailProgress.sent / emailProgress.total) * 100)}% complete — do not close this page
+            </p>
+          </div>
+        )}
 
         {/* Email error */}
         {emailError && (

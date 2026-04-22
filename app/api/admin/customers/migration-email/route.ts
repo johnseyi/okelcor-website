@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { COMPANY_LEGAL_NAME, COMPANY_ADDRESS_STREET, COMPANY_ADDRESS_CITY } from "@/lib/constants";
 
+// Allow up to 5 minutes — needed for large customer lists (Vercel Pro supports up to 300s)
+export const maxDuration = 300;
+
 const resend = new Resend(process.env.RESEND_API_KEY);
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 const FROM_EMAIL = process.env.FROM_EMAIL || "Okelcor Website <noreply@okelcor.com>";
@@ -13,7 +16,6 @@ const SUPPORT_EMAIL = "support@okelcor.de";
 const TEST_EMAIL = "johngraphics18@gmail.com";
 const BATCH_SIZE = 100;
 
-// Shared email headers — List-Unsubscribe is required by Gmail/Yahoo for bulk mail
 const BULK_HEADERS = {
   "List-Unsubscribe": `<mailto:${SUPPORT_EMAIL}?subject=Unsubscribe>`,
   "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
@@ -135,7 +137,7 @@ function buildHtml(firstName: string): string {
                   </td>
                 </tr></table>
               </td></tr>
-              <tr><td style="padding:0 0 4px;">
+              <tr><td style="padding:0 4px;">
                 <table cellpadding="0" cellspacing="0"><tr>
                   <td style="width:20px;padding-top:4px;vertical-align:top;">
                     <div style="width:6px;height:6px;background:#f4511e;border-radius:50%;"></div>
@@ -200,6 +202,13 @@ To unsubscribe, reply with the subject "Unsubscribe".
 `;
 }
 
+// ── SSE helper ─────────────────────────────────────────────────────────────────
+
+const encoder = new TextEncoder();
+function sseChunk(data: object): Uint8Array {
+  return encoder.encode(`data: ${JSON.stringify(data)}\n\n`);
+}
+
 // ── Route handler ──────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
@@ -216,9 +225,8 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const testMode = body.test_mode === true;
 
-  // ── Test mode: single email to the test address ────────────────────────────
+  // ── Test mode: single JSON response ───────────────────────────────────────
   if (testMode) {
-    // Use the admin's own first name so the preview looks realistic
     const adminDisplayName = cookieStore.get("admin_display_name")?.value ?? "";
     const adminFirstName = adminDisplayName.split(" ")[0] || "John";
 
@@ -238,64 +246,85 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // ── Full send: paginate all customers and batch-send ───────────────────────
-  let page = 1;
-  let sent = 0;
-  let failed = 0;
-  let total = 0;
-
-  try {
-    while (true) {
-      const res = await fetch(
-        `${API_URL}/admin/customers?per_page=${BATCH_SIZE}&page=${page}`,
-        {
-          headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-          cache: "no-store",
-        }
-      );
-
-      if (!res.ok) {
-        return NextResponse.json(
-          { error: `API error ${res.status} fetching customers.` },
-          { status: 502 }
-        );
-      }
-
-      const json = await res.json();
-      const customers: { first_name?: string; last_name?: string; email: string }[] =
-        Array.isArray(json.data) ? json.data : [];
-
-      if (page === 1) total = json.meta?.total ?? customers.length;
-      if (customers.length === 0) break;
-
-      const batch = customers.map((c) => {
-        const firstName = c.first_name || "";
-        const lastName = c.last_name || "";
-        return {
-          from: FROM_EMAIL,
-          to: [toField(firstName, lastName, c.email)],
-          subject: "Your Okelcor account is ready at okelcor.com",
-          html: buildHtml(firstName),
-          text: buildText(firstName),
-          headers: BULK_HEADERS,
-        };
-      });
+  // ── Full send: streaming SSE so the browser connection stays alive ─────────
+  const stream = new ReadableStream({
+    async start(controller) {
+      let page = 1;
+      let sent = 0;
+      let failed = 0;
+      let total = 0;
 
       try {
-        await resend.batch.send(batch);
-        sent += batch.length;
-      } catch (batchErr) {
-        console.error(`[migration-email] batch page ${page} error:`, batchErr);
-        failed += batch.length;
+        while (true) {
+          const res = await fetch(
+            `${API_URL}/admin/customers?per_page=${BATCH_SIZE}&page=${page}`,
+            {
+              headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+              cache: "no-store",
+            }
+          );
+
+          if (!res.ok) {
+            controller.enqueue(
+              sseChunk({ error: `API error ${res.status} fetching customers.`, sent, failed, total, done: true })
+            );
+            controller.close();
+            return;
+          }
+
+          const json = await res.json();
+          const customers: { first_name?: string; last_name?: string; email: string }[] =
+            Array.isArray(json.data) ? json.data : [];
+
+          if (page === 1) total = json.meta?.total ?? customers.length;
+          if (customers.length === 0) break;
+
+          const batch = customers.map((c) => {
+            const firstName = c.first_name || "";
+            const lastName = c.last_name || "";
+            return {
+              from: FROM_EMAIL,
+              to: [toField(firstName, lastName, c.email)],
+              subject: "Your Okelcor account is ready at okelcor.com",
+              html: buildHtml(firstName),
+              text: buildText(firstName),
+              headers: BULK_HEADERS,
+            };
+          });
+
+          try {
+            await resend.batch.send(batch);
+            sent += batch.length;
+          } catch (batchErr) {
+            console.error(`[migration-email] batch page ${page} error:`, batchErr);
+            failed += batch.length;
+          }
+
+          // Push progress to the browser after each batch
+          controller.enqueue(sseChunk({ sent, failed, total, done: false }));
+
+          if (customers.length < BATCH_SIZE) break;
+          page++;
+        }
+      } catch (err) {
+        console.error("[migration-email] unexpected error:", err);
+        controller.enqueue(
+          sseChunk({ error: "Unexpected error during send.", sent, failed, total, done: true })
+        );
+        controller.close();
+        return;
       }
 
-      if (customers.length < BATCH_SIZE) break;
-      page++;
-    }
-  } catch (err) {
-    console.error("[migration-email] unexpected error:", err);
-    return NextResponse.json({ error: "Unexpected error during send." }, { status: 500 });
-  }
+      controller.enqueue(sseChunk({ sent, failed, total, done: true }));
+      controller.close();
+    },
+  });
 
-  return NextResponse.json({ sent, failed, total, test_mode: false });
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      "X-Accel-Buffering": "no", // disable Nginx buffering
+    },
+  });
 }
