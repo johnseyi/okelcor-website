@@ -16,7 +16,7 @@ export default function ProductGallery({ product }: { product: Product }) {
   return (
     <div className="flex flex-col gap-3">
       {/* Main large image */}
-      <div className="relative aspect-square w-full overflow-hidden rounded-[22px] bg-[#efefef]">
+      <div className="relative w-full overflow-hidden rounded-[22px] bg-[#efefef]" style={{ aspectRatio: "4/3", maxHeight: "420px" }}>
         <img
           src={mainUrl}
           alt={`${product.brand} ${product.name}`}
