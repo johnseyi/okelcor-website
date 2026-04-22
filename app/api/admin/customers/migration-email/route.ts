@@ -8,13 +8,36 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1
 const FROM_EMAIL = process.env.FROM_EMAIL || "Okelcor Website <noreply@okelcor.com>";
 const SITE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://okelcor.com";
 const RESET_URL = `${SITE_URL}/forgot-password`;
+const SUPPORT_EMAIL = "support@okelcor.de";
 
 const TEST_EMAIL = "johngraphics18@gmail.com";
 const BATCH_SIZE = 100;
 
-// ── Email template ─────────────────────────────────────────────────────────────
+// Shared email headers — List-Unsubscribe is required by Gmail/Yahoo for bulk mail
+const BULK_HEADERS = {
+  "List-Unsubscribe": `<mailto:${SUPPORT_EMAIL}?subject=Unsubscribe>`,
+  "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  "Reply-To": `Okelcor Support <${SUPPORT_EMAIL}>`,
+};
 
-function buildMigrationHtml(firstName: string): string {
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+function toField(firstName: string, lastName: string, email: string): string {
+  const name = [firstName, lastName].filter(Boolean).join(" ");
+  return name ? `${name} <${email}>` : email;
+}
+
+function escHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+// ── HTML template ──────────────────────────────────────────────────────────────
+
+function buildHtml(firstName: string): string {
   const greeting = firstName ? `Hi ${escHtml(firstName)},` : "Hello,";
   return `<!DOCTYPE html>
 <html lang="en">
@@ -46,7 +69,7 @@ function buildMigrationHtml(firstName: string): string {
             <p style="margin:0 0 18px;font-size:16px;color:#171a20;font-weight:600;">${greeting}</p>
 
             <p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:#5c5e62;">
-              We've launched our new platform at
+              We have launched our new platform at
               <a href="${SITE_URL}" style="color:#f4511e;text-decoration:none;font-weight:600;">okelcor.com</a>
               — a faster, more powerful experience for browsing our tyre catalogue, submitting quote requests, and managing your orders.
             </p>
@@ -63,14 +86,14 @@ function buildMigrationHtml(firstName: string): string {
                 <td style="background:#f4511e;border-radius:100px;padding:0;">
                   <a href="${RESET_URL}"
                      style="display:inline-block;padding:14px 36px;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;letter-spacing:0.01em;">
-                    Set Your Password →
+                    Set Your Password
                   </a>
                 </td>
               </tr>
             </table>
 
             <p style="margin:0 0 8px;font-size:13px;line-height:1.6;color:#8c8f94;">
-              Or paste this link in your browser:<br />
+              Or copy and paste this link into your browser:<br />
               <a href="${RESET_URL}" style="color:#f4511e;text-decoration:none;word-break:break-all;">${RESET_URL}</a>
             </p>
           </td>
@@ -83,29 +106,46 @@ function buildMigrationHtml(firstName: string): string {
           </td>
         </tr>
 
-        <!-- What's new section -->
+        <!-- What's new -->
         <tr>
           <td style="padding:28px 40px;">
             <p style="margin:0 0 16px;font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#f4511e;">
-              What's new
+              What is new
             </p>
             <table cellpadding="0" cellspacing="0" width="100%">
-              ${[
-                ["Full tyre catalogue", "Browse PCR, TBR, and used tyres with live stock availability."],
-                ["Instant quote requests", "Submit detailed quotes and track their status from your account."],
-                ["Order tracking", "Follow your shipments and view invoices in real time."],
-              ].map(([title, desc]) => `
-              <tr>
-                <td style="padding:0 0 14px;">
-                  <div style="display:flex;align-items:flex-start;gap:12px;">
-                    <div style="flex-shrink:0;width:6px;height:6px;background:#f4511e;border-radius:50%;margin-top:6px;"></div>
-                    <div>
-                      <p style="margin:0 0 3px;font-size:14px;font-weight:600;color:#171a20;">${title}</p>
-                      <p style="margin:0;font-size:13px;color:#5c5e62;">${desc}</p>
-                    </div>
-                  </div>
-                </td>
-              </tr>`).join("")}
+              <tr><td style="padding:0 0 14px;">
+                <table cellpadding="0" cellspacing="0"><tr>
+                  <td style="width:20px;padding-top:4px;vertical-align:top;">
+                    <div style="width:6px;height:6px;background:#f4511e;border-radius:50%;"></div>
+                  </td>
+                  <td>
+                    <p style="margin:0 0 2px;font-size:14px;font-weight:600;color:#171a20;">Full tyre catalogue</p>
+                    <p style="margin:0;font-size:13px;color:#5c5e62;">Browse PCR, TBR, and used tyres with live stock availability.</p>
+                  </td>
+                </tr></table>
+              </td></tr>
+              <tr><td style="padding:0 0 14px;">
+                <table cellpadding="0" cellspacing="0"><tr>
+                  <td style="width:20px;padding-top:4px;vertical-align:top;">
+                    <div style="width:6px;height:6px;background:#f4511e;border-radius:50%;"></div>
+                  </td>
+                  <td>
+                    <p style="margin:0 0 2px;font-size:14px;font-weight:600;color:#171a20;">Instant quote requests</p>
+                    <p style="margin:0;font-size:13px;color:#5c5e62;">Submit detailed quotes and track their status from your account.</p>
+                  </td>
+                </tr></table>
+              </td></tr>
+              <tr><td style="padding:0 0 4px;">
+                <table cellpadding="0" cellspacing="0"><tr>
+                  <td style="width:20px;padding-top:4px;vertical-align:top;">
+                    <div style="width:6px;height:6px;background:#f4511e;border-radius:50%;"></div>
+                  </td>
+                  <td>
+                    <p style="margin:0 0 2px;font-size:14px;font-weight:600;color:#171a20;">Order tracking</p>
+                    <p style="margin:0;font-size:13px;color:#5c5e62;">Follow your shipments and view invoices in real time.</p>
+                  </td>
+                </tr></table>
+              </td></tr>
             </table>
           </td>
         </tr>
@@ -114,11 +154,15 @@ function buildMigrationHtml(firstName: string): string {
         <tr>
           <td style="background:#f5f5f5;padding:20px 40px;border-top:1px solid #efefef;">
             <p style="margin:0 0 4px;font-size:12px;color:#8c8f94;">
-              ${COMPANY_LEGAL_NAME} · ${COMPANY_ADDRESS_STREET} · ${COMPANY_ADDRESS_CITY}
+              ${COMPANY_LEGAL_NAME} &middot; ${COMPANY_ADDRESS_STREET} &middot; ${COMPANY_ADDRESS_CITY}
             </p>
-            <p style="margin:0;font-size:12px;color:#8c8f94;">
-              Questions? Reply to this email or contact
-              <a href="mailto:support@okelcor.de" style="color:#f4511e;text-decoration:none;">support@okelcor.de</a>
+            <p style="margin:0 0 4px;font-size:12px;color:#8c8f94;">
+              Questions? Contact us at
+              <a href="mailto:${SUPPORT_EMAIL}" style="color:#f4511e;text-decoration:none;">${SUPPORT_EMAIL}</a>
+            </p>
+            <p style="margin:8px 0 0;font-size:11px;color:#b0b3b8;">
+              You are receiving this email because you have an account with Okelcor.
+              To unsubscribe, reply with the subject &ldquo;Unsubscribe&rdquo;.
             </p>
           </td>
         </tr>
@@ -130,12 +174,30 @@ function buildMigrationHtml(firstName: string): string {
 </html>`;
 }
 
-function escHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+// ── Plain text version ─────────────────────────────────────────────────────────
+
+function buildText(firstName: string): string {
+  const greeting = firstName ? `Hi ${firstName},` : "Hello,";
+  return `${greeting}
+
+We have launched our new platform at okelcor.com — a faster, more powerful experience for browsing our tyre catalogue, submitting quote requests, and managing your orders.
+
+Your account has already been set up on the new platform. No need to register again. Simply set a new password to access your account:
+
+${RESET_URL}
+
+WHAT IS NEW
+- Full tyre catalogue: Browse PCR, TBR, and used tyres with live stock availability.
+- Instant quote requests: Submit detailed quotes and track their status from your account.
+- Order tracking: Follow your shipments and view invoices in real time.
+
+Questions? Contact us at ${SUPPORT_EMAIL}
+
+${COMPANY_LEGAL_NAME} · ${COMPANY_ADDRESS_STREET} · ${COMPANY_ADDRESS_CITY}
+
+You are receiving this email because you have an account with Okelcor.
+To unsubscribe, reply with the subject "Unsubscribe".
+`;
 }
 
 // ── Route handler ──────────────────────────────────────────────────────────────
@@ -156,12 +218,18 @@ export async function POST(req: NextRequest) {
 
   // ── Test mode: single email to the test address ────────────────────────────
   if (testMode) {
+    // Use the admin's own first name so the preview looks realistic
+    const adminDisplayName = cookieStore.get("admin_display_name")?.value ?? "";
+    const adminFirstName = adminDisplayName.split(" ")[0] || "John";
+
     try {
       await resend.emails.send({
         from: FROM_EMAIL,
-        to: [TEST_EMAIL],
-        subject: "Okelcor — Your account is ready at okelcor.com",
-        html: buildMigrationHtml("Test User"),
+        to: [`${adminFirstName} <${TEST_EMAIL}>`],
+        subject: "Your Okelcor account is ready at okelcor.com",
+        html: buildHtml(adminFirstName),
+        text: buildText(adminFirstName),
+        headers: BULK_HEADERS,
       });
       return NextResponse.json({ sent: 1, total: 1, test_mode: true });
     } catch (err) {
@@ -200,12 +268,18 @@ export async function POST(req: NextRequest) {
       if (page === 1) total = json.meta?.total ?? customers.length;
       if (customers.length === 0) break;
 
-      const batch = customers.map((c) => ({
-        from: FROM_EMAIL,
-        to: [c.email],
-        subject: "Okelcor — Your account is ready at okelcor.com",
-        html: buildMigrationHtml(c.first_name || ""),
-      }));
+      const batch = customers.map((c) => {
+        const firstName = c.first_name || "";
+        const lastName = c.last_name || "";
+        return {
+          from: FROM_EMAIL,
+          to: [toField(firstName, lastName, c.email)],
+          subject: "Your Okelcor account is ready at okelcor.com",
+          html: buildHtml(firstName),
+          text: buildText(firstName),
+          headers: BULK_HEADERS,
+        };
+      });
 
       try {
         await resend.batch.send(batch);
