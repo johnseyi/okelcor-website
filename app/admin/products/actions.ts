@@ -158,6 +158,63 @@ export async function toggleProductActive(
   return {};
 }
 
+export async function toggleProductStock(
+  id: number,
+  inStock: boolean
+): Promise<{ error?: string }> {
+  const token = await getToken();
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/admin/products/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ in_stock: inStock }),
+      cache: "no-store",
+    });
+  } catch {
+    return { error: "Network error. Could not reach the server." };
+  }
+
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    return { error: json.message || "Failed to update stock status." };
+  }
+
+  revalidateProducts(id);
+  return {};
+}
+
+export async function markAllOutOfStock(): Promise<{ error?: string }> {
+  const token = await getToken();
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/admin/products/bulk-stock`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ in_stock: false, all: true }),
+      cache: "no-store",
+    });
+  } catch {
+    return { error: "Network error. Could not reach the server." };
+  }
+
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    return { error: json.message || "Failed to mark all products as out of stock." };
+  }
+
+  revalidateProducts();
+  return {};
+}
+
 // ── Image actions ─────────────────────────────────────────────────────────────
 
 /**

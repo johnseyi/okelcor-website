@@ -3,8 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, Pencil, Trash2, ToggleLeft, ToggleRight, ChevronLeft, ChevronRight, X, ShoppingBag } from "lucide-react";
-import { toggleProductActive, deleteProduct, listOnEbay, removeFromEbay } from "@/app/admin/products/actions";
+import { Search, Pencil, Trash2, ToggleLeft, ToggleRight, ChevronLeft, ChevronRight, X, ShoppingBag, PackageX, PackageCheck, AlertTriangle } from "lucide-react";
+import { toggleProductActive, deleteProduct, listOnEbay, removeFromEbay, toggleProductStock, markAllOutOfStock } from "@/app/admin/products/actions";
 import type { AdminProduct } from "@/lib/admin-api";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -48,6 +48,15 @@ function ActiveBadge({ active }: { active: boolean }) {
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.68rem] font-bold ${active ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
       {active ? "Active" : "Inactive"}
+    </span>
+  );
+}
+
+function StockBadge({ inStock }: { inStock: boolean }) {
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[0.68rem] font-bold ${inStock ? "bg-blue-100 text-blue-700" : "bg-red-100 text-red-600"}`}>
+      {inStock ? <PackageCheck size={10} strokeWidth={2.5} /> : <PackageX size={10} strokeWidth={2.5} />}
+      {inStock ? "In Stock" : "Out of Stock"}
     </span>
   );
 }
@@ -122,8 +131,11 @@ export default function ProductsTable({
   const [confirmDelete, setConfirmDelete] = useState<AdminProduct | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<number | null>(null);
+  const [stockTogglingId, setStockTogglingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [ebayActionId, setEbayActionId] = useState<number | null>(null);
+  const [bulkStockPending, setBulkStockPending] = useState(false);
+  const [confirmBulkOutOfStock, setConfirmBulkOutOfStock] = useState(false);
   const [, startTransition] = useTransition();
 
   // ── URL navigation ──────────────────────────────────────────────────────────
@@ -176,6 +188,29 @@ export default function ProductsTable({
     });
   };
 
+  const handleStockToggle = (product: AdminProduct) => {
+    setActionError(null);
+    setStockTogglingId(product.id);
+    startTransition(async () => {
+      const result = await toggleProductStock(product.id, !(product.in_stock ?? true));
+      if (result.error) setActionError(result.error);
+      else router.refresh();
+      setStockTogglingId(null);
+    });
+  };
+
+  const handleMarkAllOutOfStock = () => {
+    setActionError(null);
+    setBulkStockPending(true);
+    setConfirmBulkOutOfStock(false);
+    startTransition(async () => {
+      const result = await markAllOutOfStock();
+      if (result.error) setActionError(result.error);
+      else router.refresh();
+      setBulkStockPending(false);
+    });
+  };
+
   const handleDelete = () => {
     if (!confirmDelete) return;
     setActionError(null);
@@ -202,6 +237,37 @@ export default function ProductsTable({
 
   return (
     <>
+      {/* Bulk out-of-stock confirm modal */}
+      {confirmBulkOutOfStock && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-[420px] rounded-2xl bg-white p-8 shadow-2xl">
+            <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-full bg-amber-100">
+              <AlertTriangle size={18} className="text-amber-600" />
+            </div>
+            <h3 className="text-[1rem] font-extrabold text-[#1a1a1a]">Mark All Out of Stock?</h3>
+            <p className="mt-2 text-[0.875rem] leading-6 text-[#5c5e62]">
+              This will set <span className="font-semibold text-[#1a1a1a]">all products</span> to Out of Stock across the entire catalogue. You can re-enable individual products afterwards.
+            </p>
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setConfirmBulkOutOfStock(false)}
+                className="flex h-10 flex-1 items-center justify-center rounded-full border border-black/10 bg-white text-[0.875rem] font-semibold text-[#1a1a1a] transition hover:bg-[#f0f2f5]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleMarkAllOutOfStock}
+                className="flex h-10 flex-1 items-center justify-center rounded-full bg-amber-500 text-[0.875rem] font-semibold text-white transition hover:bg-amber-600"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Delete modal */}
       {confirmDelete && (
         <ConfirmDeleteModal
@@ -221,6 +287,19 @@ export default function ProductsTable({
           </button>
         </div>
       )}
+
+      {/* Bulk stock toolbar */}
+      <div className="mb-3 flex items-center justify-end">
+        <button
+          type="button"
+          onClick={() => setConfirmBulkOutOfStock(true)}
+          disabled={bulkStockPending}
+          className="flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-[0.8rem] font-semibold text-amber-700 transition hover:bg-amber-100 disabled:opacity-50"
+        >
+          <PackageX size={14} strokeWidth={2} />
+          {bulkStockPending ? "Updating…" : "Mark All Out of Stock"}
+        </button>
+      </div>
 
       {/* Search + filter bar */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row">
@@ -272,7 +351,7 @@ export default function ProductsTable({
           <table className="w-full min-w-[780px] text-left">
             <thead>
               <tr className="border-b border-black/[0.06] bg-[#fafafa]">
-                {["Image", "SKU / Name", "Brand", "Type", "Size", "Price", "Status", "eBay", "Actions"].map(
+                {["Image", "SKU / Name", "Brand", "Type", "Size", "Price", "Status", "Stock", "eBay", "Actions"].map(
                   (h) => (
                     <th
                       key={h}
@@ -287,7 +366,7 @@ export default function ProductsTable({
             <tbody className="divide-y divide-black/[0.04]">
               {products.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-[0.875rem] text-[#5c5e62]">
+                  <td colSpan={10} className="px-4 py-12 text-center text-[0.875rem] text-[#5c5e62]">
                     No products found. Try adjusting your search or{" "}
                     <Link href="/admin/products/new" className="font-semibold text-[#E85C1A] underline">
                       add one
@@ -298,7 +377,9 @@ export default function ProductsTable({
               ) : (
                 products.map((product) => {
                   const active = product.is_active ?? true;
+                  const inStock = product.in_stock ?? true;
                   const isToggling = togglingId === product.id;
+                  const isStockToggling = stockTogglingId === product.id;
                   const isEbayActing = ebayActionId === product.id;
                   return (
                     <tr key={product.id} className="group transition hover:bg-[#fafafa]">
@@ -351,6 +432,19 @@ export default function ProductsTable({
                       {/* Active status */}
                       <td className="px-4 py-3">
                         <ActiveBadge active={active} />
+                      </td>
+
+                      {/* Stock status */}
+                      <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          onClick={() => handleStockToggle(product)}
+                          disabled={isStockToggling}
+                          title={inStock ? "Mark Out of Stock" : "Mark In Stock"}
+                          className="disabled:opacity-50"
+                        >
+                          <StockBadge inStock={inStock} />
+                        </button>
                       </td>
 
                       {/* eBay status */}
