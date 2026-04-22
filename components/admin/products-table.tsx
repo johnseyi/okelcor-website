@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Search, Pencil, Trash2, ToggleLeft, ToggleRight, ChevronLeft, ChevronRight, X, ShoppingBag, PackageX, PackageCheck, AlertTriangle } from "lucide-react";
-import { toggleProductActive, deleteProduct, listOnEbay, removeFromEbay, toggleProductStock, markAllOutOfStock } from "@/app/admin/products/actions";
+import { toggleProductActive, deleteProduct, listOnEbay, removeFromEbay, toggleProductStock, markAllOutOfStock, markAllInStock } from "@/app/admin/products/actions";
 import type { AdminProduct } from "@/lib/admin-api";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -136,6 +136,7 @@ export default function ProductsTable({
   const [ebayActionId, setEbayActionId] = useState<number | null>(null);
   const [bulkStockPending, setBulkStockPending] = useState(false);
   const [confirmBulkOutOfStock, setConfirmBulkOutOfStock] = useState(false);
+  const [confirmBulkInStock, setConfirmBulkInStock] = useState(false);
   const [, startTransition] = useTransition();
 
   // ── URL navigation ──────────────────────────────────────────────────────────
@@ -211,6 +212,18 @@ export default function ProductsTable({
     });
   };
 
+  const handleMarkAllInStock = () => {
+    setActionError(null);
+    setBulkStockPending(true);
+    setConfirmBulkInStock(false);
+    startTransition(async () => {
+      const result = await markAllInStock();
+      if (result.error) setActionError(result.error);
+      else router.refresh();
+      setBulkStockPending(false);
+    });
+  };
+
   const handleDelete = () => {
     if (!confirmDelete) return;
     setActionError(null);
@@ -268,6 +281,37 @@ export default function ProductsTable({
         </div>
       )}
 
+      {/* Bulk in-stock confirm modal */}
+      {confirmBulkInStock && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-[420px] rounded-2xl bg-white p-8 shadow-2xl">
+            <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-full bg-blue-100">
+              <PackageCheck size={18} className="text-blue-600" />
+            </div>
+            <h3 className="text-[1rem] font-extrabold text-[#1a1a1a]">Mark All In Stock?</h3>
+            <p className="mt-2 text-[0.875rem] leading-6 text-[#5c5e62]">
+              This will set <span className="font-semibold text-[#1a1a1a]">all products</span> to In Stock across the entire catalogue.
+            </p>
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setConfirmBulkInStock(false)}
+                className="flex h-10 flex-1 items-center justify-center rounded-full border border-black/10 bg-white text-[0.875rem] font-semibold text-[#1a1a1a] transition hover:bg-[#f0f2f5]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleMarkAllInStock}
+                className="flex h-10 flex-1 items-center justify-center rounded-full bg-blue-600 text-[0.875rem] font-semibold text-white transition hover:bg-blue-700"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Delete modal */}
       {confirmDelete && (
         <ConfirmDeleteModal
@@ -289,7 +333,16 @@ export default function ProductsTable({
       )}
 
       {/* Bulk stock toolbar */}
-      <div className="mb-3 flex items-center justify-end">
+      <div className="mb-3 flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={() => setConfirmBulkInStock(true)}
+          disabled={bulkStockPending}
+          className="flex items-center gap-2 rounded-xl border border-blue-300 bg-blue-50 px-4 py-2 text-[0.8rem] font-semibold text-blue-700 transition hover:bg-blue-100 disabled:opacity-50"
+        >
+          <PackageCheck size={14} strokeWidth={2} />
+          {bulkStockPending ? "Updating…" : "Mark All In Stock"}
+        </button>
         <button
           type="button"
           onClick={() => setConfirmBulkOutOfStock(true)}

@@ -188,7 +188,7 @@ export async function toggleProductStock(
   return {};
 }
 
-export async function markAllOutOfStock(): Promise<{ error?: string }> {
+async function bulkStockUpdate(inStock: boolean): Promise<{ error?: string }> {
   const token = await getToken();
   let res: Response;
   try {
@@ -199,7 +199,7 @@ export async function markAllOutOfStock(): Promise<{ error?: string }> {
         Accept: "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ in_stock: false, all: true }),
+      body: JSON.stringify({ in_stock: inStock, all: true }),
       cache: "no-store",
     });
   } catch {
@@ -208,11 +208,19 @@ export async function markAllOutOfStock(): Promise<{ error?: string }> {
 
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
-    return { error: json.message || "Failed to mark all products as out of stock." };
+    return { error: json.message || "Failed to update stock status." };
   }
 
   revalidateProducts();
   return {};
+}
+
+export async function markAllOutOfStock(): Promise<{ error?: string }> {
+  return bulkStockUpdate(false);
+}
+
+export async function markAllInStock(): Promise<{ error?: string }> {
+  return bulkStockUpdate(true);
 }
 
 // ── Image actions ─────────────────────────────────────────────────────────────

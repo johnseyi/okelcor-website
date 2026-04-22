@@ -16,6 +16,7 @@ import {
   Menu,
   LogOut,
   ChevronRight,
+  ChevronLeft,
   UserCircle,
   Users,
   ContactRound,
@@ -77,20 +78,20 @@ function Sidebar({
   pathname,
   role,
   roleLabel,
+  collapsed,
   onClose,
+  onToggleCollapse,
 }: {
   pathname: string;
   role: string;
   roleLabel: string;
+  collapsed: boolean;
   onClose: () => void;
+  onToggleCollapse: () => void;
 }) {
   const isActive = (href: string) =>
     href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
 
-  // Show all items when role hasn't loaded yet (empty string = cookie not read or
-  // not set for sessions that pre-date the admin_role cookie). This prevents a
-  // flash where only Profile appears on first render, and keeps existing
-  // authenticated sessions working if the cookie is absent.
   const visibleNav = NAV.filter(({ section }) =>
     section === null || !role || canAccess(role, section)
   );
@@ -102,22 +103,32 @@ function Sidebar({
   return (
     <div className="flex h-full flex-col bg-[#1a1a1a]">
       {/* Logo */}
-      <div className="flex h-16 shrink-0 items-center justify-between border-b border-white/[0.08] px-5">
-        <Image
-          src="/logo/okelcor-logo.png"
-          alt="Okelcor"
-          width={80}
-          height={22}
-          className="h-[22px] w-auto object-contain brightness-0 invert"
-          priority
-        />
-        <span className="rounded-full bg-[#E85C1A]/15 px-2.5 py-0.5 text-[0.65rem] font-bold uppercase tracking-[0.18em] text-[#E85C1A]">
-          {roleLabel || "Admin"}
-        </span>
+      <div className={[
+        "flex h-16 shrink-0 items-center border-b border-white/[0.08]",
+        collapsed ? "justify-center px-3" : "justify-between px-5",
+      ].join(" ")}>
+        {!collapsed && (
+          <Image
+            src="/logo/okelcor-logo.png"
+            alt="Okelcor"
+            width={80}
+            height={22}
+            className="h-[22px] w-auto object-contain brightness-0 invert"
+            priority
+          />
+        )}
+        {!collapsed && (
+          <span className="rounded-full bg-[#E85C1A]/15 px-2.5 py-0.5 text-[0.65rem] font-bold uppercase tracking-[0.18em] text-[#E85C1A]">
+            {roleLabel || "Admin"}
+          </span>
+        )}
+        {collapsed && (
+          <span className="text-[0.7rem] font-extrabold tracking-widest text-[#E85C1A]">OK</span>
+        )}
       </div>
 
       {/* Nav links */}
-      <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-3 py-4">
+      <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-4">
         {visibleNav.map(({ label, href, icon: Icon }) => {
           const active = isActive(href);
           return (
@@ -125,20 +136,18 @@ function Sidebar({
               key={href}
               href={href}
               onClick={onClose}
+              title={collapsed ? label : undefined}
               className={[
-                "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-[0.875rem] font-medium transition-all",
+                "group flex items-center rounded-lg py-2.5 text-[0.875rem] font-medium transition-all",
+                collapsed ? "justify-center px-2" : "gap-3 px-3",
                 active
                   ? "bg-[#E85C1A] text-white shadow-sm"
                   : "text-white/55 hover:bg-white/[0.06] hover:text-white",
               ].join(" ")}
             >
-              <Icon
-                size={16}
-                strokeWidth={active ? 2.2 : 1.8}
-                className="shrink-0"
-              />
-              <span className="flex-1 truncate">{label}</span>
-              {active && (
+              <Icon size={16} strokeWidth={active ? 2.2 : 1.8} className="shrink-0" />
+              {!collapsed && <span className="flex-1 truncate">{label}</span>}
+              {!collapsed && active && (
                 <ChevronRight size={13} strokeWidth={2.5} className="shrink-0 opacity-60" />
               )}
             </Link>
@@ -148,9 +157,12 @@ function Sidebar({
         {/* Sales Channels section */}
         {visibleSalesChannels.length > 0 && (
           <>
-            <p className="mt-4 mb-1 px-3 text-[0.63rem] font-bold uppercase tracking-[0.18em] text-white/25">
-              Sales Channels
-            </p>
+            {!collapsed && (
+              <p className="mt-4 mb-1 px-3 text-[0.63rem] font-bold uppercase tracking-[0.18em] text-white/25">
+                Sales Channels
+              </p>
+            )}
+            {collapsed && <div className="my-2 border-t border-white/[0.08]" />}
             {visibleSalesChannels.map(({ label, href, icon: Icon }) => {
               const active = isActive(href);
               return (
@@ -158,20 +170,18 @@ function Sidebar({
                   key={href}
                   href={href}
                   onClick={onClose}
+                  title={collapsed ? label : undefined}
                   className={[
-                    "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-[0.875rem] font-medium transition-all",
+                    "group flex items-center rounded-lg py-2.5 text-[0.875rem] font-medium transition-all",
+                    collapsed ? "justify-center px-2" : "gap-3 px-3",
                     active
                       ? "bg-[#E85C1A] text-white shadow-sm"
                       : "text-white/55 hover:bg-white/[0.06] hover:text-white",
                   ].join(" ")}
                 >
-                  <Icon
-                    size={16}
-                    strokeWidth={active ? 2.2 : 1.8}
-                    className="shrink-0"
-                  />
-                  <span className="flex-1 truncate">{label}</span>
-                  {active && (
+                  <Icon size={16} strokeWidth={active ? 2.2 : 1.8} className="shrink-0" />
+                  {!collapsed && <span className="flex-1 truncate">{label}</span>}
+                  {!collapsed && active && (
                     <ChevronRight size={13} strokeWidth={2.5} className="shrink-0 opacity-60" />
                   )}
                 </Link>
@@ -180,6 +190,28 @@ function Sidebar({
           </>
         )}
       </nav>
+
+      {/* Collapse toggle — desktop only */}
+      <div className="hidden shrink-0 border-t border-white/[0.08] p-2 lg:block">
+        <button
+          type="button"
+          onClick={onToggleCollapse}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className={[
+            "flex h-9 w-full items-center rounded-lg text-white/40 transition hover:bg-white/[0.06] hover:text-white",
+            collapsed ? "justify-center" : "gap-2 px-3",
+          ].join(" ")}
+        >
+          {collapsed ? (
+            <ChevronRight size={16} strokeWidth={1.8} />
+          ) : (
+            <>
+              <ChevronLeft size={16} strokeWidth={1.8} />
+              <span className="text-[0.78rem]">Collapse</span>
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 }
@@ -190,14 +222,15 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
   const router   = useRouter();
 
-  const [sidebarOpen, setSidebarOpen]   = useState(false);
-  const [role, setRole]                 = useState("");
-  const [roleLabel, setRoleLabel]       = useState("");
-  const [adminName, setAdminName]       = useState("");
-  const [displayName, setDisplayName]   = useState("");
-  const [mustChange, setMustChange]     = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef                     = useRef<HTMLDivElement>(null);
+  const [sidebarOpen, setSidebarOpen]       = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [role, setRole]                     = useState("");
+  const [roleLabel, setRoleLabel]           = useState("");
+  const [adminName, setAdminName]           = useState("");
+  const [displayName, setDisplayName]       = useState("");
+  const [mustChange, setMustChange]         = useState(false);
+  const [dropdownOpen, setDropdownOpen]     = useState(false);
+  const dropdownRef                         = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const r  = getCookie("admin_role");
@@ -207,7 +240,16 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     setAdminName(getCookie("admin_name"));
     setDisplayName(getCookie("admin_display_name") || getCookie("admin_name"));
     setMustChange(getCookie("admin_must_change") === "1");
+    setSidebarCollapsed(localStorage.getItem("adminSidebarCollapsed") === "1");
   }, []);
+
+  const handleToggleCollapse = () => {
+    setSidebarCollapsed((v) => {
+      const next = !v;
+      localStorage.setItem("adminSidebarCollapsed", next ? "1" : "0");
+      return next;
+    });
+  };
 
   // Route guard — redirect to /admin/unauthorized if role can't access current section
   useEffect(() => {
@@ -258,15 +300,18 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       {/* ── Sidebar ── */}
       <aside
         className={[
-          "fixed inset-y-0 left-0 z-30 w-60 transition-transform duration-300 ease-in-out lg:relative lg:z-auto lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-30 transition-all duration-300 ease-in-out lg:relative lg:z-auto lg:translate-x-0",
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
+          sidebarCollapsed ? "w-[64px]" : "w-60",
         ].join(" ")}
       >
         <Sidebar
           pathname={pathname}
           role={role}
           roleLabel={roleLabel}
+          collapsed={sidebarCollapsed}
           onClose={() => setSidebarOpen(false)}
+          onToggleCollapse={handleToggleCollapse}
         />
       </aside>
 
