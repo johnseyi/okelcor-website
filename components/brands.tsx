@@ -88,7 +88,7 @@ export default function Brands({ brands: apiBrands }: BrandsProps) {
               className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-[1.03]"
               style={{
                 backgroundImage:
-                  "url('/images/schwoaze-highway-3392100.png')",
+                  "url('/images/schwoaze-highway-3392100(2).png')",
               }}
             />
             <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/10 to-black/35" />
