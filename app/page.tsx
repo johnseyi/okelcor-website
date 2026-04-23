@@ -23,18 +23,20 @@ import {
 } from "@/components/ui/skeleton";
 
 export const metadata: Metadata = {
-  title: "Okelcor – Growing Together",
+  title: {
+    absolute: "OKELCOR TIRES - The Cheapest Tyres on the Internet",
+  },
   description:
     "Munich-based global tyre supplier. Premium PCR, TBR, and used tyres for businesses, fleets, and individual drivers in over 30 countries.",
   openGraph: {
-    title: "Okelcor – Growing Together",
+    title: "OKELCOR TIRES - The Cheapest Tyres on the Internet",
     description:
       "Munich-based global tyre supplier. Premium PCR, TBR, and used tyres for businesses, fleets, and individual drivers in over 30 countries.",
-    url: "/",
+    url: "https://www.okelcor.com",
     type: "website",
   },
   twitter: {
-    title: "Okelcor – Growing Together",
+    title: "OKELCOR TIRES - The Cheapest Tyres on the Internet",
     description:
       "Munich-based global tyre supplier. PCR, TBR, and used tyres for distributors worldwide.",
   },

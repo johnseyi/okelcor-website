@@ -11,9 +11,16 @@ import AmortizationCalculator from "@/components/fet/amortization-calculator";
 import FadeUp from "@/components/motion/fade-up";
 
 export const metadata: Metadata = {
-  title: "",
+  title: "Fuel Echo Tech – Engine Treatment for Fleets",
   description:
     "Fuel Echo Tech — the fuel efficiency device trusted by fleet operators across Europe. Up to 15% fuel savings, reduced emissions, improved engine performance.",
+  openGraph: {
+    title: "Fuel Echo Tech – Engine Treatment for Fleets | Okelcor Tires",
+    description:
+      "Fuel Echo Tech — up to 15% fuel savings, reduced emissions, improved engine performance. Trusted by fleet operators across Europe.",
+    url: "https://www.okelcor.com/fet",
+    type: "website",
+  },
 };
 
 // ─── Section wrapper ──────────────────────────────────────────────────────────

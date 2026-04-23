@@ -1,18 +1,18 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Contact",
+  title: "Contact Us – Wholesale & Sourcing Enquiries",
   description:
     "Get in touch with Okelcor for catalogue access, wholesale pricing, sourcing support, and partnership discussions.",
   openGraph: {
-    title: "Contact Okelcor – Talk to Our Supply Team",
+    title: "Contact Us – Wholesale & Sourcing Enquiries | Okelcor Tires",
     description:
       "Reach out for catalogue access, wholesale pricing, tyre sourcing enquiries, and global supply partnerships.",
-    url: "/contact",
+    url: "https://www.okelcor.com/contact",
     type: "website",
   },
   twitter: {
-    title: "Contact Okelcor – Talk to Our Supply Team",
+    title: "Contact Us – Wholesale & Sourcing Enquiries | Okelcor Tires",
     description:
       "Wholesale pricing, tyre sourcing enquiries, and global supply partnerships.",
   },

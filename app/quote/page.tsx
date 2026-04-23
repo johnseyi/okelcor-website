@@ -7,14 +7,14 @@ import QuoteSummary from "@/components/quote/quote-summary";
 import QuoteTrust from "@/components/quote/quote-trust";
 
 export const metadata: Metadata = {
-  title: "Request a Quote",
+  title: "Request a Tyre Supply Quote",
   description:
     "Request a tailored tyre supply quotation from Okelcor. PCR, TBR, used tyres, and mixed requests. Global delivery. Response within 1 business day.",
   openGraph: {
-    title: "Request a Tyre Supply Quote – Okelcor",
+    title: "Request a Tyre Supply Quote | Okelcor Tires",
     description:
       "Get a tailored quotation for PCR, TBR, or used tyres. Global delivery. Our team responds within 1 business day.",
-    url: "/quote",
+    url: "https://www.okelcor.com/quote",
     type: "website",
   },
   twitter: {

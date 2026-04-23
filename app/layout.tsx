@@ -25,32 +25,28 @@ const SITE_URL = (() => {
 const BASE_URL = SITE_URL.href;
 
 export const metadata: Metadata = {
-  metadataBase: SITE_URL,
+  metadataBase: new URL("https://www.okelcor.com"),
   title: {
-    default: "Okelcor – Growing Together",
-    template: "%s – Okelcor",
+    default: "OKELCOR TIRES - The Cheapest Tyres on the Internet",
+    template: "%s | Okelcor Tires",
   },
   description:
-    "Premium tyre sourcing solutions for distributors and wholesalers worldwide. PCR, TBR, and used tyres from trusted global brands.",
+    "Munich-based global tyre supplier. Premium PCR, TBR, and used tyres for businesses, fleets, and individual drivers in over 30 countries.",
+  keywords: ["tyres", "tires", "wholesale", "PCR", "TBR", "bulk tires", "Okelcor"],
   openGraph: {
     type: "website",
-    siteName: "Okelcor",
+    siteName: "Okelcor Tires",
     locale: "en_GB",
-    url: BASE_URL,
-    title: "Okelcor – Growing Together",
+    url: "https://www.okelcor.com",
+    title: "OKELCOR TIRES - The Cheapest Tyres on the Internet",
     description:
-      "Premium tyre sourcing solutions for distributors and wholesalers worldwide. PCR, TBR, and used tyres from trusted global brands.",
+      "Munich-based global tyre supplier. Premium PCR, TBR, and used tyres for businesses, fleets, and individual drivers in over 30 countries.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Okelcor – Growing Together",
+    title: "OKELCOR TIRES - The Cheapest Tyres on the Internet",
     description:
-      "Premium tyre sourcing solutions for distributors and wholesalers worldwide.",
-  },
-  icons: {
-    icon: "/favicon2.png",
-    shortcut: "/favicon2.png",
-    apple: "/favicon2.png",
+      "Munich-based global tyre supplier. Premium PCR, TBR, and used tyres for businesses, fleets, and individual drivers in over 30 countries.",
   },
   robots: {
     index: true,

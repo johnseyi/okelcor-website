@@ -8,14 +8,14 @@ import { getServerLocale } from "@/lib/locale";
 import type { Locale } from "@/lib/translations";
 
 export const metadata: Metadata = {
-  title: "News & Insights",
+  title: "Tyre Industry News & Insights",
   description:
     "Insights, updates, and tyre supply knowledge for distributors, partners, and international buyers.",
   openGraph: {
-    title: "News & Insights – Okelcor",
+    title: "Tyre Industry News & Insights | Okelcor Tires",
     description:
       "Tyre supply updates, market insights, and logistics knowledge for global distributors and buyers.",
-    url: "/news",
+    url: "https://www.okelcor.com/news",
     type: "website",
   },
   twitter: {

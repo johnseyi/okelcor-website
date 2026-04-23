@@ -9,18 +9,18 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export const metadata: Metadata = {
-  title: "Shop",
+  title: "Buy Tyres Online – PCR, TBR & Used Tyres",
   description:
     "Browse premium PCR, TBR, OTR, and used tyres from leading global brands. Filter by brand, season, and tyre type.",
   openGraph: {
-    title: "Shop Premium Tyres – Okelcor",
+    title: "Buy Tyres Online – PCR, TBR & Used Tyres | Okelcor Tires",
     description:
       "PCR, TBR, OTR, and used tyres from Michelin, Bridgestone, Goodyear, Continental, Pirelli, and Dunlop. Global wholesale supply.",
-    url: "/shop",
+    url: "https://www.okelcor.com/shop",
     type: "website",
   },
   twitter: {
-    title: "Shop Premium Tyres – Okelcor",
+    title: "Buy Tyres Online – PCR, TBR & Used Tyres | Okelcor Tires",
     description:
       "PCR, TBR, OTR, and used tyres from top global brands. Wholesale supply worldwide.",
   },
