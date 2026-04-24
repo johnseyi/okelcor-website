@@ -276,7 +276,13 @@ export async function POST(req: NextRequest) {
   }
 
   const settings = await getSiteSettings();
-  const QUOTE_EMAIL = settings.quote_email || settings.contact_email || process.env.QUOTE_EMAIL || process.env.CONTACT_EMAIL || COMPANY_EMAIL;
+  const QUOTE_EMAIL = (
+    settings.quote_email ||
+    settings.contact_email ||
+    process.env.QUOTE_EMAIL ||
+    process.env.CONTACT_EMAIL ||
+    COMPANY_EMAIL
+  ).replace(/@okelcor\.de\b/g, "@okelcor.com");
 
   let body: unknown;
   try {
