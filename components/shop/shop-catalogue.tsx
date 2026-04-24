@@ -182,14 +182,15 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed }
     abortRef.current = controller;
 
     const params = new URLSearchParams({ locale });
-    if (searchText.trim()) params.set("q",          searchText.trim());
-    if (priceMin)          params.set("price_min",  priceMin);
-    if (priceMax)          params.set("price_max",  priceMax);
-    if (selBrand)          params.set("brand",      selBrand);
-    if (selSeason)         params.set("season", selSeason);
-    if (selSpeed)          params.set("speed",      selSpeed);
-    if (selLoad)           params.set("load_index", selLoad);
-    if (sortBy)            params.set("sort",       sortBy);
+    if (searchText.trim()) params.set("q",             searchText.trim());
+    if (priceMin)          params.set("price_min",     priceMin);
+    if (priceMax)          params.set("price_max",     priceMax);
+    if (selBrand)          params.set("brand",         selBrand);
+    if (selSeason)         params.set("season",        selSeason);
+    if (selSpeed)          params.set("speed",         selSpeed);
+    if (selLoad)           params.set("load_index",    selLoad);
+    if (sortBy)            params.set("sort",          sortBy);
+    if (customerType !== "guest") params.set("customer_type", customerType);
 
     // Build size string from width / height / rim components
     let sizeStr = "";
@@ -226,7 +227,7 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed }
         }
       })
       .finally(() => setIsLoading(false));
-  }, [searchText, priceMin, priceMax, selBrand, selWidth, selHeight, selRim, selSeason, selSpeed, selLoad, sortBy, locale]);
+  }, [searchText, priceMin, priceMax, selBrand, selWidth, selHeight, selRim, selSeason, selSpeed, selLoad, sortBy, locale, customerType]);
 
   // Re-fetch when sort changes after results are already showing
   useEffect(() => {
