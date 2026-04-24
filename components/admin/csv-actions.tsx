@@ -8,10 +8,13 @@ import { deleteAllProducts } from "@/app/admin/products/actions";
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type ImportResult = {
-  imported: number;
-  updated:  number;
-  skipped:  number;
-  errors:   { row: number; message: string }[];
+  imported?: number;
+  updated?:  number;
+  skipped?:  number;
+  errors?:   { row: number; message: string }[];
+  message?:  string;
+  // Capture anything extra the backend sends, for debugging
+  [key: string]: unknown;
 };
 
 type ModalState =
@@ -383,35 +386,72 @@ export default function CsvActions({
             {/* ── Phase: done ── */}
             {modal.phase === "done" && (
               <div className="flex flex-col gap-5">
-                {/* Summary */}
-                <div className="flex items-start gap-3 rounded-[12px] border border-emerald-200 bg-emerald-50 p-4">
-                  <CheckCircle2 size={20} className="mt-0.5 shrink-0 text-emerald-600" />
-                  <div>
-                    <p className="text-[0.9rem] font-semibold text-emerald-800">Import complete</p>
-                    <p className="mt-1 text-[0.82rem] text-emerald-700">
-                      <strong>{modal.result.imported ?? 0}</strong> imported ·{" "}
-                      <strong>{modal.result.updated ?? 0}</strong> updated ·{" "}
-                      <strong>{modal.result.skipped ?? 0}</strong> skipped
-                    </p>
-                  </div>
+                {/* Summary counts */}
+                <div className="grid grid-cols-3 gap-2">
+                  {(["imported", "updated", "skipped"] as const).map((key) => (
+                    <div key={key} className="rounded-[10px] border border-black/[0.07] bg-[#f9f9f9] p-3 text-center">
+                      <p className="text-[1.1rem] font-extrabold text-[#1a1a1a]">
+                        {modal.result[key] ?? 0}
+                      </p>
+                      <p className="mt-0.5 text-[0.7rem] font-semibold uppercase tracking-wide text-[#5c5e62]">
+                        {key}
+                      </p>
+                    </div>
+                  ))}
                 </div>
+
+                {/* All-zero warning */}
+                {!modal.result.imported && !modal.result.updated && !modal.result.skipped && (
+                  <div className="flex items-start gap-2.5 rounded-[10px] border border-amber-200 bg-amber-50 p-3 text-[0.78rem] text-amber-800">
+                    <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                    <div>
+                      <strong>Nothing was imported.</strong> The backend accepted the file but returned 0 counts.
+                      {modal.result.message && (
+                        <p className="mt-1 font-mono text-[0.72rem]">Backend message: &quot;{modal.result.message}&quot;</p>
+                      )}
+                      <p className="mt-1">Check the raw response below and share with the backend team.</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Backend message (when counts > 0) */}
+                {(modal.result.imported || modal.result.updated) && modal.result.message && (
+                  <p className="text-[0.78rem] text-emerald-700">{modal.result.message}</p>
+                )}
+
+                {/* Raw backend response — always visible for debugging */}
+                <details className="rounded-[10px] border border-black/[0.07]">
+                  <summary className="cursor-pointer px-3 py-2 text-[0.72rem] font-semibold text-[#5c5e62] hover:text-[#1a1a1a]">
+                    Raw backend response
+                  </summary>
+                  <pre className="max-h-[120px] overflow-auto bg-[#f9f9f9] px-3 pb-3 text-[0.68rem] text-[#333]">
+                    {JSON.stringify(modal.result, null, 2)}
+                  </pre>
+                </details>
 
                 {/* Row errors — guard against backend not sending errors array */}
                 {(modal.result.errors ?? []).length > 0 && (
                   <div>
-                    <p className="mb-2 text-[0.78rem] font-bold uppercase tracking-wide text-red-600">
-                      {modal.result.errors.length} row{modal.result.errors.length !== 1 ? "s" : ""} failed
-                    </p>
-                    <ul className="max-h-[180px] overflow-y-auto rounded-[10px] border border-red-100 bg-red-50 divide-y divide-red-100">
-                      {modal.result.errors.map((e, i) => (
-                        <li key={i} className="flex items-start gap-2 px-3 py-2">
-                          <AlertCircle size={13} className="mt-0.5 shrink-0 text-red-500" />
-                          <span className="text-[0.78rem] text-red-700">
-                            <span className="font-semibold">Row {e.row}:</span> {e.message}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
+                    {(() => {
+                      const errs = modal.result.errors ?? [];
+                      return (
+                        <>
+                          <p className="mb-2 text-[0.78rem] font-bold uppercase tracking-wide text-red-600">
+                            {errs.length} row{errs.length !== 1 ? "s" : ""} failed
+                          </p>
+                          <ul className="max-h-[180px] overflow-y-auto rounded-[10px] border border-red-100 bg-red-50 divide-y divide-red-100">
+                            {errs.map((e, i) => (
+                              <li key={i} className="flex items-start gap-2 px-3 py-2">
+                                <AlertCircle size={13} className="mt-0.5 shrink-0 text-red-500" />
+                                <span className="text-[0.78rem] text-red-700">
+                                  <span className="font-semibold">Row {e.row}:</span> {e.message}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </>
+                      );
+                    })()}
                   </div>
                 )}
 

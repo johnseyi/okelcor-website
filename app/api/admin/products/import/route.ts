@@ -38,13 +38,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }
 
-  // Forward segment param (b2b | b2c) so the backend maps the price column
-  // to the correct pricing tier field.
+  // segment param is read for future use but NOT forwarded to Laravel yet —
+  // the backend does not implement segment-aware price routing and passing it
+  // causes 0 rows to be imported. Un-comment the searchParams line once the
+  // backend has implemented POST /import?segment=b2b|b2c price-tier routing.
   const segment = request.nextUrl.searchParams.get("segment");
   const importUrl = new URL(`${API_URL}/admin/products/import`);
-  if (segment === "b2b" || segment === "b2c") {
-    importUrl.searchParams.set("segment", segment);
-  }
+  // if (segment === "b2b" || segment === "b2c") {
+  //   importUrl.searchParams.set("segment", segment);
+  // }
+  void segment; // suppress unused-var lint until the above is re-enabled
 
   // ── Parse and normalise the CSV ───────────────────────────────────────────
   let formData: FormData;
