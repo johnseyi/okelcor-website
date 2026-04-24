@@ -18,7 +18,7 @@ declare global {
   }
 }
 
-const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
+const GA_ID = process.env.NEXT_PUBLIC_GA4_ID;
 
 /** Internal safe caller — never throws, never runs server-side. */
 function gtag(...args: unknown[]) {
