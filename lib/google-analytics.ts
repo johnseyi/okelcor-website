@@ -4,7 +4,7 @@ const propertyId = process.env.GA_PROPERTY_ID ?? "";
 
 function getClient() {
   const clientEmail = process.env.GOOGLE_SA_CLIENT_EMAIL;
-  const privateKey = process.env.GOOGLE_SA_PRIVATE_KEY?.replace(/\\n/g, "\n");
+  const privateKey  = process.env.GOOGLE_SA_PRIVATE_KEY?.replace(/\\n/g, "\n");
 
   if (!clientEmail || !privateKey || !propertyId) return null;
 
@@ -52,16 +52,19 @@ function fmt(val: string | null | undefined): string {
   return val ?? "(not set)";
 }
 
-// ── Overview metrics (last N days) ────────────────────────────────────────────
+// ── Overview metrics ──────────────────────────────────────────────────────────
 
-export async function fetchGaOverview(days = 28): Promise<GaOverview | null> {
+export async function fetchGaOverview(
+  startDate: string,
+  endDate: string
+): Promise<GaOverview | null> {
   const client = getClient();
   if (!client) return null;
 
   try {
     const [response] = await client.runReport({
       property: `properties/${propertyId}`,
-      dateRanges: [{ startDate: `${days}daysAgo`, endDate: "today" }],
+      dateRanges: [{ startDate, endDate }],
       metrics: [
         { name: "activeUsers" },
         { name: "sessions" },
@@ -73,34 +76,37 @@ export async function fetchGaOverview(days = 28): Promise<GaOverview | null> {
 
     const row = response.rows?.[0]?.metricValues ?? [];
     return {
-      activeUsers:         num(row[0]?.value),
-      sessions:            num(row[1]?.value),
-      pageViews:           num(row[2]?.value),
-      avgSessionDuration:  num(row[3]?.value),
-      bounceRate:          Math.round(Number(row[4]?.value ?? 0) * 100),
+      activeUsers:        num(row[0]?.value),
+      sessions:           num(row[1]?.value),
+      pageViews:          num(row[2]?.value),
+      avgSessionDuration: num(row[3]?.value),
+      bounceRate:         Math.round(Number(row[4]?.value ?? 0) * 100),
     };
   } catch {
     return null;
   }
 }
 
-// ── Daily trend (last N days) ─────────────────────────────────────────────────
+// ── Daily trend ───────────────────────────────────────────────────────────────
 
-export async function fetchGaDailyTrend(days = 28): Promise<GaDayPoint[]> {
+export async function fetchGaDailyTrend(
+  startDate: string,
+  endDate: string
+): Promise<GaDayPoint[]> {
   const client = getClient();
   if (!client) return [];
 
   try {
     const [response] = await client.runReport({
       property: `properties/${propertyId}`,
-      dateRanges: [{ startDate: `${days}daysAgo`, endDate: "today" }],
+      dateRanges: [{ startDate, endDate }],
       dimensions: [{ name: "date" }],
       metrics: [{ name: "sessions" }, { name: "screenPageViews" }],
       orderBys: [{ dimension: { dimensionName: "date" } }],
     });
 
     return (response.rows ?? []).map((row) => {
-      const raw = row.dimensionValues?.[0]?.value ?? "";
+      const raw  = row.dimensionValues?.[0]?.value ?? "";
       const date = `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`;
       return {
         date,
@@ -115,14 +121,18 @@ export async function fetchGaDailyTrend(days = 28): Promise<GaDayPoint[]> {
 
 // ── Top pages ─────────────────────────────────────────────────────────────────
 
-export async function fetchGaTopPages(days = 28, limit = 10): Promise<GaTopPage[]> {
+export async function fetchGaTopPages(
+  startDate: string,
+  endDate: string,
+  limit = 10
+): Promise<GaTopPage[]> {
   const client = getClient();
   if (!client) return [];
 
   try {
     const [response] = await client.runReport({
       property: `properties/${propertyId}`,
-      dateRanges: [{ startDate: `${days}daysAgo`, endDate: "today" }],
+      dateRanges: [{ startDate, endDate }],
       dimensions: [{ name: "pagePath" }],
       metrics: [{ name: "screenPageViews" }],
       orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }],
@@ -140,14 +150,18 @@ export async function fetchGaTopPages(days = 28, limit = 10): Promise<GaTopPage[
 
 // ── Traffic sources ───────────────────────────────────────────────────────────
 
-export async function fetchGaTrafficSources(days = 28, limit = 8): Promise<GaTrafficSource[]> {
+export async function fetchGaTrafficSources(
+  startDate: string,
+  endDate: string,
+  limit = 8
+): Promise<GaTrafficSource[]> {
   const client = getClient();
   if (!client) return [];
 
   try {
     const [response] = await client.runReport({
       property: `properties/${propertyId}`,
-      dateRanges: [{ startDate: `${days}daysAgo`, endDate: "today" }],
+      dateRanges: [{ startDate, endDate }],
       dimensions: [{ name: "sessionDefaultChannelGroup" }],
       metrics: [{ name: "sessions" }],
       orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
@@ -165,14 +179,18 @@ export async function fetchGaTrafficSources(days = 28, limit = 8): Promise<GaTra
 
 // ── Top countries ─────────────────────────────────────────────────────────────
 
-export async function fetchGaCountries(days = 28, limit = 8): Promise<GaCountry[]> {
+export async function fetchGaCountries(
+  startDate: string,
+  endDate: string,
+  limit = 8
+): Promise<GaCountry[]> {
   const client = getClient();
   if (!client) return [];
 
   try {
     const [response] = await client.runReport({
       property: `properties/${propertyId}`,
-      dateRanges: [{ startDate: `${days}daysAgo`, endDate: "today" }],
+      dateRanges: [{ startDate, endDate }],
       dimensions: [{ name: "country" }],
       metrics: [{ name: "sessions" }],
       orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
