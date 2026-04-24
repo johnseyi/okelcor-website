@@ -5,6 +5,7 @@ import { Search, Loader2, RotateCcw } from "lucide-react";
 import ProductGrid from "./product-grid";
 import { type Product } from "./data";
 import { useLanguage } from "@/context/language-context";
+import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import { getProductImageUrl } from "@/lib/utils";
 
 // ── API ───────────────────────────────────────────────────────────────────────
@@ -38,6 +39,8 @@ function toProduct(p: any): Product {
     season:        p.season       ?? "",
     type:          p.type         ?? "",
     price:         Number(p.price ?? 0),
+    price_b2b:     p.price_b2b != null ? Number(p.price_b2b) : undefined,
+    price_b2c:     p.price_b2c != null ? Number(p.price_b2c) : undefined,
     sku:           p.sku          ?? "",
     description:   p.description  ?? "",
     primary_image: rawPrimary,
@@ -81,6 +84,9 @@ type Props = {
 
 export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed }: Props) {
   const { locale, t } = useLanguage();
+  const { customer } = useCustomerAuth();
+  const customerType: "b2b" | "b2c" | "guest" =
+    customer?.customer_type === "b2b" ? "b2b" : customer ? "b2c" : "guest";
 
   // ── Filter state ─────────────────────────────────────────────────────────────
   const [searchText, setSearchText] = useState("");
@@ -403,6 +409,7 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed }
                   total={resultCount}
                   sortBy={sortBy}
                   onSortChange={setSortBy}
+                  customerType={customerType}
                 />
               </>
             )}

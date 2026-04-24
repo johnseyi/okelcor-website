@@ -70,6 +70,8 @@ export type AdminProduct = {
   season?: string;
   type: string;
   price: number;
+  price_b2b?: number | null;
+  price_b2c?: number | null;
   /** List endpoint returns image_url; detail endpoint may return primary_image */
   image_url?: string | null;
   primary_image?: string | null;

@@ -6,7 +6,12 @@ export type Product = {
   spec: string;
   season: string;
   type: string;
+  /** Default / base price returned by API */
   price: number;
+  /** Wholesale price — shown to B2B customers */
+  price_b2b?: number;
+  /** Retail price — shown to B2C customers */
+  price_b2c?: number;
   /** Raw relative path from API e.g. storage/products/continental_summer_primary.jpg */
   primary_image?: string;
   /** primary_image with full URL prepended — used by card/gallery as display source */

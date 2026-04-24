@@ -8,11 +8,31 @@ import { useDepthTilt } from "@/hooks/useDepthTilt";
 
 const PLACEHOLDER = "/images/tyre-placeholder.png";
 
-export default function ProductCard({ product, priority = false }: { product: Product; priority?: boolean }) {
+type CustomerType = "b2b" | "b2c" | "guest";
+
+function resolvePrice(product: Product, customerType: CustomerType) {
+  if (customerType === "b2b" && product.price_b2b != null) {
+    return { displayPrice: product.price_b2b, showWholesaleBadge: true, showGuestNudge: false };
+  }
+  const retailPrice = product.price_b2c ?? product.price;
+  const nudge = customerType === "guest" && product.price_b2b != null;
+  return { displayPrice: retailPrice, showWholesaleBadge: false, showGuestNudge: nudge };
+}
+
+export default function ProductCard({
+  product,
+  priority = false,
+  customerType = "guest",
+}: {
+  product: Product;
+  priority?: boolean;
+  customerType?: CustomerType;
+}) {
   const { t } = useLanguage();
   const cardRef = useDepthTilt<HTMLDivElement>({ maxRotate: 4, maxShift: 6, scale: 1.008 });
 
   const imageUrl = product.image || PLACEHOLDER;
+  const { displayPrice, showWholesaleBadge, showGuestNudge } = resolvePrice(product, customerType);
 
   return (
     <div
@@ -58,10 +78,23 @@ export default function ProductCard({ product, priority = false }: { product: Pr
         </p>
 
         {/* Price */}
-        <p className="mt-3 text-[1.25rem] font-extrabold tracking-tight text-[var(--foreground)]">
-          €{product.price.toFixed(2)}
+        {showWholesaleBadge && (
+          <span className="mt-3 inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-[0.63rem] font-bold uppercase tracking-wide text-green-700">
+            Wholesale
+          </span>
+        )}
+        <p className={`${showWholesaleBadge ? "mt-1" : "mt-3"} text-[1.25rem] font-extrabold tracking-tight text-[var(--foreground)]`}>
+          €{displayPrice.toFixed(2)}
         </p>
         <p className="text-[0.72rem] text-gray-400">{t.shop.card.shipping}</p>
+        {showGuestNudge && (
+          <Link
+            href="/account/login"
+            className="mt-0.5 block text-[0.7rem] font-medium text-[var(--primary)] hover:underline"
+          >
+            Sign in for wholesale pricing →
+          </Link>
+        )}
 
         {/* Actions */}
         <div className="mt-4 flex gap-2">

@@ -13,14 +13,24 @@ import CsvActions from "@/components/admin/csv-actions";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Products" };
 
-type SearchParams = Promise<{ q?: string; type?: string; page?: string }>;
+type SearchParams = Promise<{ q?: string; type?: string; page?: string; view?: string }>;
 
 export default async function AdminProductsPage({
   searchParams,
 }: {
   searchParams: SearchParams;
 }) {
-  const { q, type, page } = await searchParams;
+  const { q, type, page, view } = await searchParams;
+  const currentView = view === "b2b" || view === "b2c" ? view : "all";
+
+  function tabUrl(v: string) {
+    const p = new URLSearchParams();
+    if (q?.trim()) p.set("q", q.trim());
+    if (type && type !== "all") p.set("type", type);
+    if (v !== "all") p.set("view", v);
+    const qs = p.toString();
+    return `/admin/products${qs ? `?${qs}` : ""}`;
+  }
 
   // Auth check — token exists (middleware), but may be expired
   try {
@@ -34,9 +44,10 @@ export default async function AdminProductsPage({
   }
 
   const params: Record<string, string | number> = { per_page: 20 };
-  if (q?.trim())           params.q    = q.trim();
-  if (type && type !== "all") params.type = type;
-  if (page)                params.page = page;
+  if (q?.trim())              params.q             = q.trim();
+  if (type && type !== "all") params.type          = type;
+  if (page)                   params.page          = page;
+  if (currentView !== "all")  params.customer_type = currentView;
 
   const res = await adminSafeFetch<AdminProduct[]>("/products", {
     params,
@@ -49,7 +60,7 @@ export default async function AdminProductsPage({
   return (
     <div className="p-6 md:p-8">
       {/* Header */}
-      <div className="mb-6 flex items-start justify-between gap-4">
+      <div className="mb-4 flex items-start justify-between gap-4">
         <div>
           <p className="text-[0.75rem] font-bold uppercase tracking-[0.18em] text-[#E85C1A]">
             Catalogue
@@ -79,12 +90,46 @@ export default async function AdminProductsPage({
         </div>
       </div>
 
+      {/* B2B / B2C segment tabs */}
+      <div className="mb-6">
+        <div className="flex gap-1 border-b border-black/[0.07]">
+          {(
+            [
+              { label: "All Products",   value: "all",  desc: "Full catalogue" },
+              { label: "B2B · Wholesale", value: "b2b", desc: "Wholesale segment only" },
+              { label: "B2C · Retail",    value: "b2c", desc: "Retail segment only" },
+            ] as const
+          ).map(({ label, value }) => (
+            <Link
+              key={value}
+              href={tabUrl(value)}
+              className={[
+                "mb-[-1px] rounded-t-lg border border-transparent px-4 py-2 text-[0.82rem] font-semibold transition",
+                currentView === value
+                  ? "border-black/[0.07] border-b-white bg-white text-[#1a1a1a]"
+                  : "text-[#5c5e62] hover:text-[#1a1a1a]",
+              ].join(" ")}
+            >
+              {label}
+            </Link>
+          ))}
+        </div>
+        {currentView !== "all" && (
+          <p className="mt-2 text-[0.78rem] text-[#5c5e62]">
+            {currentView === "b2b"
+              ? "Showing products available to B2B / wholesale customers — price column shows wholesale rate."
+              : "Showing products available to B2C / retail customers — price column shows retail rate."}
+          </p>
+        )}
+      </div>
+
       <ProductsTable
         products={products}
         meta={meta}
         currentQ={q ?? ""}
         currentType={type ?? "all"}
         currentPage={Number(page ?? 1)}
+        currentView={currentView}
       />
     </div>
   );

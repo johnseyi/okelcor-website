@@ -22,6 +22,7 @@ type Props = {
   currentQ: string;
   currentType: string;
   currentPage: number;
+  currentView?: "all" | "b2b" | "b2c";
 };
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -124,6 +125,7 @@ export default function ProductsTable({
   currentQ,
   currentType,
   currentPage,
+  currentView = "all",
 }: Props) {
   const router = useRouter();
   const [q, setQ] = useState(currentQ);
@@ -149,6 +151,7 @@ export default function ProductsTable({
     if (qVal.trim()) params.set("q", qVal.trim());
     if (typeVal && typeVal !== "all") params.set("type", typeVal);
     if (pageVal > 1) params.set("page", String(pageVal));
+    if (currentView !== "all") params.set("view", currentView);
     const qs = params.toString();
     return `/admin/products${qs ? `?${qs}` : ""}`;
   };
@@ -404,7 +407,11 @@ export default function ProductsTable({
           <table className="w-full min-w-[780px] text-left">
             <thead>
               <tr className="border-b border-black/[0.06] bg-[#fafafa]">
-                {["Image", "SKU / Name", "Brand", "Type", "Size", "Price", "Status", "Stock", "eBay", "Actions"].map(
+                {[
+                  "Image", "SKU / Name", "Brand", "Type", "Size",
+                  currentView === "b2b" ? "Wholesale" : currentView === "b2c" ? "Retail" : "Price",
+                  "Status", "Stock", "eBay", "Actions",
+                ].map(
                   (h) => (
                     <th
                       key={h}
@@ -478,8 +485,30 @@ export default function ProductsTable({
                       </td>
 
                       {/* Price */}
-                      <td className="px-4 py-3 text-[0.875rem] font-semibold text-[#1a1a1a]">
-                        €{Number(product.price).toFixed(2)}
+                      <td className="px-4 py-3">
+                        {currentView === "b2b" ? (
+                          <span className="inline-flex flex-col gap-0.5">
+                            <span className="text-[0.875rem] font-semibold text-green-700">
+                              €{product.price_b2b != null ? Number(product.price_b2b).toFixed(2) : Number(product.price).toFixed(2)}
+                            </span>
+                            {product.price_b2b == null && (
+                              <span className="text-[0.65rem] text-[#aaa]">no B2B price</span>
+                            )}
+                          </span>
+                        ) : currentView === "b2c" ? (
+                          <span className="inline-flex flex-col gap-0.5">
+                            <span className="text-[0.875rem] font-semibold text-[#1a1a1a]">
+                              €{product.price_b2c != null ? Number(product.price_b2c).toFixed(2) : Number(product.price).toFixed(2)}
+                            </span>
+                            {product.price_b2c == null && (
+                              <span className="text-[0.65rem] text-[#aaa]">no B2C price</span>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="text-[0.875rem] font-semibold text-[#1a1a1a]">
+                            €{Number(product.price).toFixed(2)}
+                          </span>
+                        )}
                       </td>
 
                       {/* Active status */}

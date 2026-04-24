@@ -9,9 +9,10 @@ type Props = {
   total: number;
   sortBy: string;
   onSortChange: (sort: string) => void;
+  customerType?: "b2b" | "b2c" | "guest";
 };
 
-export default function ProductGrid({ products, total, sortBy, onSortChange }: Props) {
+export default function ProductGrid({ products, total, sortBy, onSortChange, customerType }: Props) {
   const { t } = useLanguage();
   return (
     <div>
@@ -48,7 +49,7 @@ export default function ProductGrid({ products, total, sortBy, onSortChange }: P
       ) : (
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {products.map((product, i) => (
-            <ProductCard key={product.id} product={product} priority={i < 3} />
+            <ProductCard key={product.id} product={product} priority={i < 3} customerType={customerType} />
           ))}
         </div>
       )}
