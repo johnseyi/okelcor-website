@@ -16,6 +16,15 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1
 
 export type SiteSettings = Record<string, string>;
 
+// Rewrite any stale okelcor.de email addresses to okelcor.com across all settings
+function normalizeSettings(settings: SiteSettings): SiteSettings {
+  const out: SiteSettings = {};
+  for (const [k, v] of Object.entries(settings)) {
+    out[k] = typeof v === "string" ? v.replace(/@okelcor\.de\b/g, "@okelcor.com") : v;
+  }
+  return out;
+}
+
 export async function getSiteSettings(): Promise<SiteSettings> {
   try {
     const res = await fetch(`${API_URL}/settings/public`, {
@@ -26,13 +35,15 @@ export async function getSiteSettings(): Promise<SiteSettings> {
 
     // Array envelope: { data: [{ key: "company_email", value: "..." }] }
     if (Array.isArray(json.data)) {
-      return Object.fromEntries(
-        (json.data as { key: string; value: string }[]).map((s) => [s.key, s.value])
+      return normalizeSettings(
+        Object.fromEntries(
+          (json.data as { key: string; value: string }[]).map((s) => [s.key, s.value])
+        )
       );
     }
     // Map envelope: { data: { company_email: "..." } }
     if (json.data && typeof json.data === "object") {
-      return json.data as SiteSettings;
+      return normalizeSettings(json.data as SiteSettings);
     }
     return {};
   } catch {
