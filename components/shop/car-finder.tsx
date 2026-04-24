@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Car, Ruler, Search, Loader2, AlertCircle, ChevronDown, Zap, ArrowRight } from "lucide-react";
+import { Car, Ruler, Search, Loader2, AlertCircle, ChevronDown, Zap, ArrowRight, Download, FileText } from "lucide-react";
+import EngineLookup from "@/components/fet/engine-lookup";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -331,39 +332,40 @@ export default function CarFinder({ onSizeSelect }: Props) {
             <div className="px-4 py-6 sm:px-5 sm:py-7">
 
               {/* Header */}
-              <div className="mb-5">
-                <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-[#dcfce7] px-3 py-1">
+              <div className="mb-5 flex flex-col gap-1">
+                <div className="inline-flex items-center gap-1.5 self-start rounded-full bg-[#dcfce7] px-3 py-1">
                   <Zap size={11} strokeWidth={2.5} className="text-[#16a34a]" />
-                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#166534]">Fuel Eco Tech</span>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#166534]">Fuel Echo Tech</span>
                 </div>
-                <h3 className="text-[1rem] font-extrabold text-[#111111]">Fuel Eco Tech Products</h3>
-                <p className="mt-1 text-[0.82rem] leading-5 text-[#5c5e62]">
-                  Certified fuel efficiency technology for passenger cars, vans, trucks and heavy machinery
+                <h3 className="text-[1rem] font-extrabold text-[#111111]">Choose Your FET Model</h3>
+                <p className="text-[0.82rem] leading-5 text-[#5c5e62]">
+                  Certified fuel efficiency treatment — fits all diesel &amp; petrol engines. Select your vehicle type below.
                 </p>
               </div>
 
-              {/* 2×2 product grid */}
+              {/* Product grid */}
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {([
-                  { name: "FET Passenger Car",       desc: "For vehicles up to 2,000cc",       price: "From €249" },
-                  { name: "FET Van & SUV",            desc: "For vehicles up to 3,500kg",       price: "From €299" },
-                  { name: "FET Truck (up to 18t)",    desc: "For trucks and heavy vans",        price: "From €449" },
-                  { name: "FET Heavy Machinery (up to 40t)", desc: "For construction and fleet", price: "From €649" },
-                ] as const).map(({ name, desc, price }) => (
-                  <div
-                    key={name}
-                    className="flex flex-col rounded-xl border border-[#e2e8e2] bg-[#f0f4f0] p-4"
-                  >
-                    {/* Icon placeholder */}
-                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[#dcfce7]">
-                      <Zap size={18} strokeWidth={1.8} className="text-[#16a34a]" />
+                  { name: "FET Passenger Car",              desc: "Cars up to 2,000 cc",                 price: "From €249", tag: "Cars & SUV"          },
+                  { name: "FET Van & SUV",                  desc: "Vans & SUVs up to 3,500 kg",          price: "From €299", tag: "Cars & SUV"          },
+                  { name: "FET Truck (up to 18t)",          desc: "Trucks and heavy vans",               price: "From €449", tag: "Commercial"          },
+                  { name: "FET Heavy Machinery (up to 40t)", desc: "Construction, fleet & agriculture", price: "From €649", tag: "Commercial"          },
+                ] as const).map(({ name, desc, price, tag }) => (
+                  <div key={name} className="flex flex-col rounded-xl border border-[#e2e8e2] bg-[#f9fffe] p-4 transition hover:border-[#22c55e]/40 hover:shadow-sm">
+                    <div className="mb-3 flex items-start justify-between gap-2">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#dcfce7]">
+                        <Zap size={18} strokeWidth={1.8} className="text-[#16a34a]" />
+                      </div>
+                      <span className="rounded-full bg-[#f0f2f5] px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-[0.1em] text-[#6b7280]">
+                        {tag}
+                      </span>
                     </div>
                     <p className="text-[0.88rem] font-extrabold leading-snug text-[#111111]">{name}</p>
                     <p className="mt-0.5 text-[0.75rem] text-[#5c5e62]">{desc}</p>
-                    <p className="mt-2 text-[0.95rem] font-extrabold text-[#22c55e]">{price}</p>
+                    <p className="mt-2 text-[1rem] font-extrabold text-[#22c55e]">{price}</p>
                     <Link
                       href="/quote"
-                      className="mt-3 flex items-center justify-center gap-1.5 rounded-lg bg-[#f4511e] px-4 py-2 text-[0.78rem] font-semibold text-white transition hover:bg-[#d14f14]"
+                      className="mt-auto pt-3 flex items-center justify-center gap-1.5 rounded-lg bg-[#22c55e] px-4 py-2 text-[0.78rem] font-semibold text-white transition hover:bg-[#16a34a]"
                     >
                       Request a Quote <ArrowRight size={12} strokeWidth={2.5} />
                     </Link>
@@ -371,9 +373,57 @@ export default function CarFinder({ onSizeSelect }: Props) {
                 ))}
               </div>
 
-              {/* Footer note */}
-              <p className="mt-4 text-center text-[0.77rem] text-[#9ca3af]">
-                Full product catalogue coming soon. Contact us for bulk fleet pricing.
+              {/* Divider */}
+              <div className="my-5 flex items-center gap-3">
+                <div className="h-px flex-1 bg-[#e2e8e2]" />
+                <span className="text-[0.72rem] font-bold uppercase tracking-[0.18em] text-[#9ca3af]">Engine Compatibility</span>
+                <div className="h-px flex-1 bg-[#e2e8e2]" />
+              </div>
+
+              {/* Engine lookup — compact mode */}
+              <div className="mb-4">
+                <p className="mb-2 text-[0.82rem] text-[#5c5e62]">
+                  Search by manufacturer or engine code to confirm compatibility and find your FET model.
+                </p>
+                <EngineLookup compact />
+              </div>
+
+              {/* PDF downloads */}
+              <div className="mt-5 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                <a
+                  href="/documents/FET-Engine-Overview-Cars-SUV.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 rounded-xl border border-[#e2e8e2] bg-white px-4 py-3 text-[0.8rem] transition hover:border-[#22c55e]/40 hover:bg-[#f9fffe]"
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#dcfce7]">
+                    <FileText size={15} strokeWidth={1.8} className="text-[#16a34a]" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-[#111111]">Cars, SUVs &amp; Sports</p>
+                    <p className="text-[0.72rem] text-[#9ca3af]">Full engine compatibility list</p>
+                  </div>
+                  <Download size={13} className="shrink-0 text-[#9ca3af]" />
+                </a>
+                <a
+                  href="/documents/FET-Engine-Overview-Commercial-Vehicles.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 rounded-xl border border-[#e2e8e2] bg-white px-4 py-3 text-[0.8rem] transition hover:border-[#22c55e]/40 hover:bg-[#f9fffe]"
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#dcfce7]">
+                    <FileText size={15} strokeWidth={1.8} className="text-[#16a34a]" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-[#111111]">Commercial Vehicles (up to 40t)</p>
+                    <p className="text-[0.72rem] text-[#9ca3af]">Full engine compatibility list</p>
+                  </div>
+                  <Download size={13} className="shrink-0 text-[#9ca3af]" />
+                </a>
+              </div>
+
+              <p className="mt-4 text-center text-[0.75rem] text-[#9ca3af]">
+                Not sure which model fits? <Link href="/contact" className="text-[#22c55e] hover:underline">Contact our team</Link> for a free compatibility check.
               </p>
             </div>
           )}

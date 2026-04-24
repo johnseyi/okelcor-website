@@ -26,6 +26,7 @@ import {
   ShoppingBag,
   BarChart2,
   Megaphone,
+  Zap,
 } from "lucide-react";
 import { logoutAdmin } from "@/app/admin/actions";
 import { canAccess, PATH_SECTION } from "@/lib/admin-permissions";
@@ -41,6 +42,7 @@ const NAV = [
   { label: "Quote Requests", href: "/admin/quotes",      icon: ClipboardList,   section: "quotes" },
   { label: "Hero Slides",    href: "/admin/hero-slides",  icon: Layers,      section: "hero_slides" },
   { label: "Promotions",     href: "/admin/promotions",   icon: Megaphone,   section: "promotions" },
+  { label: "FET Engines",    href: "/admin/fet",          icon: Zap,         section: "fet" },
   { label: "Brands",         href: "/admin/brands",       icon: Star,        section: "brands" },
   { label: "Customers",      href: "/admin/customers",   icon: ContactRound,    section: "customers" },
   { label: "Settings",       href: "/admin/settings",    icon: Settings,        section: "settings" },

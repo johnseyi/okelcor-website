@@ -3,8 +3,9 @@ import Link from "next/link";
 import {
   Zap, BarChart3, Leaf, Wrench, CheckCircle2,
   Truck, Tractor, Bus, Anchor, Car, Factory,
-  ArrowRight, ChevronDown, ShieldCheck, Download,
+  ArrowRight, ChevronDown, ShieldCheck, Download, FileText,
 } from "lucide-react";
+import EngineLookup from "@/components/fet/engine-lookup";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import AmortizationCalculator from "@/components/fet/amortization-calculator";
@@ -408,6 +409,63 @@ export default function FetPage() {
           </div>
 
         </div>
+      </Section>
+
+      {/* ── Engine Compatibility ─────────────────────────────────────────── */}
+      <Section className="bg-[#f0f4f0]" id="compatibility">
+        <FadeUp>
+          <SectionEyebrow>Engine Compatibility</SectionEyebrow>
+          <h2 className="mb-3 text-3xl font-extrabold tracking-tight text-[#111111] md:text-4xl">
+            Compatible with your engine?
+          </h2>
+          <p className="mb-10 max-w-[560px] text-[0.95rem] leading-7 text-[#6b7280]">
+            FET works with all standard diesel and petrol engines. Search the database below or download the full compatibility guide for your vehicle category.
+          </p>
+        </FadeUp>
+
+        {/* PDF download cards */}
+        <FadeUp>
+          <div className="mb-8 grid gap-4 sm:grid-cols-2">
+            {[
+              {
+                label: "Cars, SUVs & Sports Cars",
+                sub:   "Passenger car engines — comprehensive model listing",
+                href:  "/documents/FET-Engine-Overview-Cars-SUV.pdf",
+                icon:  Car,
+              },
+              {
+                label: "Commercial Vehicles (up to 40t)",
+                sub:   "Trucks, vans, buses & heavy machinery — full engine list",
+                href:  "/documents/FET-Engine-Overview-Commercial-Vehicles.pdf",
+                icon:  Truck,
+              },
+            ].map(({ label, sub, href, icon: Icon }) => (
+              <a
+                key={label}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex items-center gap-5 rounded-[18px] border border-[#e2e8e2] bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-[#22c55e]/40 hover:shadow-md"
+              >
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#dcfce7]">
+                  <Icon size={24} strokeWidth={1.7} className="text-[#16a34a]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-extrabold text-[#111111]">{label}</p>
+                  <p className="mt-0.5 text-[0.83rem] text-[#6b7280]">{sub}</p>
+                </div>
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#22c55e]/30 bg-[#f0fdf4] transition group-hover:bg-[#22c55e] group-hover:text-white">
+                  <Download size={15} strokeWidth={2} className="text-[#16a34a] group-hover:text-white" />
+                </div>
+              </a>
+            ))}
+          </div>
+        </FadeUp>
+
+        {/* Live engine search */}
+        <FadeUp delay={120}>
+          <EngineLookup />
+        </FadeUp>
       </Section>
 
       {/* ── Bottom CTA ───────────────────────────────────────────────────── */}

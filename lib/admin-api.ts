@@ -215,6 +215,19 @@ export type AdminBrand = {
   order?: number;
 };
 
+export type AdminFetEngine = {
+  id: number;
+  category: "cars_suv" | "commercial";
+  manufacturer: string;
+  model_series: string;
+  engine_code?: string | null;
+  displacement?: string | null;
+  fuel_type: "diesel" | "petrol" | "both";
+  fet_model: string;
+  notes?: string | null;
+  created_at?: string;
+};
+
 export type AdminPromotion = {
   id: number;
   title: string;
