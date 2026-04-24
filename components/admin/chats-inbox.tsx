@@ -180,13 +180,23 @@ export default function ChatsInbox() {
       const res  = await fetch("/api/admin/crisp?action=conversations&page=1");
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(json.error ?? "Failed to load conversations.");
+        const diagnostic =
+          res.status === 404
+            ? `404 — API route not found on this server. The production deployment is likely outdated and does not include the Live Chats route (/api/admin/crisp). Redeploy the frontend to fix this.`
+            : res.status === 503
+            ? `503 — Crisp credentials not configured on the server. Add NEXT_PUBLIC_CRISP_WEBSITE_ID, CRISP_IDENTIFIER and CRISP_KEY to the server environment variables, then restart.`
+            : res.status === 401
+            ? `401 — Admin session expired. Please log out and log back in.`
+            : res.status === 502
+            ? `502 — Could not reach the Crisp API. Verify your CRISP_IDENTIFIER and CRISP_KEY are correct.`
+            : `HTTP ${res.status} — ${json.error ?? "Unexpected error from Crisp proxy."}`;
+        setError(diagnostic);
         return;
       }
       const list: Conversation[] = Array.isArray(json.data) ? json.data : [];
       setConversations(list);
-    } catch {
-      setError("Could not reach Crisp API.");
+    } catch (err) {
+      setError(`Network error — could not reach /api/admin/crisp. Detail: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setLoadingConvs(false);
     }
@@ -332,8 +342,16 @@ export default function ChatsInbox() {
               <span className="text-[0.8rem]">Loading conversations…</span>
             </div>
           ) : error ? (
-            <div className="m-4 rounded-xl bg-red-50 px-4 py-3 text-[0.8rem] text-red-600">
-              {error}
+            <div className="m-4 rounded-xl border border-red-200 bg-red-50 px-4 py-4">
+              <p className="mb-1 text-[0.78rem] font-bold uppercase tracking-wide text-red-700">Diagnostic Error</p>
+              <p className="text-[0.8rem] leading-6 text-red-700">{error}</p>
+              <button
+                type="button"
+                onClick={() => fetchConversations()}
+                className="mt-3 rounded-lg bg-red-100 px-3 py-1.5 text-[0.75rem] font-semibold text-red-700 transition hover:bg-red-200"
+              >
+                Retry
+              </button>
             </div>
           ) : conversations.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 py-16 text-[#9ca3af]">
