@@ -19,6 +19,9 @@ import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 
+// Allow up to 5 minutes for large CSV imports (Vercel Pro required for > 60s)
+export const maxDuration = 300;
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
 export async function POST(request: NextRequest) {

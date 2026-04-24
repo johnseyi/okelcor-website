@@ -127,49 +127,36 @@ export default function CsvActions() {
 
     setModal({ phase: "uploading" });
 
-    // Step 1 — get the bearer token from the httpOnly cookie via the token route
-    let token: string | null = null;
-    try {
-      const tokenRes = await fetch("/api/admin/token");
-      const tokenJson = await tokenRes.json().catch(() => ({}));
-      token = tokenJson.token ?? null;
-    } catch {
-      setModal({ phase: "error", message: "Network error — could not reach the server." });
-      return;
-    }
-
-    if (!token) {
-      setModal({ phase: "error", message: "Session expired — please refresh the page and log in again." });
-      return;
-    }
-
-    // Step 2 — POST directly to Laravel, bypassing Vercel's 4.5 MB body limit.
-    // Do NOT set Content-Type — the browser sets it automatically with the multipart boundary.
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+    // POST to the Next.js proxy route — it reads admin_token from the httpOnly
+    // cookie server-side and forwards the file to Laravel.
+    // Do NOT set Content-Type — the browser sets it with the multipart boundary.
     const form = new FormData();
     form.append("file", file);
 
     try {
-      const res = await fetch(`${apiUrl}/admin/products/import`, {
+      const res = await fetch("/api/admin/products/import", {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
         body: form,
       });
+
+      if (res.status === 401) {
+        router.push("/admin/login");
+        return;
+      }
 
       const json = await res.json().catch(() => ({
         error: "Server returned an unreadable response.",
       }));
 
       if (!res.ok) {
-        const msg =
-          res.status === 401
-            ? "Session expired — please refresh the page and log in again."
-            : json.error ?? json.message ?? `Import failed (HTTP ${res.status}).`;
-        setModal({ phase: "error", message: msg });
+        setModal({
+          phase: "error",
+          message: json.error ?? json.message ?? `Import failed (HTTP ${res.status}).`,
+        });
         return;
       }
 
-      // Success — refresh the products table immediately, then auto-close via useEffect
+      // Refresh the products list, then show the result summary
       router.refresh();
       setModal({ phase: "done", result: json as ImportResult });
     } catch {
@@ -312,6 +299,21 @@ export default function CsvActions() {
                   ⚠ Newly imported products are set to <strong>Inactive</strong> by default. After import, toggle each one to <strong>Active</strong> so they appear on the shop.
                 </p>
 
+                {/* Large file notice */}
+                {selectedFile && selectedFile.size > 1_000_000 && modal.phase !== "uploading" && (
+                  <p className="text-[0.75rem] text-[#5c5e62]">
+                    ⏱ This file is {(selectedFile.size / 1_000_000).toFixed(1)} MB — large imports can take 1–3 minutes. Please keep this window open.
+                  </p>
+                )}
+
+                {/* Uploading progress hint */}
+                {modal.phase === "uploading" && (
+                  <div className="flex items-center gap-2.5 rounded-[10px] bg-[#f9f9f9] px-4 py-3 text-[0.78rem] text-[#5c5e62]">
+                    <Loader2 size={14} className="shrink-0 animate-spin text-[#E85C1A]" />
+                    <span>Uploading and processing — this can take a few minutes for large catalogues. Do not close this window.</span>
+                  </div>
+                )}
+
                 {/* Actions */}
                 <div className="flex gap-3">
                   <button
@@ -323,7 +325,7 @@ export default function CsvActions() {
                     {modal.phase === "uploading" ? (
                       <>
                         <Loader2 size={16} className="animate-spin" />
-                        Uploading…
+                        Processing…
                       </>
                     ) : (
                       <>
@@ -353,15 +355,15 @@ export default function CsvActions() {
                   <div>
                     <p className="text-[0.9rem] font-semibold text-emerald-800">Import complete</p>
                     <p className="mt-1 text-[0.82rem] text-emerald-700">
-                      <strong>{modal.result.imported}</strong> imported ·{" "}
-                      <strong>{modal.result.updated}</strong> updated ·{" "}
-                      <strong>{modal.result.skipped}</strong> skipped
+                      <strong>{modal.result.imported ?? 0}</strong> imported ·{" "}
+                      <strong>{modal.result.updated ?? 0}</strong> updated ·{" "}
+                      <strong>{modal.result.skipped ?? 0}</strong> skipped
                     </p>
                   </div>
                 </div>
 
-                {/* Row errors */}
-                {modal.result.errors.length > 0 && (
+                {/* Row errors — guard against backend not sending errors array */}
+                {(modal.result.errors ?? []).length > 0 && (
                   <div>
                     <p className="mb-2 text-[0.78rem] font-bold uppercase tracking-wide text-red-600">
                       {modal.result.errors.length} row{modal.result.errors.length !== 1 ? "s" : ""} failed
