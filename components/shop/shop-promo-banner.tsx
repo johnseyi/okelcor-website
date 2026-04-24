@@ -20,7 +20,7 @@ export default function ShopPromoBanner({ promo }: { promo: ShopPromotion | null
 
   return (
     <section className="relative w-full overflow-hidden pt-[76px] lg:pt-20">
-      <div className="relative min-h-[480px] sm:min-h-[520px] md:min-h-[580px]">
+      <div className="relative min-h-[280px] sm:min-h-[300px] md:min-h-[340px]">
 
         {/* Background */}
         {imageUrl ? (
@@ -46,7 +46,7 @@ export default function ShopPromoBanner({ promo }: { promo: ShopPromotion | null
         <div className="absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-[#f5f5f5] to-transparent" />
 
         {/* Content */}
-        <div className="relative z-10 flex min-h-[480px] sm:min-h-[520px] md:min-h-[580px] flex-col justify-center px-6 py-16 md:px-12 lg:px-24">
+        <div className="relative z-10 flex min-h-[280px] sm:min-h-[300px] md:min-h-[340px] flex-col justify-center px-6 py-10 md:px-12 lg:px-24">
           <div className="max-w-2xl">
 
             {/* Badge */}
