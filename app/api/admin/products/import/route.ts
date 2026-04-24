@@ -34,9 +34,17 @@ export async function POST(request: NextRequest) {
 
   const contentType = request.headers.get("content-type") ?? "";
 
+  // Forward segment param (b2b | b2c) so the backend stores the price column
+  // in the correct field (price_b2b / price_b2c) without touching the other tier.
+  const segment = request.nextUrl.searchParams.get("segment");
+  const importUrl = new URL(`${API_URL}/admin/products/import`);
+  if (segment === "b2b" || segment === "b2c") {
+    importUrl.searchParams.set("segment", segment);
+  }
+
   let res: Response;
   try {
-    res = await fetch(`${API_URL}/admin/products/import`, {
+    res = await fetch(importUrl.toString(), {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,

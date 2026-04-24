@@ -138,12 +138,19 @@ export default function CsvActions({
 
     // POST to the Next.js proxy route — it reads admin_token from the httpOnly
     // cookie server-side and forwards the file to Laravel.
+    // Pass segment so the backend maps the price column to the right tier
+    // (price_b2b or price_b2c) without touching the other tier.
     // Do NOT set Content-Type — the browser sets it with the multipart boundary.
     const form = new FormData();
     form.append("file", file);
 
+    const importUrl =
+      currentView === "b2b" ? "/api/admin/products/import?segment=b2b"
+      : currentView === "b2c" ? "/api/admin/products/import?segment=b2c"
+      : "/api/admin/products/import";
+
     try {
-      const res = await fetch("/api/admin/products/import", {
+      const res = await fetch(importUrl, {
         method: "POST",
         body: form,
       });
@@ -208,7 +215,7 @@ export default function CsvActions({
           aria-label="Import products from CSV"
         >
           <Upload size={15} strokeWidth={2} />
-          Import CSV
+          {currentView === "b2b" ? "Import B2B" : currentView === "b2c" ? "Import B2C" : "Import CSV"}
         </button>
 
         <button
@@ -248,10 +255,10 @@ export default function CsvActions({
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
                 <p className="text-[0.72rem] font-bold uppercase tracking-[0.18em] text-[#E85C1A]">
-                  Products
+                  {currentView === "b2b" ? "B2B · Wholesale" : currentView === "b2c" ? "B2C · Retail" : "Products"}
                 </p>
                 <h2 className="mt-0.5 text-[1.1rem] font-extrabold text-[#171a20]">
-                  Import CSV
+                  {currentView === "b2b" ? "Import B2B Prices" : currentView === "b2c" ? "Import B2C Prices" : "Import CSV"}
                 </h2>
               </div>
               <button
@@ -289,6 +296,24 @@ export default function CsvActions({
                   />
                 </label>
 
+                {/* Segment-specific context */}
+                {currentView !== "all" && (
+                  <div className="flex items-start gap-2.5 rounded-[10px] border border-blue-200 bg-blue-50 p-3 text-[0.78rem] text-blue-800">
+                    <span className="mt-0.5 shrink-0 text-base leading-none">ℹ</span>
+                    <div>
+                      {currentView === "b2b" ? (
+                        <>
+                          <strong>B2B import:</strong> the <code className="rounded bg-blue-100 px-1 font-mono">price</code> column will be stored as the <strong>wholesale (B2B) price</strong>. Existing B2C prices and product data are not affected. Safe to run multiple times.
+                        </>
+                      ) : (
+                        <>
+                          <strong>B2C import:</strong> the <code className="rounded bg-blue-100 px-1 font-mono">price</code> column will be stored as the <strong>retail (B2C) price</strong>. Existing B2B prices and product data are not affected. Safe to run multiple times.
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <div className="rounded-[10px] border border-black/[0.07] bg-[#f9f9f9] p-3 text-[0.75rem] text-[#5c5e62]">
                   <p className="mb-1.5 font-bold text-[#1a1a1a]">Required columns</p>
                   <p className="mb-2 font-mono">
@@ -302,7 +327,7 @@ export default function CsvActions({
                       <code key={c} className="mr-1 rounded bg-black/[0.06] px-1 py-0.5">{c}</code>
                     ))}
                   </p>
-                  <p className="mt-2">Rows with a matching SKU are <strong>updated</strong>, not duplicated. Product images are preserved on update.</p>
+                  <p className="mt-2">Rows with a matching SKU are <strong>updated</strong>, not duplicated. Products not in the CSV are left untouched. Images are preserved on update.</p>
                 </div>
                 <p className="text-[0.78rem] font-medium text-amber-600">
                   ⚠ Newly imported products are set to <strong>Inactive</strong> by default. After import, toggle each one to <strong>Active</strong> so they appear on the shop.
