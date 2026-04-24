@@ -2,9 +2,15 @@
  * POST /api/admin/products/import
  *
  * Proxy to POST /api/v1/admin/products/import on the Laravel backend.
- * Reads admin_token from the httpOnly cookie server-side, then pipes the
- * multipart/form-data body (containing the CSV file) straight through to
- * the backend without buffering to avoid Vercel's request-body size limit.
+ * Reads admin_token from the httpOnly cookie server-side.
+ *
+ * CSV normalisation applied before forwarding:
+ *  - Renames "visible" header → "is_active"
+ *  - Converts Python-style booleans "True"/"False" → "1"/"0"
+ *
+ * Optional query param: ?segment=b2b|b2c
+ *  - Forwarded to Laravel so it can store the price column in the
+ *    correct pricing tier field (price_b2b / price_b2c).
  *
  * Expected response shape from the backend:
  * {
@@ -32,15 +38,48 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }
 
-  const contentType = request.headers.get("content-type") ?? "";
-
-  // Forward segment param (b2b | b2c) so the backend stores the price column
-  // in the correct field (price_b2b / price_b2c) without touching the other tier.
+  // Forward segment param (b2b | b2c) so the backend maps the price column
+  // to the correct pricing tier field.
   const segment = request.nextUrl.searchParams.get("segment");
   const importUrl = new URL(`${API_URL}/admin/products/import`);
   if (segment === "b2b" || segment === "b2c") {
     importUrl.searchParams.set("segment", segment);
   }
+
+  // ── Parse and normalise the CSV ───────────────────────────────────────────
+  let formData: FormData;
+  try {
+    formData = await request.formData();
+  } catch {
+    return NextResponse.json({ error: "Could not parse the uploaded file." }, { status: 400 });
+  }
+
+  const rawFile = formData.get("file");
+  if (!rawFile || !(rawFile instanceof File)) {
+    return NextResponse.json({ error: "No file provided." }, { status: 400 });
+  }
+
+  let csvText = await rawFile.text();
+
+  // 1. Rename "visible" header to "is_active" (first line only)
+  const firstNewline = csvText.indexOf("\n");
+  if (firstNewline !== -1) {
+    const header = csvText.slice(0, firstNewline).replace(/\bvisible\b/, "is_active");
+    csvText = header + csvText.slice(firstNewline);
+  }
+
+  // 2. Convert Python-style booleans to numeric 1/0
+  //    The description field is always quoted so ,True, and ,False, only
+  //    appear at real column boundaries — safe to replace globally.
+  csvText = csvText
+    .replace(/,True,/g, ",1,")
+    .replace(/,False,/g, ",0,")
+    .replace(/,True\r?\n/g, (m) => ",1" + m.slice(",True".length))
+    .replace(/,False\r?\n/g, (m) => ",0" + m.slice(",False".length));
+
+  // ── Forward to Laravel ────────────────────────────────────────────────────
+  const outForm = new FormData();
+  outForm.append("file", new File([csvText], rawFile.name, { type: "text/csv" }));
 
   let res: Response;
   try {
@@ -49,12 +88,9 @@ export async function POST(request: NextRequest) {
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: "application/json",
-        "content-type": contentType,
+        // Do NOT set Content-Type — fetch sets it with the multipart boundary
       },
-      body: request.body,
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore  Node 18+ requires duplex when body is a ReadableStream
-      duplex: "half",
+      body: outForm,
     });
   } catch {
     return NextResponse.json(
