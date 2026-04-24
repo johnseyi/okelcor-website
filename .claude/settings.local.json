@@ -39,7 +39,8 @@
       "Bash(git rm *)",
       "Bash(xargs grep *)",
       "Bash(mkdir -p \"C:/Users/user/Desktop/Projects/okelcor-website/app/api/admin/products/[id]/ebay/list\")",
-      "Bash(mkdir -p \"C:/Users/user/Desktop/Projects/okelcor-website/app/api/admin/products/[id]/ebay/remove\")"
+      "Bash(mkdir -p \"C:/Users/user/Desktop/Projects/okelcor-website/app/api/admin/products/[id]/ebay/remove\")",
+      "Bash(python3 -c ' *)"
     ]
   }
 }
