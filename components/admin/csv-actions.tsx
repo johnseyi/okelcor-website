@@ -35,7 +35,11 @@ const outlineBtnCls =
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function CsvActions() {
+export default function CsvActions({
+  currentView = "all",
+}: {
+  currentView?: "all" | "b2b" | "b2c";
+}) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -81,7 +85,11 @@ export default function CsvActions() {
     setExportError(null);
 
     try {
-      const res = await fetch("/api/admin/products/export");
+      const url = currentView !== "all"
+        ? `/api/admin/products/export?segment=${currentView}`
+        : "/api/admin/products/export";
+
+      const res = await fetch(url);
 
       if (res.status === 401) {
         router.push("/admin/login");
@@ -94,18 +102,19 @@ export default function CsvActions() {
         return;
       }
 
-      // Create an object URL from the blob and click a hidden anchor to download
       const blob = await res.blob();
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement("a");
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
 
-      // Use the filename from Content-Disposition if present, else a default
+      // Use filename from Content-Disposition; proxy also sets a segment-aware fallback
       const disposition = res.headers.get("content-disposition") ?? "";
-      const match       = disposition.match(/filename="?([^";\n]+)"?/i);
-      a.download = match?.[1] ?? `products-${new Date().toISOString().slice(0, 10)}.csv`;
-      a.href     = url;
+      const match = disposition.match(/filename="?([^";\n]+)"?/i);
+      const date = new Date().toISOString().slice(0, 10);
+      const segmentSuffix = currentView !== "all" ? `-${currentView}` : "";
+      a.download = match?.[1] ?? `products${segmentSuffix}-${date}.csv`;
+      a.href = objectUrl;
       a.click();
-      URL.revokeObjectURL(url);
+      URL.revokeObjectURL(objectUrl);
     } catch {
       setExportError("Network error — could not reach the server.");
     } finally {
@@ -182,14 +191,14 @@ export default function CsvActions() {
           onClick={handleExport}
           disabled={exporting}
           className={outlineBtnCls}
-          aria-label="Export products as CSV"
+          aria-label={`Export ${currentView === "b2b" ? "B2B" : currentView === "b2c" ? "B2C" : ""} products as CSV`}
         >
           {exporting ? (
             <Loader2 size={15} className="animate-spin" />
           ) : (
             <Download size={15} strokeWidth={2} />
           )}
-          Export CSV
+          {currentView === "b2b" ? "Export B2B" : currentView === "b2c" ? "Export B2C" : "Export CSV"}
         </button>
 
         <button

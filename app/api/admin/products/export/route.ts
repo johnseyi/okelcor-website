@@ -8,11 +8,11 @@
  */
 
 import { cookies } from "next/headers";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const cookieStore = await cookies();
   const token = cookieStore.get("admin_token")?.value;
 
@@ -20,9 +20,16 @@ export async function GET() {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }
 
+  // Forward segment filter (b2b | b2c) to the Laravel export endpoint
+  const segment = request.nextUrl.searchParams.get("segment");
+  const exportUrl = new URL(`${API_URL}/admin/products/export`);
+  if (segment === "b2b" || segment === "b2c") {
+    exportUrl.searchParams.set("segment", segment);
+  }
+
   let res: Response;
   try {
-    res = await fetch(`${API_URL}/admin/products/export`, {
+    res = await fetch(exportUrl.toString(), {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -49,9 +56,11 @@ export async function GET() {
 
   // Forward the CSV body and preserve Content-Disposition so the browser
   // downloads the file rather than trying to display it inline.
+  const date = new Date().toISOString().slice(0, 10);
+  const segmentSuffix = segment === "b2b" ? "-b2b" : segment === "b2c" ? "-b2c" : "";
   const contentDisposition =
     res.headers.get("content-disposition") ??
-    `attachment; filename="products-${new Date().toISOString().slice(0, 10)}.csv"`;
+    `attachment; filename="products${segmentSuffix}-${date}.csv"`;
 
   return new NextResponse(res.body, {
     status: 200,
