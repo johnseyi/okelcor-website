@@ -4,6 +4,7 @@ import Footer from "@/components/footer";
 import ShopHero from "@/components/shop/shop-hero";
 import ShopPageClient from "@/components/shop/shop-page-client";
 import FadeUp from "@/components/motion/fade-up";
+import type { ShopPromotion } from "@/components/shop/shop-promo-banner";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -26,14 +27,29 @@ export const metadata: Metadata = {
   },
 };
 
-// Products are now fetched client-side in ShopCatalogue with the user's
-// actual filter params — the API requires at least one filter to return results.
-export default function ShopPage() {
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+
+async function getActivePromotion(): Promise<ShopPromotion | null> {
+  try {
+    const res = await fetch(`${API_URL}/promotions/active`, {
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.data ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export default async function ShopPage() {
+  const activePromo = await getActivePromotion();
+
   return (
     <main>
       <Navbar />
       <ShopHero />
-      <FadeUp><ShopPageClient /></FadeUp>
+      <FadeUp><ShopPageClient activePromo={activePromo} /></FadeUp>
       <Footer />
     </main>
   );

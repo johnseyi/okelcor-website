@@ -215,6 +215,19 @@ export type AdminBrand = {
   order?: number;
 };
 
+export type AdminPromotion = {
+  id: number;
+  title: string;
+  subheadline?: string | null;
+  button_text?: string | null;
+  button_link?: string | null;
+  image_url?: string | null;
+  is_active: boolean;
+  start_date?: string | null; // ISO date "YYYY-MM-DD"
+  end_date?: string | null;   // ISO date "YYYY-MM-DD"
+  created_at?: string;
+};
+
 export type AdminSetting = {
   key: string;
   value: string;

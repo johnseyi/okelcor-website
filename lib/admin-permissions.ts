@@ -1,8 +1,8 @@
 // Canonical permissions map — mirrors the backend's ROLE_ACCESS table.
 export const ROLE_ACCESS: Record<string, string[]> = {
-  super_admin:   ["dashboard", "products", "orders", "quotes", "articles", "hero_slides", "brands", "categories", "media", "settings", "users", "supplier", "customers", "ebay", "analytics"],
-  admin:         ["dashboard", "products", "orders", "quotes", "articles", "hero_slides", "brands", "categories", "media", "settings", "users", "supplier", "customers", "ebay", "analytics"],
-  editor:        ["dashboard", "articles", "hero_slides"],
+  super_admin:   ["dashboard", "products", "orders", "quotes", "articles", "hero_slides", "promotions", "brands", "categories", "media", "settings", "users", "supplier", "customers", "ebay", "analytics"],
+  admin:         ["dashboard", "products", "orders", "quotes", "articles", "hero_slides", "promotions", "brands", "categories", "media", "settings", "users", "supplier", "customers", "ebay", "analytics"],
+  editor:        ["dashboard", "articles", "hero_slides", "promotions"],
   order_manager: ["dashboard", "orders", "quotes", "supplier"],
 };
 
@@ -16,7 +16,8 @@ export const PATH_SECTION: Record<string, string> = {
   "/admin/orders":      "orders",
   "/admin/quotes":      "quotes",
   "/admin/articles":    "articles",
-  "/admin/hero-slides": "hero_slides",
+  "/admin/hero-slides":  "hero_slides",
+  "/admin/promotions":  "promotions",
   "/admin/brands":      "brands",
   "/admin/settings":    "settings",
   "/admin/users":       "users",

@@ -25,6 +25,7 @@ import {
   AlertTriangle,
   ShoppingBag,
   BarChart2,
+  Megaphone,
 } from "lucide-react";
 import { logoutAdmin } from "@/app/admin/actions";
 import { canAccess, PATH_SECTION } from "@/lib/admin-permissions";
@@ -38,8 +39,9 @@ const NAV = [
   { label: "Articles",       href: "/admin/articles",    icon: FileText,        section: "articles" },
   { label: "Orders",         href: "/admin/orders",      icon: ShoppingCart,    section: "orders" },
   { label: "Quote Requests", href: "/admin/quotes",      icon: ClipboardList,   section: "quotes" },
-  { label: "Hero Slides",    href: "/admin/hero-slides", icon: Layers,          section: "hero_slides" },
-  { label: "Brands",         href: "/admin/brands",      icon: Star,            section: "brands" },
+  { label: "Hero Slides",    href: "/admin/hero-slides",  icon: Layers,      section: "hero_slides" },
+  { label: "Promotions",     href: "/admin/promotions",   icon: Megaphone,   section: "promotions" },
+  { label: "Brands",         href: "/admin/brands",       icon: Star,        section: "brands" },
   { label: "Customers",      href: "/admin/customers",   icon: ContactRound,    section: "customers" },
   { label: "Settings",       href: "/admin/settings",    icon: Settings,        section: "settings" },
   { label: "Supplier Intel", href: "/admin/supplier",    icon: TrendingUp,      section: "supplier" },
