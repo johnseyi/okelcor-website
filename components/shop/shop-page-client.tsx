@@ -7,8 +7,10 @@ import ShopPromoBanner, { type ShopPromotion } from "@/components/shop/shop-prom
 
 export default function ShopPageClient({
   activePromo,
+  initialFilters,
 }: {
   activePromo?: ShopPromotion | null;
+  initialFilters?: Record<string, string>;
 }) {
   const [prefilledSize, setPrefilledSize] = useState("");
 
@@ -20,6 +22,7 @@ export default function ShopPageClient({
         <ShopCatalogue
           prefilledSize={prefilledSize}
           onPrefilledSizeConsumed={() => setPrefilledSize("")}
+          initialFilters={initialFilters}
         />
       </div>
     </>

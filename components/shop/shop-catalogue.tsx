@@ -80,9 +80,10 @@ const sel =
 type Props = {
   prefilledSize?: string;
   onPrefilledSizeConsumed?: () => void;
+  initialFilters?: Record<string, string>;
 };
 
-export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed }: Props) {
+export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed, initialFilters }: Props) {
   const { locale, t } = useLanguage();
   const { customer } = useCustomerAuth();
   const customerType: "b2b" | "b2c" | "guest" =
@@ -93,6 +94,7 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed }
   const [priceMin,   setPriceMin]   = useState("");
   const [priceMax,   setPriceMax]   = useState("");
   const [selBrand,   setSelBrand]   = useState("");
+  const [selType,    setSelType]    = useState("");
   const [selWidth,   setSelWidth]   = useState("");
   const [selHeight,  setSelHeight]  = useState("");
   const [selRim,     setSelRim]     = useState("");
@@ -121,6 +123,25 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed }
 
   // Triggers runSearch() one render after prefilledSize state is applied
   const [pendingAutoSearch, setPendingAutoSearch] = useState(false);
+
+  // Apply URL initialFilters on first render and auto-search
+  useEffect(() => {
+    if (!initialFilters || Object.keys(initialFilters).length === 0) return;
+    if (initialFilters.q)           setSearchText(initialFilters.q);
+    if (initialFilters.type)        setSelType(initialFilters.type);
+    if (initialFilters.brand)       setSelBrand(initialFilters.brand);
+    if (initialFilters.season)      setSelSeason(initialFilters.season);
+    if (initialFilters.speed)       setSelSpeed(initialFilters.speed);
+    if (initialFilters.load_index)  setSelLoad(initialFilters.load_index);
+    if (initialFilters.price_min)   setPriceMin(initialFilters.price_min);
+    if (initialFilters.price_max)   setPriceMax(initialFilters.price_max);
+    if (initialFilters.size) {
+      const match = initialFilters.size.match(/^(\d+)\/(\d+)[Rr](\d+)/);
+      if (match) { setSelWidth(match[1]); setSelHeight(match[2]); setSelRim(match[3]); }
+    }
+    setPendingAutoSearch(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Consume prefilledSize: parse "205/55R16" → width / height / rim, then auto-search
   useEffect(() => {
@@ -172,7 +193,7 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed }
 
   const runSearch = useCallback(() => {
     const hasInput =
-      searchText.trim() || priceMin || priceMax || selBrand ||
+      searchText.trim() || priceMin || priceMax || selBrand || selType ||
       selWidth || selHeight || selRim || selSeason || selSpeed || selLoad;
     if (!hasInput) return;
 
@@ -186,6 +207,7 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed }
     if (priceMin)          params.set("price_min",     priceMin);
     if (priceMax)          params.set("price_max",     priceMax);
     if (selBrand)          params.set("brand",         selBrand);
+    if (selType)           params.set("type",          selType);
     if (selSeason)         params.set("season",        selSeason);
     if (selSpeed)          params.set("speed",         selSpeed);
     if (selLoad)           params.set("load_index",    selLoad);
@@ -226,7 +248,7 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed }
         }
       })
       .finally(() => setIsLoading(false));
-  }, [searchText, priceMin, priceMax, selBrand, selWidth, selHeight, selRim, selSeason, selSpeed, selLoad, sortBy, locale]);
+  }, [searchText, priceMin, priceMax, selBrand, selType, selWidth, selHeight, selRim, selSeason, selSpeed, selLoad, sortBy, locale]);
 
   // Re-fetch when sort changes after results are already showing
   useEffect(() => {
@@ -236,8 +258,9 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed }
 
   const reset = () => {
     setSearchText("");
-    setPriceMin(""); setPriceMax(""); setSelBrand(""); setSelWidth(""); setSelHeight("");
-    setSelRim(""); setSelSeason(""); setSelSpeed(""); setSelLoad(""); setSortBy("");
+    setPriceMin(""); setPriceMax(""); setSelBrand(""); setSelType("");
+    setSelWidth(""); setSelHeight(""); setSelRim("");
+    setSelSeason(""); setSelSpeed(""); setSelLoad(""); setSortBy("");
     setHasSearched(false);
     setProducts([]);
     setResultCount(0);
@@ -245,7 +268,7 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed }
   };
 
   const hasActiveFilters =
-    searchText.trim() || priceMin || priceMax || selBrand ||
+    searchText.trim() || priceMin || priceMax || selBrand || selType ||
     selWidth || selHeight || selRim || selSeason || selSpeed || selLoad;
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -399,6 +422,16 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed }
               </div>
             ) : (
               <>
+                {/* Active filter chips */}
+                {(selType || selBrand || selSeason || searchText.trim()) && (
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
+                    <span className="text-[0.75rem] font-semibold text-[#5c5e62]">Filtered by:</span>
+                    {selType    && <span className="inline-flex items-center gap-1 rounded-full bg-[#171a20] px-3 py-1 text-[0.72rem] font-semibold text-white">{selType} <button onClick={() => { setSelType(""); runSearch(); }} className="ml-0.5 opacity-70 hover:opacity-100">×</button></span>}
+                    {selBrand   && <span className="inline-flex items-center gap-1 rounded-full bg-[#f0f0f0] px-3 py-1 text-[0.72rem] font-semibold text-[#171a20]">{selBrand} <button onClick={() => { setSelBrand(""); runSearch(); }} className="ml-0.5 opacity-60 hover:opacity-100">×</button></span>}
+                    {selSeason  && <span className="inline-flex items-center gap-1 rounded-full bg-[#f0f0f0] px-3 py-1 text-[0.72rem] font-semibold text-[#171a20]">{selSeason} <button onClick={() => { setSelSeason(""); runSearch(); }} className="ml-0.5 opacity-60 hover:opacity-100">×</button></span>}
+                    {searchText.trim() && <span className="inline-flex items-center gap-1 rounded-full bg-[#f0f0f0] px-3 py-1 text-[0.72rem] font-semibold text-[#171a20]">&ldquo;{searchText}&rdquo; <button onClick={() => { setSearchText(""); runSearch(); }} className="ml-0.5 opacity-60 hover:opacity-100">×</button></span>}
+                  </div>
+                )}
                 {/* Result count */}
                 <p className="mb-4 text-[0.85rem] text-[#5c5e62]">
                   <span className="font-semibold text-[#171a20]">{resultCount}</span>{" "}

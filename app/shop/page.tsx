@@ -42,14 +42,29 @@ async function getActivePromotion(): Promise<ShopPromotion | null> {
   }
 }
 
-export default async function ShopPage() {
-  const activePromo = await getActivePromotion();
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+const SUPPORTED_PARAMS = ["q", "type", "brand", "size", "season", "speed", "load_index", "price_min", "price_max"];
+
+export default async function ShopPage({ searchParams }: { searchParams: SearchParams }) {
+  const [activePromo, params] = await Promise.all([getActivePromotion(), searchParams]);
+
+  const initialFilters: Record<string, string> = {};
+  for (const key of SUPPORTED_PARAMS) {
+    const val = params[key];
+    if (typeof val === "string" && val.trim()) initialFilters[key] = val.trim();
+  }
 
   return (
     <main>
       <Navbar />
       <ShopHero />
-      <FadeUp><ShopPageClient activePromo={activePromo} /></FadeUp>
+      <FadeUp>
+        <ShopPageClient
+          activePromo={activePromo}
+          initialFilters={Object.keys(initialFilters).length > 0 ? initialFilters : undefined}
+        />
+      </FadeUp>
       <Footer />
     </main>
   );
