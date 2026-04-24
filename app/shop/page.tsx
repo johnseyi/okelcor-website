@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
-import ShopHero from "@/components/shop/shop-hero";
+import ShopPromoBanner, { type ShopPromotion } from "@/components/shop/shop-promo-banner";
 import ShopPageClient from "@/components/shop/shop-page-client";
 import FadeUp from "@/components/motion/fade-up";
-import type { ShopPromotion } from "@/components/shop/shop-promo-banner";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -58,10 +57,9 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
   return (
     <main>
       <Navbar />
-      <ShopHero />
+      <ShopPromoBanner promo={activePromo} />
       <FadeUp>
         <ShopPageClient
-          activePromo={activePromo}
           initialFilters={Object.keys(initialFilters).length > 0 ? initialFilters : undefined}
         />
       </FadeUp>
