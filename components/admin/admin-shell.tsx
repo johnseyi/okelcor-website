@@ -27,6 +27,7 @@ import {
   BarChart2,
   Megaphone,
   Zap,
+  MessageSquare,
 } from "lucide-react";
 import { logoutAdmin } from "@/app/admin/actions";
 import { canAccess, PATH_SECTION } from "@/lib/admin-permissions";
@@ -36,6 +37,7 @@ import { canAccess, PATH_SECTION } from "@/lib/admin-permissions";
 const NAV = [
   { label: "Dashboard",      href: "/admin",             icon: LayoutDashboard, section: "dashboard" },
   { label: "Analytics",      href: "/admin/analytics",  icon: BarChart2,       section: "analytics" },
+  { label: "Live Chats",     href: "/admin/chats",      icon: MessageSquare,   section: "chats" },
   { label: "Products",       href: "/admin/products",    icon: Package,         section: "products" },
   { label: "Articles",       href: "/admin/articles",    icon: FileText,        section: "articles" },
   { label: "Orders",         href: "/admin/orders",      icon: ShoppingCart,    section: "orders" },
