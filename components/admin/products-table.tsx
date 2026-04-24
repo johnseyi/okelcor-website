@@ -141,15 +141,6 @@ export default function ProductsTable({
   const [confirmBulkInStock, setConfirmBulkInStock] = useState(false);
   const [, startTransition] = useTransition();
 
-  // ── Segment filter ──────────────────────────────────────────────────────────
-
-  const visibleProducts =
-    currentView === "b2b"
-      ? products.filter((p) => p.price_b2b != null)
-      : currentView === "b2c"
-      ? products.filter((p) => p.price_b2c != null)
-      : products;
-
   // ── URL navigation ──────────────────────────────────────────────────────────
 
   const buildUrl = (overrides: { q?: string; type?: string; page?: number }) => {
@@ -433,18 +424,18 @@ export default function ProductsTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-black/[0.04]">
-              {visibleProducts.length === 0 ? (
+              {products.length === 0 ? (
                 <tr>
                   <td colSpan={10} className="px-4 py-12 text-center text-[0.875rem] text-[#5c5e62]">
-                    {currentView !== "all"
-                      ? `No products have a ${currentView === "b2b" ? "wholesale (B2B)" : "retail (B2C)"} price set yet.`
-                      : <>No products found. Try adjusting your search or{" "}
-                          <Link href="/admin/products/new" className="font-semibold text-[#E85C1A] underline">add one</Link>.</>
-                    }
+                    No products found. Try adjusting your search or{" "}
+                    <Link href="/admin/products/new" className="font-semibold text-[#E85C1A] underline">
+                      add one
+                    </Link>
+                    .
                   </td>
                 </tr>
               ) : (
-                visibleProducts.map((product) => {
+                products.map((product) => {
                   const active = product.is_active ?? true;
                   const inStock = product.in_stock ?? true;
                   const isToggling = togglingId === product.id;
