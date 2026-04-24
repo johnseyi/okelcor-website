@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Download, Upload, X, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Download, Upload, X, CheckCircle2, AlertCircle, Loader2, Trash2 } from "lucide-react";
+import { deleteAllProducts } from "@/app/admin/products/actions";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -20,6 +21,13 @@ type ModalState =
   | { phase: "done"; result: ImportResult }
   | { phase: "error"; message: string };
 
+type DeleteAllState =
+  | { phase: "idle" }
+  | { phase: "confirm"; typed: string }
+  | { phase: "deleting" }
+  | { phase: "done"; deleted?: number }
+  | { phase: "error"; message: string };
+
 // ── Shared button styles ───────────────────────────────────────────────────────
 
 const outlineBtnCls =
@@ -34,8 +42,9 @@ export default function CsvActions() {
   const [exporting, setExporting]     = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [modal, setModal]             = useState<ModalState>({ phase: "idle" });
+  const [deleteAll, setDeleteAll]     = useState<DeleteAllState>({ phase: "idle" });
 
-  // Auto-close the modal 3 seconds after a successful import
+  // Auto-close the import modal 3 seconds after a successful import
   useEffect(() => {
     if (modal.phase !== "done") return;
     const timer = setTimeout(() => {
@@ -44,6 +53,26 @@ export default function CsvActions() {
     }, 3000);
     return () => clearTimeout(timer);
   }, [modal.phase]);
+
+  // Auto-close the delete-all success modal after 3 seconds
+  useEffect(() => {
+    if (deleteAll.phase !== "done") return;
+    const timer = setTimeout(() => setDeleteAll({ phase: "idle" }), 3000);
+    return () => clearTimeout(timer);
+  }, [deleteAll.phase]);
+
+  // ── Delete All ──────────────────────────────────────────────────────────────
+
+  const handleDeleteAll = async () => {
+    setDeleteAll({ phase: "deleting" });
+    const result = await deleteAllProducts();
+    if (result.error) {
+      setDeleteAll({ phase: "error", message: result.error });
+    } else {
+      router.refresh();
+      setDeleteAll({ phase: "done", deleted: result.deleted });
+    }
+  };
 
   // ── Export ──────────────────────────────────────────────────────────────────
 
@@ -185,6 +214,21 @@ export default function CsvActions() {
           <Upload size={15} strokeWidth={2} />
           Import CSV
         </button>
+
+        <button
+          type="button"
+          onClick={() => setDeleteAll({ phase: "confirm", typed: "" })}
+          disabled={deleteAll.phase === "deleting"}
+          className="flex items-center gap-2 rounded-full border border-red-200 bg-white px-4 py-2.5 text-[0.875rem] font-semibold text-red-600 transition hover:border-red-400 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+          aria-label="Delete all products"
+        >
+          {deleteAll.phase === "deleting" ? (
+            <Loader2 size={15} className="animate-spin" />
+          ) : (
+            <Trash2 size={15} strokeWidth={2} />
+          )}
+          Delete All
+        </button>
       </div>
 
       {/* ── Import modal ── */}
@@ -249,11 +293,23 @@ export default function CsvActions() {
                   />
                 </label>
 
-                <p className="text-[0.78rem] text-[#5c5e62]">
-                  Required columns: <code className="rounded bg-black/[0.06] px-1 py-0.5 font-mono text-[0.75rem]">brand</code>, <code className="rounded bg-black/[0.06] px-1 py-0.5 font-mono text-[0.75rem]">name</code>, <code className="rounded bg-black/[0.06] px-1 py-0.5 font-mono text-[0.75rem]">size</code>, <code className="rounded bg-black/[0.06] px-1 py-0.5 font-mono text-[0.75rem]">price</code>, <code className="rounded bg-black/[0.06] px-1 py-0.5 font-mono text-[0.75rem]">type</code>, <code className="rounded bg-black/[0.06] px-1 py-0.5 font-mono text-[0.75rem]">sku</code>. Rows with a matching SKU will be updated.
-                </p>
+                <div className="rounded-[10px] border border-black/[0.07] bg-[#f9f9f9] p-3 text-[0.75rem] text-[#5c5e62]">
+                  <p className="mb-1.5 font-bold text-[#1a1a1a]">Required columns</p>
+                  <p className="mb-2 font-mono">
+                    {["sku","brand","name","size","price","type"].map((c) => (
+                      <code key={c} className="mr-1 rounded bg-black/[0.06] px-1 py-0.5">{c}</code>
+                    ))}
+                  </p>
+                  <p className="mb-1.5 font-bold text-[#1a1a1a]">Optional columns</p>
+                  <p className="font-mono leading-relaxed">
+                    {["spec","season","visible","width","height","rim","load_index","speed_rating","inventory","cost","price_b2b","price_b2c"].map((c) => (
+                      <code key={c} className="mr-1 rounded bg-black/[0.06] px-1 py-0.5">{c}</code>
+                    ))}
+                  </p>
+                  <p className="mt-2">Rows with a matching SKU are <strong>updated</strong>, not duplicated. Product images are preserved on update.</p>
+                </div>
                 <p className="text-[0.78rem] font-medium text-amber-600">
-                  ⚠ Newly imported products are set to <strong>Inactive</strong> by default. After import, go to the products list and toggle each one to <strong>Active</strong> so they appear on the shop.
+                  ⚠ Newly imported products are set to <strong>Inactive</strong> by default. After import, toggle each one to <strong>Active</strong> so they appear on the shop.
                 </p>
 
                 {/* Actions */}
@@ -357,6 +413,163 @@ export default function CsvActions() {
                   <button
                     type="button"
                     onClick={closeModal}
+                    className="rounded-full border border-black/10 px-5 py-3 text-[0.9rem] font-semibold text-[#5c5e62] transition hover:bg-black/[0.04]"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* ── Delete All modal ── */}
+      {deleteAll.phase !== "idle" && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px]"
+            aria-hidden="true"
+            onClick={() => deleteAll.phase !== "deleting" && setDeleteAll({ phase: "idle" })}
+          />
+
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Delete all products"
+            className="fixed left-1/2 top-1/2 z-50 w-full max-w-[480px] -translate-x-1/2 -translate-y-1/2 rounded-[22px] bg-white p-7 shadow-[0_24px_64px_rgba(0,0,0,0.18)]"
+          >
+            {/* Header */}
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[0.72rem] font-bold uppercase tracking-[0.18em] text-red-600">
+                  Destructive Action
+                </p>
+                <h2 className="mt-0.5 text-[1.1rem] font-extrabold text-[#171a20]">
+                  Delete All Products
+                </h2>
+              </div>
+              {deleteAll.phase !== "deleting" && (
+                <button
+                  type="button"
+                  onClick={() => setDeleteAll({ phase: "idle" })}
+                  className="rounded-full p-1.5 text-[#5c5e62] transition hover:bg-black/[0.05] hover:text-[#171a20]"
+                  aria-label="Close"
+                >
+                  <X size={18} strokeWidth={2} />
+                </button>
+              )}
+            </div>
+
+            {/* Phase: confirm */}
+            {deleteAll.phase === "confirm" && (
+              <div className="flex flex-col gap-5">
+                <div className="flex items-start gap-3 rounded-[12px] border border-red-200 bg-red-50 p-4">
+                  <AlertCircle size={20} className="mt-0.5 shrink-0 text-red-600" />
+                  <div>
+                    <p className="text-[0.88rem] font-semibold text-red-800">This will remove every product from the catalogue.</p>
+                    <ul className="mt-2 space-y-1 text-[0.8rem] text-red-700">
+                      <li>• All product records will be soft-deleted (moved to Trash)</li>
+                      <li>• Product images linked to deleted records may be lost</li>
+                      <li>• The shop will show no products until you re-import</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="rounded-[10px] border border-amber-200 bg-amber-50 p-3 text-[0.78rem] text-amber-800">
+                  <strong>Tip:</strong> If you only want to update prices, use <strong>Import CSV</strong> instead — existing SKUs are updated in-place and images are preserved.
+                </div>
+
+                <div>
+                  <p className="mb-2 text-[0.82rem] font-semibold text-[#1a1a1a]">
+                    Type <span className="font-mono font-bold text-red-600">DELETE ALL</span> to confirm
+                  </p>
+                  <input
+                    type="text"
+                    value={deleteAll.typed}
+                    onChange={(e) => setDeleteAll({ phase: "confirm", typed: e.target.value })}
+                    placeholder="DELETE ALL"
+                    className="w-full rounded-xl border border-black/[0.09] bg-white px-4 py-2.5 font-mono text-[0.875rem] text-[#1a1a1a] outline-none placeholder:text-[#ccc] transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={handleDeleteAll}
+                    disabled={deleteAll.typed !== "DELETE ALL"}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-full bg-red-600 py-3 text-[0.9rem] font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <Trash2 size={15} strokeWidth={2} />
+                    Delete All Products
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeleteAll({ phase: "idle" })}
+                    className="rounded-full border border-black/10 px-5 py-3 text-[0.9rem] font-semibold text-[#5c5e62] transition hover:bg-black/[0.04]"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Phase: deleting */}
+            {deleteAll.phase === "deleting" && (
+              <div className="flex flex-col items-center gap-4 py-6">
+                <Loader2 size={36} className="animate-spin text-red-500" />
+                <p className="text-[0.9rem] font-semibold text-[#1a1a1a]">Deleting all products…</p>
+                <p className="text-[0.78rem] text-[#5c5e62]">This may take a moment for large catalogues.</p>
+              </div>
+            )}
+
+            {/* Phase: done */}
+            {deleteAll.phase === "done" && (
+              <div className="flex flex-col gap-5">
+                <div className="flex items-start gap-3 rounded-[12px] border border-emerald-200 bg-emerald-50 p-4">
+                  <CheckCircle2 size={20} className="mt-0.5 shrink-0 text-emerald-600" />
+                  <div>
+                    <p className="text-[0.9rem] font-semibold text-emerald-800">All products deleted</p>
+                    {deleteAll.deleted != null && (
+                      <p className="mt-1 text-[0.82rem] text-emerald-700">
+                        <strong>{deleteAll.deleted}</strong> product{deleteAll.deleted !== 1 ? "s" : ""} moved to Trash.
+                      </p>
+                    )}
+                    <p className="mt-1 text-[0.78rem] text-emerald-700">You can now import the new CSV file.</p>
+                  </div>
+                </div>
+                <p className="text-center text-[0.75rem] text-[#5c5e62]">Closing automatically…</p>
+                <button
+                  type="button"
+                  onClick={() => setDeleteAll({ phase: "idle" })}
+                  className="w-full rounded-full bg-[#171a20] py-3 text-[0.9rem] font-semibold text-white transition hover:bg-black"
+                >
+                  Close Now
+                </button>
+              </div>
+            )}
+
+            {/* Phase: error */}
+            {deleteAll.phase === "error" && (
+              <div className="flex flex-col gap-5">
+                <div className="flex items-start gap-3 rounded-[12px] border border-red-200 bg-red-50 p-4">
+                  <AlertCircle size={20} className="mt-0.5 shrink-0 text-red-600" />
+                  <div>
+                    <p className="text-[0.9rem] font-semibold text-red-800">Delete failed</p>
+                    <p className="mt-1 text-[0.82rem] text-red-700">{deleteAll.message}</p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setDeleteAll({ phase: "confirm", typed: "" })}
+                    className="flex-1 rounded-full bg-red-600 py-3 text-[0.9rem] font-semibold text-white transition hover:bg-red-700"
+                  >
+                    Try Again
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeleteAll({ phase: "idle" })}
                     className="rounded-full border border-black/10 px-5 py-3 text-[0.9rem] font-semibold text-[#5c5e62] transition hover:bg-black/[0.04]"
                   >
                     Cancel

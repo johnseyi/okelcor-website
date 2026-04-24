@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Search, Pencil, Trash2, ToggleLeft, ToggleRight, ChevronLeft, ChevronRight, X, ShoppingBag, PackageX, PackageCheck, AlertTriangle } from "lucide-react";
@@ -245,6 +245,16 @@ export default function ProductsTable({
     });
   };
 
+  // ── B2B / B2C client-side filter ────────────────────────────────────────────
+  // When a segment tab is active, only show products with the matching price tier.
+  // The API also receives segment= param so the backend can filter server-side
+  // once that feature is implemented — client filter acts as an immediate fallback.
+  const displayProducts = useMemo(() => {
+    if (currentView === "b2b") return products.filter((p) => p.price_b2b != null);
+    if (currentView === "b2c") return products.filter((p) => p.price_b2c != null);
+    return products;
+  }, [products, currentView]);
+
   // ── Pagination ──────────────────────────────────────────────────────────────
 
   const lastPage = meta.last_page ?? 1;
@@ -424,18 +434,20 @@ export default function ProductsTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-black/[0.04]">
-              {products.length === 0 ? (
+              {displayProducts.length === 0 ? (
                 <tr>
                   <td colSpan={10} className="px-4 py-12 text-center text-[0.875rem] text-[#5c5e62]">
-                    No products found. Try adjusting your search or{" "}
-                    <Link href="/admin/products/new" className="font-semibold text-[#E85C1A] underline">
-                      add one
-                    </Link>
-                    .
+                    {currentView === "b2b"
+                      ? "No B2B products found. Import a CSV with price_b2b values or add pricing in the product edit page."
+                      : currentView === "b2c"
+                      ? "No B2C products found. Import a CSV with price_b2c values or add pricing in the product edit page."
+                      : <>No products found. Try adjusting your search or{" "}
+                          <Link href="/admin/products/new" className="font-semibold text-[#E85C1A] underline">add one</Link>.</>
+                    }
                   </td>
                 </tr>
               ) : (
-                products.map((product) => {
+                displayProducts.map((product) => {
                   const active = product.is_active ?? true;
                   const inStock = product.in_stock ?? true;
                   const isToggling = togglingId === product.id;
@@ -603,8 +615,8 @@ export default function ProductsTable({
           </table>
         </div>
 
-        {/* Pagination */}
-        {lastPage > 1 && (
+        {/* Pagination — hidden for segment views since filtering is client-side */}
+        {lastPage > 1 && currentView === "all" && (
           <div className="flex items-center justify-between border-t border-black/[0.06] px-5 py-3">
             <p className="text-[0.78rem] text-[#5c5e62]">
               Page {currentPage} of {lastPage}

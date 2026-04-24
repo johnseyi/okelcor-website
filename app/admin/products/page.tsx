@@ -44,8 +44,9 @@ export default async function AdminProductsPage({
   }
 
   const params: Record<string, string | number> = { per_page: 200 };
-  if (q?.trim())              params.q    = q.trim();
-  if (type && type !== "all") params.type = type;
+  if (q?.trim())              params.q       = q.trim();
+  if (type && type !== "all") params.type    = type;
+  if (currentView !== "all")  params.segment = currentView;
 
   const res = await adminSafeFetch<AdminProduct[]>("/products", {
     params,

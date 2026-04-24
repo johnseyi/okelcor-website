@@ -84,6 +84,14 @@ export type AdminProduct = {
   ebay_listed?: boolean;
   created_at?: string;
   deleted_at?: string | null;
+  // Extended tyre specification fields (populated via CSV import)
+  width?: number | null;
+  height?: number | null;
+  rim?: number | null;
+  load_index?: number | null;
+  speed_rating?: string | null;
+  inventory?: number | null;
+  cost?: number | null;
 };
 
 /** Per-locale content block used in both list and detail article responses. */

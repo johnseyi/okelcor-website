@@ -40,6 +40,17 @@ export type ProductInput = {
   price: number;
   description: string;
   is_active: boolean;
+  // Optional pricing tiers
+  price_b2b?: number | null;
+  price_b2c?: number | null;
+  // Extended tyre specification fields (from CSV)
+  width?: number | null;
+  height?: number | null;
+  rim?: number | null;
+  load_index?: number | null;
+  speed_rating?: string | null;
+  inventory?: number | null;
+  cost?: number | null;
 };
 
 // ── CRUD actions ──────────────────────────────────────────────────────────────
@@ -390,4 +401,27 @@ export async function restoreProduct(
   revalidateProducts(id);
   revalidatePath("/admin/products/trash");
   return {};
+}
+
+export async function deleteAllProducts(): Promise<{ error?: string; deleted?: number }> {
+  const token = await getToken();
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/admin/products/all`, {
+      method: "DELETE",
+      headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+  } catch {
+    return { error: "Network error. Could not reach the server." };
+  }
+
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok && res.status !== 204) {
+    return { error: json.message || `Failed to delete all products (HTTP ${res.status}).` };
+  }
+
+  revalidateProducts();
+  revalidatePath("/shop", "page");
+  return { deleted: json.data?.deleted ?? json.deleted };
 }
