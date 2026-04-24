@@ -190,7 +190,6 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed }
     if (selSpeed)          params.set("speed",         selSpeed);
     if (selLoad)           params.set("load_index",    selLoad);
     if (sortBy)            params.set("sort",          sortBy);
-    if (customerType !== "guest") params.set("customer_type", customerType);
 
     // Build size string from width / height / rim components
     let sizeStr = "";
@@ -227,7 +226,7 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed }
         }
       })
       .finally(() => setIsLoading(false));
-  }, [searchText, priceMin, priceMax, selBrand, selWidth, selHeight, selRim, selSeason, selSpeed, selLoad, sortBy, locale, customerType]);
+  }, [searchText, priceMin, priceMax, selBrand, selWidth, selHeight, selRim, selSeason, selSpeed, selLoad, sortBy, locale]);
 
   // Re-fetch when sort changes after results are already showing
   useEffect(() => {

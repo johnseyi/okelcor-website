@@ -43,11 +43,9 @@ export default async function AdminProductsPage({
     // Other errors (network down) — fall through, table shows empty
   }
 
-  const params: Record<string, string | number> = { per_page: 20 };
-  if (q?.trim())              params.q             = q.trim();
-  if (type && type !== "all") params.type          = type;
-  if (page)                   params.page          = page;
-  if (currentView !== "all")  params.customer_type = currentView;
+  const params: Record<string, string | number> = { per_page: 200 };
+  if (q?.trim())              params.q    = q.trim();
+  if (type && type !== "all") params.type = type;
 
   const res = await adminSafeFetch<AdminProduct[]>("/products", {
     params,
