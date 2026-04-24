@@ -11,7 +11,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1
 const FROM_EMAIL = process.env.FROM_EMAIL || "Okelcor Website <noreply@okelcor.com>";
 const SITE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://okelcor.com";
 const RESET_URL = `${SITE_URL}/forgot-password`;
-const SUPPORT_EMAIL = "support@okelcor.de";
+const SUPPORT_EMAIL = "support@okelcor.com";
 
 const TEST_EMAIL = "johngraphics18@gmail.com";
 const BATCH_SIZE = 100;

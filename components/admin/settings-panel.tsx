@@ -31,7 +31,7 @@ const SCHEMA: GroupDef[] = [
     label: "Company Information",
     fields: [
       { key: "company_name",    label: "Company Name",      type: "text",     default: "Okelcor GmbH" },
-      { key: "company_email",   label: "Contact Email",     type: "email",    default: "support@okelcor.de" },
+      { key: "company_email",   label: "Contact Email",     type: "email",    default: "support@okelcor.com" },
       { key: "company_phone",   label: "Phone Number",      type: "tel",      default: "+49 (0) 89 / 545 583 60" },
       { key: "company_fax",     label: "Fax Number",        type: "tel",      default: "+49 (0) 89 / 545 583 33" },
       {
@@ -98,11 +98,11 @@ const SCHEMA: GroupDef[] = [
       },
       {
         key: "contact_email", label: "Contact Form Recipient",
-        type: "email", default: "support@okelcor.de",
+        type: "email", default: "support@okelcor.com",
       },
       {
         key: "quote_email", label: "Quote Request Recipient",
-        type: "email", default: "support@okelcor.de",
+        type: "email", default: "support@okelcor.com",
       },
     ],
   },
