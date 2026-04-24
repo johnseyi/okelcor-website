@@ -14,8 +14,8 @@ export default function ShopPageClient({
 
   return (
     <>
-      <CarFinder onSizeSelect={setPrefilledSize} />
       {activePromo && <ShopPromoBanner promo={activePromo} />}
+      <CarFinder onSizeSelect={setPrefilledSize} />
       <div id="shop-catalogue">
         <ShopCatalogue
           prefilledSize={prefilledSize}
