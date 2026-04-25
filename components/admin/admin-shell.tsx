@@ -28,6 +28,7 @@ import {
   Megaphone,
   Zap,
   MessageSquare,
+  ShieldAlert,
 } from "lucide-react";
 import { logoutAdmin } from "@/app/admin/actions";
 import { canAccess, PATH_SECTION } from "@/lib/admin-permissions";
@@ -47,6 +48,7 @@ const NAV = [
   { label: "FET Engines",    href: "/admin/fet",          icon: Zap,         section: "fet" },
   { label: "Brands",         href: "/admin/brands",       icon: Star,        section: "brands" },
   { label: "Customers",      href: "/admin/customers",   icon: ContactRound,    section: "customers" },
+  { label: "Security",       href: "/admin/security",    icon: ShieldAlert,     section: "security" },
   { label: "Settings",       href: "/admin/settings",    icon: Settings,        section: "settings" },
   { label: "Supplier Intel", href: "/admin/supplier",    icon: TrendingUp,      section: "supplier" },
   { label: "Users",          href: "/admin/users",       icon: Users,           section: "users" },

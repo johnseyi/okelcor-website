@@ -14,7 +14,9 @@ import LowStock       from "@/components/admin/dashboard/low-stock";
 import CrispPanel     from "@/components/admin/dashboard/crisp-panel";
 import GoogleAdsCard  from "@/components/admin/dashboard/google-ads-card";
 import FunnelCard     from "@/components/admin/dashboard/funnel-card";
-import TopProducts    from "@/components/admin/dashboard/top-products";
+import TopProducts       from "@/components/admin/dashboard/top-products";
+import SuspiciousBanner  from "@/components/admin/dashboard/suspicious-banner";
+import SecurityAlertCard from "@/components/admin/dashboard/security-alert-card";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Dashboard" };
@@ -28,6 +30,9 @@ export default async function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-[#f5f5f7] p-4 md:p-6 lg:p-8">
+
+      {/* Suspicious activity banner — hidden when no alerts */}
+      <SuspiciousBanner />
 
       {/* Live status bar */}
       <StatusBar />
@@ -75,6 +80,11 @@ export default async function AdminDashboard() {
         <GoogleAdsCard />
         <FunnelCard />
         <TopProducts />
+      </div>
+
+      {/* Security overview */}
+      <div className="mt-5 grid gap-5 lg:grid-cols-3">
+        <SecurityAlertCard />
       </div>
 
     </div>
