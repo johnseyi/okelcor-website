@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Search, Pencil, Trash2, ToggleLeft, ToggleRight, ChevronLeft, ChevronRight, X, ShoppingBag, PackageX, PackageCheck, AlertTriangle } from "lucide-react";
 import { toggleProductActive, deleteProduct, listOnEbay, removeFromEbay, toggleProductStock, markAllOutOfStock, markAllInStock } from "@/app/admin/products/actions";
 import type { AdminProduct } from "@/lib/admin-api";
+import { getProductImageUrl } from "@/lib/utils";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -461,7 +462,7 @@ export default function ProductsTable({
                           {(product.image_url || product.primary_image) ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
-                              src={product.image_url ?? product.primary_image ?? ""}
+                              src={getProductImageUrl(product.image_url ?? product.primary_image)}
                               alt={product.name}
                               className="h-full w-full object-cover"
                             />
