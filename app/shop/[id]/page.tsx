@@ -143,7 +143,7 @@ export default async function ProductDetailPage({ params }: Props) {
       <ProductViewTracker product={product} />
       <Navbar />
 
-      <div className="w-full bg-[#f5f5f5] pt-[76px] lg:pt-20">
+      <div className="w-full bg-[#f5f5f5]" style={{ paddingTop: "calc(var(--bar-h, 0px) + 76px)" }}>
         {/* Breadcrumb */}
         <div className="tesla-shell py-4">
           <ShopBreadcrumb product={product} />

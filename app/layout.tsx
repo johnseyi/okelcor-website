@@ -13,6 +13,8 @@ import { CustomerAuthProvider } from "@/context/CustomerAuthContext";
 import { SiteSettingsProvider } from "@/context/site-settings-context";
 import { getSiteSettings } from "@/lib/site-settings";
 import CrispChat from "@/components/crisp-chat";
+import AnnouncementBar from "@/components/announcement-bar";
+import PostHogProvider from "@/components/posthog-provider";
 
 const SITE_URL = (() => {
   try {
@@ -64,11 +66,13 @@ export default async function RootLayout({
   return (
     <html lang="en" className="w-full">
       <body className="m-0 w-full p-0">
+        <PostHogProvider>
         <CustomerAuthProvider>
           <SiteSettingsProvider settings={settings}>
             <LanguageProvider>
               <SearchProvider>
                 <CartProvider>
+                  <AnnouncementBar />
                   {children}
                   <CartDrawer />
                   <SearchModal />
@@ -81,6 +85,7 @@ export default async function RootLayout({
             </LanguageProvider>
           </SiteSettingsProvider>
         </CustomerAuthProvider>
+        </PostHogProvider>
       </body>
     </html>
   );

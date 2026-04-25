@@ -12,7 +12,7 @@ export default function ShopPageClient({
   const [prefilledSize, setPrefilledSize] = useState("");
 
   return (
-    <>
+    <div style={{ paddingTop: "calc(var(--bar-h, 0px) + 76px)" }}>
       <CarFinder onSizeSelect={setPrefilledSize} />
       <div id="shop-catalogue">
         <ShopCatalogue
@@ -21,6 +21,6 @@ export default function ShopPageClient({
           initialFilters={initialFilters}
         />
       </div>
-    </>
+    </div>
   );
 }

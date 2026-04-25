@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Car, Ruler, Search, Loader2, AlertCircle, ChevronDown, Zap, ArrowRight, Download, FileText } from "lucide-react";
 import EngineLookup from "@/components/fet/engine-lookup";
+import { trackTyreSpecSelected } from "@/lib/analytics";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -312,7 +313,7 @@ export default function CarFinder({ onSizeSelect }: Props) {
                             <button
                               key={size}
                               type="button"
-                              onClick={() => { onSizeSelect(size); scrollToCatalogue(); }}
+                              onClick={() => { onSizeSelect(size); scrollToCatalogue(); trackTyreSpecSelected({ size }); }}
                               className="rounded-full border border-[#f4511e]/30 bg-[#fff3ee] px-4 py-1.5 text-[0.82rem] font-semibold text-[#f4511e] transition hover:bg-[#f4511e] hover:text-white"
                             >
                               {size}

@@ -5,6 +5,7 @@ import {
   ShoppingCart, CheckCircle2, Tag, Archive, Zap,
 } from "lucide-react";
 import { adminApiFetch, AdminUnauthorizedError } from "@/lib/admin-api";
+import PostHogPanel from "@/components/admin/posthog-panel";
 import {
   fetchGaOverview,
   fetchGaDailyTrend,
@@ -467,7 +468,14 @@ export default async function AnalyticsPage() {
       </div>
 
       {/* ════════════════════════════════════════════════════════════════════════
-          SECTION 2 — PREVIOUS SITE  (okelcor.de) — archived
+          SECTION 2 — POSTHOG  (real-time, client-side)
+      ═══════════════════════════════════════════════════════════════════════════ */}
+      <div className="mb-10 rounded-2xl border border-[#1d4ed8]/15 bg-[#f5f8ff] p-6">
+        <PostHogPanel />
+      </div>
+
+      {/* ════════════════════════════════════════════════════════════════════════
+          SECTION 3 — PREVIOUS SITE  (okelcor.de) — archived
       ═══════════════════════════════════════════════════════════════════════════ */}
       <div className="rounded-2xl border border-black/[0.07] bg-[#f7f8f9] p-6">
 

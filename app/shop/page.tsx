@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
-import ShopPromoBanner, { type ShopPromotion } from "@/components/shop/shop-promo-banner";
 import ShopPageClient from "@/components/shop/shop-page-client";
 
 export const dynamic = "force-dynamic";
@@ -25,27 +24,12 @@ export const metadata: Metadata = {
   },
 };
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
-
-async function getActivePromotion(): Promise<ShopPromotion | null> {
-  try {
-    const res = await fetch(`${API_URL}/promotions/active`, {
-      cache: "no-store",
-    });
-    if (!res.ok) return null;
-    const json = await res.json();
-    return json.data ?? null;
-  } catch {
-    return null;
-  }
-}
+const SUPPORTED_PARAMS = ["q", "type", "brand", "size", "season", "speed", "load_index", "price_min", "price_max"];
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
-const SUPPORTED_PARAMS = ["q", "type", "brand", "size", "season", "speed", "load_index", "price_min", "price_max"];
-
 export default async function ShopPage({ searchParams }: { searchParams: SearchParams }) {
-  const [activePromo, params] = await Promise.all([getActivePromotion(), searchParams]);
+  const params = await searchParams;
 
   const initialFilters: Record<string, string> = {};
   for (const key of SUPPORTED_PARAMS) {
@@ -56,7 +40,6 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
   return (
     <main>
       <Navbar />
-      <ShopPromoBanner promo={activePromo} />
       <ShopPageClient
         initialFilters={Object.keys(initialFilters).length > 0 ? initialFilters : undefined}
       />

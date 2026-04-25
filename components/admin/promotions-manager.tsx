@@ -29,8 +29,11 @@ import {
 type FormState = {
   title: string;
   subheadline: string;
+  short_text: string;
+  emoji: string;
   button_text: string;
   button_link: string;
+  placement: "announcement_bar" | "shop_inline" | "both";
   is_active: boolean;
   start_date: string;
   end_date: string;
@@ -39,8 +42,11 @@ type FormState = {
 const EMPTY_FORM: FormState = {
   title: "",
   subheadline: "",
+  short_text: "",
+  emoji: "",
   button_text: "",
   button_link: "",
+  placement: "shop_inline",
   is_active: false,
   start_date: "",
   end_date: "",
@@ -50,8 +56,11 @@ function promoToForm(p: AdminPromotion): FormState {
   return {
     title:       p.title ?? "",
     subheadline: p.subheadline ?? "",
+    short_text:  p.short_text ?? "",
+    emoji:       p.emoji ?? "",
     button_text: p.button_text ?? "",
     button_link: p.button_link ?? "",
+    placement:   (p.placement as FormState["placement"]) ?? "shop_inline",
     is_active:   p.is_active,
     start_date:  p.start_date ?? "",
     end_date:    p.end_date ?? "",
@@ -103,6 +112,22 @@ function PromotionForm({
       </h3>
 
       <div className="grid gap-4 sm:grid-cols-2">
+        {/* Placement */}
+        <div className="sm:col-span-2">
+          <label className="mb-1 block text-[0.75rem] font-semibold text-[#5c5e62]">
+            Placement <span className="text-red-500">*</span>
+          </label>
+          <select
+            value={form.placement}
+            onChange={(e) => set("placement", e.target.value as FormState["placement"])}
+            className="w-full rounded-xl border border-black/[0.12] px-3.5 py-2.5 text-[0.875rem] text-[#1a1a1a] outline-none transition focus:border-[#E85C1A] focus:ring-2 focus:ring-[#E85C1A]/15"
+          >
+            <option value="shop_inline">Shop Inline Banner (between filters and products)</option>
+            <option value="announcement_bar">Announcement Bar (top of every page)</option>
+            <option value="both">Both placements</option>
+          </select>
+        </div>
+
         {/* Title */}
         <div className="sm:col-span-2">
           <label className="mb-1 block text-[0.75rem] font-semibold text-[#5c5e62]">
@@ -117,19 +142,52 @@ function PromotionForm({
           />
         </div>
 
-        {/* Subheadline */}
-        <div className="sm:col-span-2">
-          <label className="mb-1 block text-[0.75rem] font-semibold text-[#5c5e62]">
-            Subheadline
-          </label>
-          <input
-            type="text"
-            value={form.subheadline}
-            onChange={(e) => set("subheadline", e.target.value)}
-            placeholder="e.g. Premium PCR & TBR tyres — limited stock"
-            className="w-full rounded-xl border border-black/[0.12] px-3.5 py-2.5 text-[0.875rem] text-[#1a1a1a] outline-none transition focus:border-[#E85C1A] focus:ring-2 focus:ring-[#E85C1A]/15"
-          />
-        </div>
+        {/* Subheadline — for Shop Inline Banner */}
+        {(form.placement === "shop_inline" || form.placement === "both") && (
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-[0.75rem] font-semibold text-[#5c5e62]">
+              Subheadline <span className="text-[#9ca3af]">(Shop Inline)</span>
+            </label>
+            <input
+              type="text"
+              value={form.subheadline}
+              onChange={(e) => set("subheadline", e.target.value)}
+              placeholder="e.g. Premium PCR & TBR tyres — limited stock"
+              className="w-full rounded-xl border border-black/[0.12] px-3.5 py-2.5 text-[0.875rem] text-[#1a1a1a] outline-none transition focus:border-[#E85C1A] focus:ring-2 focus:ring-[#E85C1A]/15"
+            />
+          </div>
+        )}
+
+        {/* Short text + Emoji — for Announcement Bar */}
+        {(form.placement === "announcement_bar" || form.placement === "both") && (
+          <>
+            <div>
+              <label className="mb-1 block text-[0.75rem] font-semibold text-[#5c5e62]">
+                Short Text <span className="text-[#9ca3af]">(Announcement Bar)</span>
+              </label>
+              <input
+                type="text"
+                value={form.short_text}
+                onChange={(e) => set("short_text", e.target.value)}
+                placeholder="e.g. Free shipping on orders over €500"
+                className="w-full rounded-xl border border-black/[0.12] px-3.5 py-2.5 text-[0.875rem] text-[#1a1a1a] outline-none transition focus:border-[#E85C1A] focus:ring-2 focus:ring-[#E85C1A]/15"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[0.75rem] font-semibold text-[#5c5e62]">
+                Emoji <span className="text-[#9ca3af]">(optional)</span>
+              </label>
+              <input
+                type="text"
+                value={form.emoji}
+                onChange={(e) => set("emoji", e.target.value)}
+                placeholder="e.g. 🚚"
+                maxLength={4}
+                className="w-full rounded-xl border border-black/[0.12] px-3.5 py-2.5 text-[0.875rem] text-[#1a1a1a] outline-none transition focus:border-[#E85C1A] focus:ring-2 focus:ring-[#E85C1A]/15"
+              />
+            </div>
+          </>
+        )}
 
         {/* Button text */}
         <div>
@@ -200,14 +258,9 @@ function PromotionForm({
               )}
             </button>
             <span className="text-[0.875rem] font-medium text-[#1a1a1a]">
-              {form.is_active ? "Active — will show on shop page" : "Inactive — hidden from shop page"}
+              {form.is_active ? "Active — visible to customers" : "Inactive — hidden from customers"}
             </span>
           </label>
-          {form.is_active && (
-            <p className="mt-1 text-[0.75rem] text-amber-600">
-              Activating this will deactivate any currently active promotion.
-            </p>
-          )}
         </div>
       </div>
 
@@ -369,11 +422,35 @@ function PromotionRow({
             )}
           </div>
 
-          {promo.subheadline && (
+          {(promo.subheadline || promo.short_text) && (
             <p className="mt-0.5 truncate text-[0.8rem] text-[#5c5e62]">
-              {promo.subheadline}
+              {promo.emoji && <span className="mr-1">{promo.emoji}</span>}
+              {promo.short_text || promo.subheadline}
             </p>
           )}
+
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            {promo.placement === "announcement_bar" && (
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-wide text-amber-700">
+                Announcement Bar
+              </span>
+            )}
+            {promo.placement === "shop_inline" && (
+              <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-wide text-blue-700">
+                Shop Inline
+              </span>
+            )}
+            {promo.placement === "both" && (
+              <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-wide text-purple-700">
+                Both Placements
+              </span>
+            )}
+            {!promo.placement && (
+              <span className="rounded-full bg-[#f0f2f5] px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-wide text-[#9ca3af]">
+                Shop Inline
+              </span>
+            )}
+          </div>
 
           {(promo.start_date || promo.end_date) && (
             <div className="mt-1.5 flex items-center gap-1.5 text-[0.75rem] text-[#9ca3af]">
@@ -503,8 +580,11 @@ export default function PromotionsManager({
     const payload = {
       title:       form.title.trim(),
       subheadline: form.subheadline.trim() || undefined,
+      short_text:  form.short_text.trim() || undefined,
+      emoji:       form.emoji.trim() || undefined,
       button_text: form.button_text.trim() || undefined,
       button_link: form.button_link.trim() || undefined,
+      placement:   form.placement,
       is_active:   form.is_active,
       start_date:  form.start_date || undefined,
       end_date:    form.end_date || undefined,

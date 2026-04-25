@@ -242,9 +242,12 @@ export type AdminPromotion = {
   id: number;
   title: string;
   subheadline?: string | null;
+  short_text?: string | null;
+  emoji?: string | null;
   button_text?: string | null;
   button_link?: string | null;
   image_url?: string | null;
+  placement?: "announcement_bar" | "shop_inline" | "both" | null;
   is_active: boolean;
   start_date?: string | null; // ISO date "YYYY-MM-DD"
   end_date?: string | null;   // ISO date "YYYY-MM-DD"

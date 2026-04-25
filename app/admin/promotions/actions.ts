@@ -23,8 +23,11 @@ function revalidatePromotions() {
 export async function createPromotion(data: {
   title: string;
   subheadline?: string;
+  short_text?: string;
+  emoji?: string;
   button_text?: string;
   button_link?: string;
+  placement?: "announcement_bar" | "shop_inline" | "both";
   is_active?: boolean;
   start_date?: string;
   end_date?: string;
@@ -62,8 +65,11 @@ export async function updatePromotion(
   data: {
     title?: string;
     subheadline?: string;
+    short_text?: string;
+    emoji?: string;
     button_text?: string;
     button_link?: string;
+    placement?: "announcement_bar" | "shop_inline" | "both";
     is_active?: boolean;
     start_date?: string;
     end_date?: string;

@@ -8,6 +8,7 @@ import { useLanguage } from "@/context/language-context";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import OrderSummary from "./order-summary";
 import VatField from "@/components/vat-field";
+import { trackCheckoutStarted } from "@/lib/analytics";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -259,6 +260,11 @@ export default function CheckoutFlow() {
     setSubmitting(true);
     setSubmitError(null);
     setMethodError(false);
+
+    trackCheckoutStarted({
+      value:     items.reduce((s, i) => s + i.product.price * i.quantity, 0),
+      itemCount: items.reduce((s, i) => s + i.quantity, 0),
+    });
 
     try {
       const res = await fetch("/api/payments/mollie/create", {

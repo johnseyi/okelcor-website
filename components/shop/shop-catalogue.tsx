@@ -3,10 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Search, Loader2, RotateCcw } from "lucide-react";
 import ProductGrid from "./product-grid";
+import ShopPromoBanner, { type ShopPromotion } from "./shop-promo-banner";
 import { type Product } from "./data";
 import { useLanguage } from "@/context/language-context";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import { getProductImageUrl } from "@/lib/utils";
+import { trackTyreSpecSelected } from "@/lib/analytics";
 
 // ── API ───────────────────────────────────────────────────────────────────────
 
@@ -112,6 +114,9 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed, 
   const [resultCount, setResultCount] = useState(0);
   const [apiError,    setApiError]    = useState<string | null>(null);
 
+  // ── Inline promotions ────────────────────────────────────────────────────────
+  const [inlinePromos, setInlinePromos] = useState<ShopPromotion[]>([]);
+
   // ── Dynamic filter options ───────────────────────────────────────────────────
   const [brands,      setBrands]      = useState<string[]>([]);
   const [widths,      setWidths]      = useState<string[]>(FALLBACK_WIDTHS);
@@ -166,6 +171,20 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed, 
     runSearch();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingAutoSearch]);
+
+  // Load inline promotions on mount
+  useEffect(() => {
+    fetch("/api/promotions/active", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => {
+        const all: ShopPromotion[] = Array.isArray(json?.data) ? json.data : [];
+        const inline = all.filter(
+          (p) => !p.placement || p.placement === "shop_inline" || p.placement === "both"
+        );
+        setInlinePromos(inline);
+      })
+      .catch(() => {});
+  }, []);
 
   // Load brands + specs on mount
   useEffect(() => {
@@ -229,6 +248,18 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed, 
     setIsLoading(true);
     setHasSearched(true);
     setApiError(null);
+
+    // Fire tyre spec event when user searches with at least one size dimension
+    if (selWidth || selHeight || selRim) {
+      trackTyreSpecSelected({
+        width:     selWidth  || undefined,
+        height:    selHeight || undefined,
+        rim:       selRim    || undefined,
+        size:      sizeStr   || undefined,
+        brand:     selBrand  || undefined,
+        tyre_type: selType   || undefined,
+      });
+    }
 
     fetch(`${PRODUCTS_API}?${params.toString()}`, {
       cache: "no-store",
@@ -416,6 +447,9 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed, 
             )}
           </div>
         </div>
+
+        {/* ── Inline promo banner ── */}
+        <ShopPromoBanner promotions={inlinePromos} />
 
         {/* ── Results ── */}
         {hasSearched && (
