@@ -39,8 +39,8 @@ function toProduct(p: any): Product {
     season:        p.season       ?? "",
     type:          p.type         ?? "",
     price:         Number(p.price ?? 0),
-    price_b2b:     p.price_b2b != null ? Number(p.price_b2b) : undefined,
-    price_b2c:     p.price_b2c != null ? Number(p.price_b2c) : undefined,
+    price_b2b:     p.price_b2b != null && Number(p.price_b2b) > 0 ? Number(p.price_b2b) : undefined,
+    price_b2c:     p.price_b2c != null && Number(p.price_b2c) > 0 ? Number(p.price_b2c) : undefined,
     sku:           p.sku          ?? "",
     description:   p.description  ?? "",
     primary_image: rawPrimary,
@@ -212,6 +212,10 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed, 
     if (selSpeed)          params.set("speed",         selSpeed);
     if (selLoad)           params.set("load_index",    selLoad);
     if (sortBy)            params.set("sort",          sortBy);
+    // Segment-aware filtering: backend returns only products priced for this tier
+    if (customerType === "b2b" || customerType === "b2c") {
+      params.set("segment", customerType);
+    }
 
     // Build size string from width / height / rim components
     let sizeStr = "";
@@ -237,7 +241,13 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed, 
           setResultCount(0);
           return;
         }
-        const list = Array.isArray(json.data) ? json.data.map(toProduct) : [];
+        const allProducts = Array.isArray(json.data) ? json.data.map(toProduct) : [];
+        // Client-side guard: only show products priced for the customer's segment
+        const list = allProducts.filter((p: Product) => {
+          if (customerType === "b2b") return (p.price_b2b ?? 0) > 0;
+          if (customerType === "b2c") return (p.price_b2c ?? 0) > 0;
+          return true; // guest: show all available products
+        });
         setProducts(list);
         setResultCount(typeof json.meta?.total === "number" ? json.meta.total : list.length);
       })
@@ -248,7 +258,7 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed, 
         }
       })
       .finally(() => setIsLoading(false));
-  }, [searchText, priceMin, priceMax, selBrand, selType, selWidth, selHeight, selRim, selSeason, selSpeed, selLoad, sortBy, locale]);
+  }, [searchText, priceMin, priceMax, selBrand, selType, selWidth, selHeight, selRim, selSeason, selSpeed, selLoad, sortBy, locale, customerType]);
 
   // Re-fetch when sort changes after results are already showing
   useEffect(() => {

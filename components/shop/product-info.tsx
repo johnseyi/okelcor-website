@@ -6,9 +6,20 @@ import { Minus, Plus, ShoppingCart, Check } from "lucide-react";
 import type { Product } from "./data";
 import { useCart } from "@/context/cart-context";
 import { useLanguage } from "@/context/language-context";
+import { useCustomerAuth } from "@/context/CustomerAuthContext";
 
 export default function ProductInfo({ product }: { product: Product }) {
   const { t } = useLanguage();
+  const { customer } = useCustomerAuth();
+  const customerType = customer?.customer_type === "b2b" ? "b2b" : customer ? "b2c" : "guest";
+  const displayPrice =
+    customerType === "b2b" && (product.price_b2b ?? 0) > 0
+      ? product.price_b2b!
+      : customerType === "b2c" && (product.price_b2c ?? 0) > 0
+      ? product.price_b2c!
+      : (product.price_b2c ?? 0) > 0
+      ? product.price_b2c!
+      : product.price;
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const { addItem, openCart } = useCart();
@@ -66,8 +77,18 @@ export default function ProductInfo({ product }: { product: Product }) {
 
       {/* Price */}
       <div className="mt-5 border-t border-black/[0.07] pt-5">
+        {customerType === "b2b" && (product.price_b2b ?? 0) > 0 && (
+          <span className="mb-1.5 inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-[0.63rem] font-bold uppercase tracking-wide text-green-700">
+            B2B Wholesale Price
+          </span>
+        )}
+        {customerType === "b2c" && (product.price_b2c ?? 0) > 0 && (
+          <span className="mb-1.5 inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-[0.63rem] font-bold uppercase tracking-wide text-blue-700">
+            Retail Price
+          </span>
+        )}
         <p className="text-[2rem] font-extrabold tracking-tight text-[var(--foreground)]">
-          €{product.price.toFixed(2)}
+          €{displayPrice.toFixed(2)}
         </p>
         <p className="mt-0.5 text-[0.82rem] text-[var(--muted)]">
           {t.shop.info.shipping}

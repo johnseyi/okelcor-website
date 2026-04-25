@@ -73,6 +73,8 @@ export type ApiProduct = {
   season: string;
   type: string;
   price: number;
+  price_b2b?: number | null;
+  price_b2c?: number | null;
   /** Primary cover image — detail endpoint returns this as primary_image */
   primary_image?: string | null;
   /** List endpoint may return image_url; use primary_image ?? image_url in normalizers */

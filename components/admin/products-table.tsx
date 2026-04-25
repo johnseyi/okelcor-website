@@ -250,8 +250,8 @@ export default function ProductsTable({
   // The API also receives segment= param so the backend can filter server-side
   // once that feature is implemented — client filter acts as an immediate fallback.
   const displayProducts = useMemo(() => {
-    if (currentView === "b2b") return products.filter((p) => p.price_b2b != null);
-    if (currentView === "b2c") return products.filter((p) => p.price_b2c != null);
+    if (currentView === "b2b") return products.filter((p) => p.price_b2b != null && Number(p.price_b2b) > 0);
+    if (currentView === "b2c") return products.filter((p) => p.price_b2c != null && Number(p.price_b2c) > 0);
     return products;
   }, [products, currentView]);
 
@@ -499,22 +499,12 @@ export default function ProductsTable({
                       {/* Price */}
                       <td className="px-4 py-3">
                         {currentView === "b2b" ? (
-                          <span className="inline-flex flex-col gap-0.5">
-                            <span className="text-[0.875rem] font-semibold text-green-700">
-                              €{product.price_b2b != null ? Number(product.price_b2b).toFixed(2) : Number(product.price).toFixed(2)}
-                            </span>
-                            {product.price_b2b == null && (
-                              <span className="text-[0.65rem] text-[#aaa]">no B2B price</span>
-                            )}
+                          <span className="text-[0.875rem] font-semibold text-green-700">
+                            €{Number(product.price_b2b).toFixed(2)}
                           </span>
                         ) : currentView === "b2c" ? (
-                          <span className="inline-flex flex-col gap-0.5">
-                            <span className="text-[0.875rem] font-semibold text-[#1a1a1a]">
-                              €{product.price_b2c != null ? Number(product.price_b2c).toFixed(2) : Number(product.price).toFixed(2)}
-                            </span>
-                            {product.price_b2c == null && (
-                              <span className="text-[0.65rem] text-[#aaa]">no B2C price</span>
-                            )}
+                          <span className="text-[0.875rem] font-semibold text-[#1a1a1a]">
+                            €{Number(product.price_b2c).toFixed(2)}
                           </span>
                         ) : (
                           <span className="text-[0.875rem] font-semibold text-[#1a1a1a]">
