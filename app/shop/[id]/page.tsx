@@ -35,7 +35,7 @@ function toProduct(p: ApiProduct): Product {
     primary_image: rawPrimary,
     image:         getProductImageUrl(rawPrimary),
     images:        allPaths.map(getProductImageUrl),
-    in_stock:      p.in_stock ?? true,
+    in_stock:      p.in_stock != null ? Boolean(p.in_stock) : undefined,
     price_b2b:     p.price_b2b != null && Number(p.price_b2b) > 0 ? Number(p.price_b2b) : undefined,
     price_b2c:     p.price_b2c != null && Number(p.price_b2c) > 0 ? Number(p.price_b2c) : undefined,
   };

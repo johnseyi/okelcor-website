@@ -46,7 +46,9 @@ function toProduct(p: any): Product {
     primary_image: rawPrimary,
     image:         getProductImageUrl(rawPrimary),
     images:        allPaths.map(getProductImageUrl),
-    in_stock:      p.in_stock ?? true,
+    // Normalise to strict boolean. Backend may return 0/1 integers or null.
+    // ?? true would hide out-of-stock: 0 ?? true = 0, but 0 === false is false.
+    in_stock:      p.in_stock != null ? Boolean(p.in_stock) : undefined,
   };
 }
 
