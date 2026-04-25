@@ -12,14 +12,15 @@ export default function ProductInfo({ product }: { product: Product }) {
   const { t } = useLanguage();
   const { customer } = useCustomerAuth();
   const customerType = customer?.customer_type === "b2b" ? "b2b" : customer ? "b2c" : "guest";
+  // Use tier price when the API returns it; otherwise fall back to base price
+  // (the backend may return price_b2b/price_b2c as the base `price` field already
+  // resolved for the customer's segment, so product.price is always a safe fallback).
   const displayPrice =
-    customerType === "b2b" && (product.price_b2b ?? 0) > 0
-      ? product.price_b2b!
-      : customerType === "b2c" && (product.price_b2c ?? 0) > 0
-      ? product.price_b2c!
-      : (product.price_b2c ?? 0) > 0
-      ? product.price_b2c!
-      : product.price;
+    customerType === "b2b"
+      ? (product.price_b2b !== undefined && product.price_b2b > 0 ? product.price_b2b : product.price)
+      : customerType === "b2c"
+      ? (product.price_b2c !== undefined && product.price_b2c > 0 ? product.price_b2c : product.price)
+      : (product.price_b2c !== undefined && product.price_b2c > 0 ? product.price_b2c : product.price);
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const { addItem, openCart } = useCart();

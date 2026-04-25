@@ -242,11 +242,19 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed, 
           return;
         }
         const allProducts = Array.isArray(json.data) ? json.data.map(toProduct) : [];
-        // Client-side guard: only show products priced for the customer's segment
+        // Client-side guard for segment pricing.
+        // The public API may not include price_b2b / price_b2c as separate fields —
+        // it may return only the base `price` field (already resolved for the segment
+        // by the backend). So we only use the tier field when it is present; otherwise
+        // we trust the backend's segment filter and fall back to checking price > 0.
         const list = allProducts.filter((p: Product) => {
-          if (customerType === "b2b") return (p.price_b2b ?? 0) > 0;
-          if (customerType === "b2c") return (p.price_b2c ?? 0) > 0;
-          return true; // guest: show all available products
+          if (customerType === "b2b") {
+            return p.price_b2b !== undefined ? p.price_b2b > 0 : p.price > 0;
+          }
+          if (customerType === "b2c") {
+            return p.price_b2c !== undefined ? p.price_b2c > 0 : p.price > 0;
+          }
+          return p.price > 0; // guest: show all priced products
         });
         setProducts(list);
         setResultCount(typeof json.meta?.total === "number" ? json.meta.total : list.length);
