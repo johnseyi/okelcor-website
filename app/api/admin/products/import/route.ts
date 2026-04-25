@@ -38,16 +38,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }
 
-  // segment param is read for future use but NOT forwarded to Laravel yet —
-  // the backend does not implement segment-aware price routing and passing it
-  // causes 0 rows to be imported. Un-comment the searchParams line once the
-  // backend has implemented POST /import?segment=b2b|b2c price-tier routing.
+  // Forward segment to Laravel so it stores the price column in price_b2b / price_b2c
   const segment = request.nextUrl.searchParams.get("segment");
   const importUrl = new URL(`${API_URL}/admin/products/import`);
-  // if (segment === "b2b" || segment === "b2c") {
-  //   importUrl.searchParams.set("segment", segment);
-  // }
-  void segment; // suppress unused-var lint until the above is re-enabled
+  if (segment === "b2b" || segment === "b2c") {
+    importUrl.searchParams.set("segment", segment);
+  }
 
   // ── Parse and normalise the CSV ───────────────────────────────────────────
   let formData: FormData;
@@ -116,5 +112,12 @@ export async function POST(request: NextRequest) {
     revalidatePath("/admin/products");
   }
 
-  return NextResponse.json(json, { status: res.status });
+  // Backend wraps the result in { data: { imported, updated, skipped, errors }, message }
+  // Normalise to the flat shape the frontend expects.
+  const normalized =
+    json?.data && typeof json.data === "object"
+      ? { ...json.data, message: json.message ?? json.data.message }
+      : json;
+
+  return NextResponse.json(normalized, { status: res.status });
 }
