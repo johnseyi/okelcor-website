@@ -53,6 +53,7 @@ export default function PostHogPanel() {
   const [stats, setStats]       = useState<Stats | null>(null);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState<string | null>(null);
+  const [errStep, setErrStep]   = useState<string | null>(null);
   const [lastRefresh, setLast]  = useState<Date | null>(null);
   const [age, setAge]           = useState(0);
   const timerRef                = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -61,18 +62,20 @@ export default function PostHogPanel() {
   const fetchStats = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setErrStep(null);
     try {
       const res = await fetch("/api/admin/posthog/stats", { cache: "no-store" });
       const json = await res.json();
       if (!res.ok) {
         setError(json.error ?? `HTTP ${res.status}`);
+        setErrStep(json.step ?? null);
       } else {
         setStats(json);
         setLast(new Date());
         setAge(0);
       }
     } catch {
-      setError("Network error — could not reach PostHog.");
+      setError("Network error — could not reach the stats endpoint.");
     } finally {
       setLoading(false);
     }
@@ -95,7 +98,7 @@ export default function PostHogPanel() {
     };
   }, []);
 
-  const notConfigured = error?.includes("not configured");
+  const notConfigured = errStep === "config" || error?.includes("not configured");
   const maxViews = stats?.topPages[0]?.views ?? 1;
   const delta = stats ? sessionDelta(stats.sessionsToday, stats.sessionsYesterday) : null;
 
@@ -163,7 +166,12 @@ export default function PostHogPanel() {
       {/* Error (not config related) */}
       {error && !notConfigured && (
         <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[0.83rem] text-red-700">
-          {error}
+          {errStep && (
+            <p className="mb-1 font-bold uppercase tracking-wide text-red-500 text-[0.7rem]">
+              Failed at step: {errStep}
+            </p>
+          )}
+          <p className="break-words leading-5">{error}</p>
         </div>
       )}
 
