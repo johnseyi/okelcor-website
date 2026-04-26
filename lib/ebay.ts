@@ -146,13 +146,17 @@ function isSuccess(xml: string): boolean {
 // ── Trading API core caller ────────────────────────────────────────────────────
 
 async function tradingCall(callName: string, xmlBody: string): Promise<string> {
-  const e = env();
+  const e     = env();
   const token = await getToken();
+
+  // eBay Trading API requires credentials inside the XML body, not just in the header.
+  // Inject <RequesterCredentials> immediately after the root request element's opening tag.
+  const credentials = `<RequesterCredentials><eBayAuthToken>${token}</eBayAuthToken></RequesterCredentials>`;
+  const bodyWithAuth = xmlBody.replace(/(<\w+Request[^>]*>)/, `$1${credentials}`);
 
   const res = await fetch(TRADING_API_URL, {
     method: "POST",
     headers: {
-      Authorization:                    `Bearer ${token}`,
       "X-EBAY-API-COMPATIBILITY-LEVEL": TRADING_COMPAT_LEVEL,
       "X-EBAY-API-CALL-NAME":           callName,
       "X-EBAY-API-SITEID":              EBAY_SITE_ID_DE,
@@ -161,7 +165,7 @@ async function tradingCall(callName: string, xmlBody: string): Promise<string> {
       "X-EBAY-API-CERT-NAME":           e.certId,
       "Content-Type":                   "text/xml;charset=utf-8",
     },
-    body: xmlBody,
+    body: bodyWithAuth,
     cache: "no-store",
   });
 
