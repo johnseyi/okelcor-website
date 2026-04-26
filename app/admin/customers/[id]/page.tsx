@@ -180,43 +180,58 @@ export default function CustomerProfilePage() {
   }, [id]);
 
   const loadSections = useCallback(async () => {
+    if (!customer) return;
+
     const [lhRes, sessRes, ordRes, qRes] = await Promise.all([
-      fetch(`/api/admin/security/events?customer_id=${id}&type=failed_login,login_success&per_page=50`, { cache: "no-store" })
+      // Login history via security events
+      fetch(`/api/admin/security/events?customer_id=${id}&per_page=50`, { cache: "no-store" })
         .then(r => r.json()).catch(() => null),
+      // Active sessions (backend may not have this yet)
       fetch(`/api/admin/customers/${id}?section=sessions`, { cache: "no-store" })
         .then(r => r.ok ? r.json() : null).catch(() => null),
-      fetch(`/api/admin/customers?customer_id=${id}`, { cache: "no-store" })
-        .then(() => null).catch(() => null),
-      fetch(`/api/admin/customers?customer_id=${id}&type=quotes`, { cache: "no-store" })
-        .then(() => null).catch(() => null),
+      // Orders filtered by customer ID (falls back to customer_email if empty)
+      fetch(`/api/admin/orders?customer_id=${id}&per_page=50&sort=latest`, { cache: "no-store" })
+        .then(r => r.ok ? r.json() : null).catch(() => null),
+      // Quotes filtered by customer ID
+      fetch(`/api/admin/quotes?customer_id=${id}&per_page=50&sort=latest`, { cache: "no-store" })
+        .then(r => r.ok ? r.json() : null).catch(() => null),
     ]);
 
+    // Login history
     if (lhRes?._unavailable) setLoginUA(true);
-    else if (lhRes?.data) setLoginH(lhRes.data);
+    else if (Array.isArray(lhRes?.data)) setLoginH(lhRes.data);
+    else setLoginUA(true);
 
+    // Sessions
     if (!sessRes || sessRes._unavailable) setSessUA(true);
     else {
       const s = sessRes.data ?? sessRes;
-      if (Array.isArray(s)) setSessions(s);
+      setSessions(Array.isArray(s) ? s : []);
     }
 
-    // Orders — fetch via orders endpoint filtered by customer email
-    if (customer) {
-      const oRes = await fetch(
-        `/api/admin/customers?search=${encodeURIComponent(customer.email)}&orders=1`,
+    // Orders — if customer_id filter returned nothing, retry with customer email
+    const ordRows: Order[] = ordRes?.data ?? (Array.isArray(ordRes) ? ordRes : []);
+    if (ordRows.length === 0 && customer.email) {
+      const byEmail = await fetch(
+        `/api/admin/orders?customer_email=${encodeURIComponent(customer.email)}&per_page=50&sort=latest`,
         { cache: "no-store" }
       ).then(r => r.ok ? r.json() : null).catch(() => null);
-      if (oRes?.data) setOrders(oRes.data);
-      else setOrders([]);
-
-      const qRes2 = await fetch(
-        `/api/admin/customers?search=${encodeURIComponent(customer.email)}&quotes=1`,
-        { cache: "no-store" }
-      ).then(r => r.ok ? r.json() : null).catch(() => null);
-      if (qRes2?.data) setQuotes(qRes2.data);
-      else setQuotes([]);
+      setOrders(byEmail?.data ?? (Array.isArray(byEmail) ? byEmail : []));
+    } else {
+      setOrders(ordRows);
     }
-    void ordRes; void qRes;
+
+    // Quotes — same fallback pattern
+    const qRows: Quote[] = qRes?.data ?? (Array.isArray(qRes) ? qRes : []);
+    if (qRows.length === 0 && customer.email) {
+      const byEmail = await fetch(
+        `/api/admin/quotes?customer_email=${encodeURIComponent(customer.email)}&per_page=50&sort=latest`,
+        { cache: "no-store" }
+      ).then(r => r.ok ? r.json() : null).catch(() => null);
+      setQuotes(byEmail?.data ?? (Array.isArray(byEmail) ? byEmail : []));
+    } else {
+      setQuotes(qRows);
+    }
   }, [id, customer]);
 
   useEffect(() => { loadCustomer(); }, [loadCustomer]);

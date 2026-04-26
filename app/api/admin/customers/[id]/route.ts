@@ -26,10 +26,41 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params;
 
   try {
+    // Try the individual detail endpoint first
     const res = await fetch(`${BASE}/customers/${id}`, {
       headers: { Authorization: `Bearer ${tk}`, Accept: "application/json" },
       cache: "no-store",
     });
+
+    if (res.ok) {
+      const json = await res.json().catch(() => ({}));
+      return NextResponse.json(json);
+    }
+
+    // Backend returned 404 (endpoint not yet implemented) — fall back to
+    // fetching the paginated list and finding the customer by ID.
+    if (res.status === 404) {
+      let page = 1;
+      while (page <= 10) { // cap at 10 pages (500 customers @ per_page=50)
+        const listRes = await fetch(`${BASE}/customers?per_page=50&page=${page}`, {
+          headers: { Authorization: `Bearer ${tk}`, Accept: "application/json" },
+          cache: "no-store",
+        });
+        if (!listRes.ok) break;
+        const listData = await listRes.json().catch(() => null);
+        const rows: Record<string, unknown>[] = listData?.data ?? listData ?? [];
+        if (!Array.isArray(rows) || rows.length === 0) break;
+
+        const match = rows.find(c => String(c.id) === String(id));
+        if (match) return NextResponse.json(match);
+
+        // If we've seen fewer rows than the page size we've exhausted the list
+        if (rows.length < 50) break;
+        page++;
+      }
+      return NextResponse.json({ error: "Customer not found." }, { status: 404 });
+    }
+
     const json = await res.json().catch(() => ({}));
     return NextResponse.json(json, { status: res.status });
   } catch {
