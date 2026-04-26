@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { unstable_cache } from "next/cache";
 import {
   Users, MousePointerClick, Eye, Clock, TrendingUp,
   Globe, BarChart2, ExternalLink, AlertCircle,
@@ -12,10 +13,58 @@ import {
   fetchGaTopPages,
   fetchGaTrafficSources,
   fetchGaCountries,
+  type GaOverview,
+  type GaDayPoint,
+  type GaTopPage,
+  type GaTrafficSource,
+  type GaCountry,
 } from "@/lib/google-analytics";
+
+type GaResult = [GaOverview | null, GaDayPoint[], GaTopPage[], GaTrafficSource[], GaCountry[]];
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Analytics" };
+
+// ── Cached GA fetchers ────────────────────────────────────────────────────────
+// Current-site data: revalidate every hour (data changes frequently)
+const fetchCurrentGaData = unstable_cache(
+  async (startDate: string, endDate: string): Promise<GaResult> => {
+    try {
+      return await Promise.all([
+        fetchGaOverview(startDate, endDate),
+        fetchGaDailyTrend(startDate, endDate),
+        fetchGaTopPages(startDate, endDate, 10),
+        fetchGaTrafficSources(startDate, endDate, 8),
+        fetchGaCountries(startDate, endDate, 8),
+      ]);
+    } catch (e) {
+      console.error("[analytics] current GA fetch failed:", e instanceof Error ? e.message : String(e));
+      return [null, [], [], [], []];
+    }
+  },
+  ["admin-analytics-current"],
+  { revalidate: 3600 },
+);
+
+// Historical/previous-site data: revalidate once per day (archive — never changes)
+const fetchPreviousGaData = unstable_cache(
+  async (startDate: string, endDate: string): Promise<GaResult> => {
+    try {
+      return await Promise.all([
+        fetchGaOverview(startDate, endDate),
+        fetchGaDailyTrend(startDate, endDate),
+        fetchGaTopPages(startDate, endDate, 8),
+        fetchGaTrafficSources(startDate, endDate, 6),
+        fetchGaCountries(startDate, endDate, 6),
+      ]);
+    } catch (e) {
+      console.error("[analytics] previous GA fetch failed:", e instanceof Error ? e.message : String(e));
+      return [null, [], [], [], []];
+    }
+  },
+  ["admin-analytics-previous"],
+  { revalidate: 86400 },
+);
 
 // ── Date constants ─────────────────────────────────────────────────────────────
 
@@ -322,38 +371,14 @@ export default async function AnalyticsPage() {
   const prevEnd    = CUTOFF_DATE;
   const curr       = currentRange();
 
-  // ── Parallel data fetch — both ranges at once ────────────────────────────────
-  let currOverview: Awaited<ReturnType<typeof fetchGaOverview>> = null;
-  let prevOverview: Awaited<ReturnType<typeof fetchGaOverview>> = null;
-  let currTrend:    Awaited<ReturnType<typeof fetchGaDailyTrend>>      = [];
-  let prevTrend:    Awaited<ReturnType<typeof fetchGaDailyTrend>>      = [];
-  let currPages:    Awaited<ReturnType<typeof fetchGaTopPages>>         = [];
-  let prevPages:    Awaited<ReturnType<typeof fetchGaTopPages>>         = [];
-  let currSources:  Awaited<ReturnType<typeof fetchGaTrafficSources>>   = [];
-  let prevSources:  Awaited<ReturnType<typeof fetchGaTrafficSources>>   = [];
-  let currCountries: Awaited<ReturnType<typeof fetchGaCountries>>       = [];
-  let prevCountries: Awaited<ReturnType<typeof fetchGaCountries>>       = [];
+  // ── Parallel data fetch — both ranges at once (results served from cache) ────
+  const [currResults, prevResults] = await Promise.all([
+    fetchCurrentGaData(curr.startDate, curr.endDate),
+    fetchPreviousGaData(prevStart, prevEnd),
+  ]);
 
-  try {
-    [
-      currOverview, currTrend, currPages, currSources, currCountries,
-      prevOverview, prevTrend, prevPages, prevSources, prevCountries,
-    ] = await Promise.all([
-      fetchGaOverview(curr.startDate, curr.endDate),
-      fetchGaDailyTrend(curr.startDate, curr.endDate),
-      fetchGaTopPages(curr.startDate, curr.endDate, 10),
-      fetchGaTrafficSources(curr.startDate, curr.endDate, 8),
-      fetchGaCountries(curr.startDate, curr.endDate, 8),
-
-      fetchGaOverview(prevStart, prevEnd),
-      fetchGaDailyTrend(prevStart, prevEnd),
-      fetchGaTopPages(prevStart, prevEnd, 8),
-      fetchGaTrafficSources(prevStart, prevEnd, 6),
-      fetchGaCountries(prevStart, prevEnd, 6),
-    ]);
-  } catch (e) {
-    console.error("[analytics] GA fetch failed:", e instanceof Error ? e.message : String(e));
-  }
+  const [currOverview, currTrend, currPages, currSources, currCountries] = currResults;
+  const [prevOverview, prevTrend, prevPages, prevSources, prevCountries] = prevResults;
 
   return (
     <div className="p-6 md:p-8">
