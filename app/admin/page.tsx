@@ -17,6 +17,7 @@ import FunnelCard     from "@/components/admin/dashboard/funnel-card";
 import TopProducts       from "@/components/admin/dashboard/top-products";
 import SuspiciousBanner  from "@/components/admin/dashboard/suspicious-banner";
 import SecurityAlertCard from "@/components/admin/dashboard/security-alert-card";
+import SentryCard        from "@/components/admin/dashboard/sentry-card";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Dashboard" };
@@ -82,9 +83,10 @@ export default async function AdminDashboard() {
         <TopProducts />
       </div>
 
-      {/* Security overview */}
+      {/* Security overview + Sentry */}
       <div className="mt-5 grid gap-5 lg:grid-cols-3">
         <SecurityAlertCard />
+        <SentryCard />
       </div>
 
     </div>

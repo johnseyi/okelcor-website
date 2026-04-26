@@ -12,6 +12,7 @@
     "@google-analytics/data": "^5.2.1",
     "@gsap/react": "^2.1.2",
     "@mollie/api-client": "^4.5.0",
+    "@sentry/nextjs": "^10.50.0",
     "clsx": "^2.1.1",
     "crisp-sdk-web": "^1.1.0",
     "gsap": "^3.14.2",
