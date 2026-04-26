@@ -13,7 +13,66 @@ const COOKIE_OPTS = {
   path: "/",
 };
 
+// ── IP geolocation (fire-and-forget, best-effort) ─────────────────────────────
+
+async function getLocation(ip: string): Promise<string> {
+  if (!ip || ip === "unknown" || ip === "::1" || ip.startsWith("127.") || ip.startsWith("192.168.") || ip.startsWith("10.")) {
+    return "";
+  }
+  try {
+    const res = await fetch(`http://ip-api.com/json/${ip}?fields=city,country`, {
+      signal: AbortSignal.timeout(2500),
+    });
+    if (!res.ok) return "";
+    const geo = await res.json() as { city?: string; country?: string };
+    if (geo.city && geo.country) return `${geo.city}, ${geo.country}`;
+    if (geo.country) return geo.country;
+    return "";
+  } catch {
+    return "";
+  }
+}
+
+// ── Post-login activity recording (fire-and-forget) ───────────────────────────
+
+async function recordLoginActivity(
+  token: string,
+  ip: string,
+  userAgent: string,
+  location: string,
+) {
+  try {
+    await fetch(`${API_URL}/auth/record-login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        last_login_at: new Date().toISOString(),
+        last_login_ip: ip || null,
+        last_login_location: location || null,
+        user_agent: userAgent || null,
+      }),
+    });
+  } catch (e) {
+    // Non-critical — don't log noise if the backend hasn't implemented this yet
+    void e;
+  }
+}
+
+// ── Route handler ─────────────────────────────────────────────────────────────
+
 export async function POST(request: NextRequest) {
+  // Extract real client IP (works behind proxies / Vercel / Cloudflare)
+  const clientIp =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    request.headers.get("x-real-ip") ??
+    request.headers.get("cf-connecting-ip") ??
+    "";
+  const userAgent = request.headers.get("user-agent") ?? "";
+
   // Parse request body
   let body: unknown;
   try {
@@ -22,12 +81,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: "Invalid request body" }, { status: 400 });
   }
 
-  // Proxy to backend
+  // Proxy to backend — forward IP/UA so the backend can also record them
   let res: Response;
   try {
     res = await fetch(`${API_URL}/auth/login`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        // Forward client metadata so backend can record it natively if desired
+        "X-Forwarded-For": clientIp,
+        "X-User-Agent": userAgent,
+      },
       body: JSON.stringify(body),
     });
   } catch (fetchError) {
@@ -62,7 +127,6 @@ export async function POST(request: NextRequest) {
 
   // Forward backend 4xx error responses directly to the client
   if (!res.ok) {
-    // Normalise error message — backend may use "error", "message", or "errors"
     const message =
       (data.message as string) ??
       (data.error as string) ??
@@ -93,6 +157,14 @@ export async function POST(request: NextRequest) {
 
   if (!token) {
     console.error("[login] Backend login succeeded but no token in response. Keys:", Object.keys(data));
+  }
+
+  // Fire-and-forget: resolve geolocation then record login activity.
+  // Done AFTER building the response so it never delays the login reply.
+  if (token) {
+    getLocation(clientIp).then((location) => {
+      recordLoginActivity(token, clientIp, userAgent, location);
+    });
   }
 
   const response = NextResponse.json({
