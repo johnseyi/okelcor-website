@@ -138,9 +138,7 @@ export default function LoginPage() {
       // Normal redirect — use full navigation (not router.push) to clear any
       // stale Next.js router-cache entries (e.g. a cached /shop redirect from
       // before the user was logged in), consistent with how logout works.
-      const destination =
-        callbackUrl ||
-        (data?.customer_type === "b2b" ? "/account/orders" : "/account");
+      const destination = callbackUrl || "/";
       window.location.href = destination;
     } catch (err: unknown) {
       setSubmitting(false);
