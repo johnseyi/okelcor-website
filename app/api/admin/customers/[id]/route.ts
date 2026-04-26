@@ -37,35 +37,65 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json(json);
     }
 
-    // Backend returned 404 (endpoint not yet implemented) — fall back to
-    // fetching the paginated list and finding the customer by ID.
-    if (res.status === 404) {
-      let page = 1;
-      while (page <= 10) { // cap at 10 pages (500 customers @ per_page=50)
-        const listRes = await fetch(`${BASE}/customers?per_page=50&page=${page}`, {
-          headers: { Authorization: `Bearer ${tk}`, Accept: "application/json" },
-          cache: "no-store",
-        });
-        if (!listRes.ok) break;
-        const listData = await listRes.json().catch(() => null);
-        const rows: Record<string, unknown>[] = listData?.data ?? listData ?? [];
-        if (!Array.isArray(rows) || rows.length === 0) break;
-
-        const match = rows.find(c => String(c.id) === String(id));
-        if (match) return NextResponse.json(match);
-
-        // If we've seen fewer rows than the page size we've exhausted the list
-        if (rows.length < 50) break;
-        page++;
-      }
-      return NextResponse.json({ error: "Customer not found." }, { status: 404 });
+    // Auth errors — forward immediately, no fallback makes sense
+    if (res.status === 401 || res.status === 403) {
+      const json = await res.json().catch(() => ({}));
+      return NextResponse.json(json, { status: res.status });
     }
 
-    const json = await res.json().catch(() => ({}));
-    return NextResponse.json(json, { status: res.status });
-  } catch {
+    // 404 or 5xx — backend endpoint missing or broken.
+    // Fall back to paginating the list and matching by ID so the admin
+    // can still view the customer even when the detail endpoint is down.
+    console.error(`[customers/${id}] backend returned ${res.status} — falling back to list search`);
+
+    const found = await findCustomerInList(tk, id);
+    if (found) return NextResponse.json(found);
+
+    return NextResponse.json({ error: "Customer not found." }, { status: 404 });
+  } catch (e) {
+    console.error(`[customers/${id}] fetch error:`, e instanceof Error ? e.message : String(e));
+    // Still try the list fallback on network errors
+    try {
+      const found = await findCustomerInList(tk, id);
+      if (found) return NextResponse.json(found);
+    } catch (_) { /* ignore */ }
     return NextResponse.json({ error: "Network error" }, { status: 502 });
   }
+}
+
+async function findCustomerInList(
+  tk: string,
+  id: string,
+): Promise<Record<string, unknown> | null> {
+  let page = 1;
+  while (page <= 20) { // up to 1 000 customers @ per_page=50
+    let listRes: Response;
+    try {
+      listRes = await fetch(`${BASE}/customers?per_page=50&page=${page}`, {
+        headers: { Authorization: `Bearer ${tk}`, Accept: "application/json" },
+        cache: "no-store",
+      });
+    } catch {
+      return null;
+    }
+    if (!listRes.ok) return null;
+
+    const listData = await listRes.json().catch(() => null);
+    const rows: Record<string, unknown>[] = Array.isArray(listData?.data)
+      ? listData.data
+      : Array.isArray(listData)
+        ? listData
+        : [];
+
+    if (rows.length === 0) return null;
+
+    const match = rows.find((c) => String(c.id) === String(id));
+    if (match) return match;
+
+    if (rows.length < 50) return null; // exhausted
+    page++;
+  }
+  return null;
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
