@@ -323,22 +323,37 @@ export default async function AnalyticsPage() {
   const curr       = currentRange();
 
   // ── Parallel data fetch — both ranges at once ────────────────────────────────
-  const [
-    currOverview, currTrend, currPages, currSources, currCountries,
-    prevOverview, prevTrend, prevPages, prevSources, prevCountries,
-  ] = await Promise.all([
-    fetchGaOverview(curr.startDate, curr.endDate),
-    fetchGaDailyTrend(curr.startDate, curr.endDate),
-    fetchGaTopPages(curr.startDate, curr.endDate, 10),
-    fetchGaTrafficSources(curr.startDate, curr.endDate, 8),
-    fetchGaCountries(curr.startDate, curr.endDate, 8),
+  let currOverview: Awaited<ReturnType<typeof fetchGaOverview>> = null;
+  let prevOverview: Awaited<ReturnType<typeof fetchGaOverview>> = null;
+  let currTrend:    Awaited<ReturnType<typeof fetchGaDailyTrend>>      = [];
+  let prevTrend:    Awaited<ReturnType<typeof fetchGaDailyTrend>>      = [];
+  let currPages:    Awaited<ReturnType<typeof fetchGaTopPages>>         = [];
+  let prevPages:    Awaited<ReturnType<typeof fetchGaTopPages>>         = [];
+  let currSources:  Awaited<ReturnType<typeof fetchGaTrafficSources>>   = [];
+  let prevSources:  Awaited<ReturnType<typeof fetchGaTrafficSources>>   = [];
+  let currCountries: Awaited<ReturnType<typeof fetchGaCountries>>       = [];
+  let prevCountries: Awaited<ReturnType<typeof fetchGaCountries>>       = [];
 
-    fetchGaOverview(prevStart, prevEnd),
-    fetchGaDailyTrend(prevStart, prevEnd),
-    fetchGaTopPages(prevStart, prevEnd, 8),
-    fetchGaTrafficSources(prevStart, prevEnd, 6),
-    fetchGaCountries(prevStart, prevEnd, 6),
-  ]);
+  try {
+    [
+      currOverview, currTrend, currPages, currSources, currCountries,
+      prevOverview, prevTrend, prevPages, prevSources, prevCountries,
+    ] = await Promise.all([
+      fetchGaOverview(curr.startDate, curr.endDate),
+      fetchGaDailyTrend(curr.startDate, curr.endDate),
+      fetchGaTopPages(curr.startDate, curr.endDate, 10),
+      fetchGaTrafficSources(curr.startDate, curr.endDate, 8),
+      fetchGaCountries(curr.startDate, curr.endDate, 8),
+
+      fetchGaOverview(prevStart, prevEnd),
+      fetchGaDailyTrend(prevStart, prevEnd),
+      fetchGaTopPages(prevStart, prevEnd, 8),
+      fetchGaTrafficSources(prevStart, prevEnd, 6),
+      fetchGaCountries(prevStart, prevEnd, 6),
+    ]);
+  } catch (e) {
+    console.error("[analytics] GA fetch failed:", e instanceof Error ? e.message : String(e));
+  }
 
   return (
     <div className="p-6 md:p-8">

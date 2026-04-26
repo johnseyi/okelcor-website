@@ -58,10 +58,10 @@ export async function fetchGaOverview(
   startDate: string,
   endDate: string
 ): Promise<GaOverview | null> {
-  const client = getClient();
-  if (!client) return null;
-
   try {
+    const client = getClient();
+    if (!client) return null;
+
     const [response] = await client.runReport({
       property: `properties/${propertyId}`,
       dateRanges: [{ startDate, endDate }],
@@ -82,7 +82,8 @@ export async function fetchGaOverview(
       avgSessionDuration: num(row[3]?.value),
       bounceRate:         Math.round(Number(row[4]?.value ?? 0) * 100),
     };
-  } catch {
+  } catch (e) {
+    console.error("[GA] fetchGaOverview error:", e instanceof Error ? e.message : String(e));
     return null;
   }
 }
@@ -93,10 +94,10 @@ export async function fetchGaDailyTrend(
   startDate: string,
   endDate: string
 ): Promise<GaDayPoint[]> {
-  const client = getClient();
-  if (!client) return [];
-
   try {
+    const client = getClient();
+    if (!client) return [];
+
     const [response] = await client.runReport({
       property: `properties/${propertyId}`,
       dateRanges: [{ startDate, endDate }],
@@ -114,7 +115,8 @@ export async function fetchGaDailyTrend(
         pageViews: num(row.metricValues?.[1]?.value),
       };
     });
-  } catch {
+  } catch (e) {
+    console.error("[GA] fetchGaDailyTrend error:", e instanceof Error ? e.message : String(e));
     return [];
   }
 }
@@ -126,10 +128,10 @@ export async function fetchGaTopPages(
   endDate: string,
   limit = 10
 ): Promise<GaTopPage[]> {
-  const client = getClient();
-  if (!client) return [];
-
   try {
+    const client = getClient();
+    if (!client) return [];
+
     const [response] = await client.runReport({
       property: `properties/${propertyId}`,
       dateRanges: [{ startDate, endDate }],
@@ -143,7 +145,8 @@ export async function fetchGaTopPages(
       path:      fmt(row.dimensionValues?.[0]?.value),
       pageViews: num(row.metricValues?.[0]?.value),
     }));
-  } catch {
+  } catch (e) {
+    console.error("[GA] fetchGaTopPages error:", e instanceof Error ? e.message : String(e));
     return [];
   }
 }
@@ -155,10 +158,10 @@ export async function fetchGaTrafficSources(
   endDate: string,
   limit = 8
 ): Promise<GaTrafficSource[]> {
-  const client = getClient();
-  if (!client) return [];
-
   try {
+    const client = getClient();
+    if (!client) return [];
+
     const [response] = await client.runReport({
       property: `properties/${propertyId}`,
       dateRanges: [{ startDate, endDate }],
@@ -172,7 +175,8 @@ export async function fetchGaTrafficSources(
       source:   fmt(row.dimensionValues?.[0]?.value),
       sessions: num(row.metricValues?.[0]?.value),
     }));
-  } catch {
+  } catch (e) {
+    console.error("[GA] fetchGaTrafficSources error:", e instanceof Error ? e.message : String(e));
     return [];
   }
 }
@@ -184,10 +188,10 @@ export async function fetchGaCountries(
   endDate: string,
   limit = 8
 ): Promise<GaCountry[]> {
-  const client = getClient();
-  if (!client) return [];
-
   try {
+    const client = getClient();
+    if (!client) return [];
+
     const [response] = await client.runReport({
       property: `properties/${propertyId}`,
       dateRanges: [{ startDate, endDate }],
@@ -201,7 +205,8 @@ export async function fetchGaCountries(
       country:  fmt(row.dimensionValues?.[0]?.value),
       sessions: num(row.metricValues?.[0]?.value),
     }));
-  } catch {
+  } catch (e) {
+    console.error("[GA] fetchGaCountries error:", e instanceof Error ? e.message : String(e));
     return [];
   }
 }
