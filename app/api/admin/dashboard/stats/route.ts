@@ -20,12 +20,36 @@ async function apiFetch(path: string, token: string, params?: Record<string, str
   }
 }
 
-function dateStr(d: Date): string {
-  return d.toISOString().slice(0, 10);
+function dateStr(d: Date): string { return d.toISOString().slice(0, 10); }
+function toDate(iso: string): string { return (iso ?? "").slice(0, 10); }
+
+// An order's revenue counts as "confirmed" when payment is settled.
+// Status-based: confirmed, shipped, delivered, completed
+// Payment-based: payment_status === "paid" (overrides status check)
+const CONFIRMED_STATUSES = new Set(["confirmed", "shipped", "delivered", "completed"]);
+const PENDING_STATUSES   = new Set(["pending", "processing"]);
+
+type RawOrder = {
+  id: number;
+  order_ref: string;
+  customer_name: string;
+  customer_email: string;
+  total: number | string;
+  status: string;
+  payment_status?: string;
+  created_at: string;
+};
+
+function isConfirmed(o: RawOrder): boolean {
+  return CONFIRMED_STATUSES.has(o.status) || o.payment_status === "paid";
 }
 
-function toDate(iso: string): string {
-  return (iso ?? "").slice(0, 10);
+function isPending(o: RawOrder): boolean {
+  return PENDING_STATUSES.has(o.status) && o.payment_status !== "paid";
+}
+
+function sum(arr: RawOrder[]): number {
+  return arr.reduce((s, o) => s + (Number(o.total) || 0), 0);
 }
 
 export async function GET() {
@@ -33,62 +57,70 @@ export async function GET() {
   const token = cookieStore.get("admin_token")?.value;
   if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const now      = new Date();
-  const today    = dateStr(now);
-  const yd       = new Date(now); yd.setDate(yd.getDate() - 1);
+  const now       = new Date();
+  const today     = dateStr(now);
+  const yd        = new Date(now); yd.setDate(yd.getDate() - 1);
   const yesterday = dateStr(yd);
 
   const [ordersRes, quotesRes, productsRes] = await Promise.all([
-    apiFetch("/orders",          token, { per_page: "500", sort: "latest" }),
-    apiFetch("/quote-requests",  token, { per_page: "200", sort: "latest" }),
-    apiFetch("/products",        token, { per_page: "300", is_active: "1" }),
+    apiFetch("/orders",         token, { per_page: "500", sort: "latest" }),
+    apiFetch("/quote-requests", token, { per_page: "200", sort: "latest" }),
+    apiFetch("/products",       token, { per_page: "300", is_active: "1" }),
   ]);
 
   // ── Orders ────────────────────────────────────────────────────────────────
-  type RawOrder = {
-    id: number; order_ref: string; customer_name: string; customer_email: string;
-    total: number | string; status: string; created_at: string;
-  };
   const orders: RawOrder[] = Array.isArray(ordersRes?.data) ? ordersRes.data : [];
 
   const todayOrders     = orders.filter(o => toDate(o.created_at) === today);
   const yesterdayOrders = orders.filter(o => toDate(o.created_at) === yesterday);
 
-  const sum = (arr: RawOrder[]) => arr.reduce((s, o) => s + (Number(o.total) || 0), 0);
-  const revenueToday     = sum(todayOrders);
-  const revenueYesterday = sum(yesterdayOrders);
-  const ordersToday      = todayOrders.length;
-  const ordersYesterday  = yesterdayOrders.length;
-  const avgOrderValueToday     = ordersToday     > 0 ? revenueToday     / ordersToday     : 0;
-  const avgOrderValueYesterday = ordersYesterday > 0 ? revenueYesterday / ordersYesterday : 0;
+  // Confirmed-only revenue (real earned money)
+  const confirmedToday     = todayOrders.filter(isConfirmed);
+  const confirmedYesterday = yesterdayOrders.filter(isConfirmed);
+  const pendingToday       = todayOrders.filter(isPending);
+  const pendingYesterday   = yesterdayOrders.filter(isPending);
 
-  const pendingOrders = orders.filter(
-    o => o.status === "pending" || o.status === "confirmed" || o.status === "processing"
-  ).length;
+  const confirmedRevenueToday     = sum(confirmedToday);
+  const confirmedRevenueYesterday = sum(confirmedYesterday);
+  const pendingRevenueToday       = sum(pendingToday);
+  const pendingRevenueYesterday   = sum(pendingYesterday);
 
-  // Revenue chart — last 7 days
+  const ordersConfirmedToday   = confirmedToday.length;
+  const ordersPendingToday     = pendingToday.length;
+  const ordersToday            = todayOrders.length;
+  const ordersYesterday        = yesterdayOrders.length;
+
+  // AOV from confirmed orders only
+  const avgOrderValueToday     = ordersConfirmedToday > 0
+    ? confirmedRevenueToday / ordersConfirmedToday : 0;
+  const avgOrderValueYesterday = confirmedYesterday.length > 0
+    ? confirmedRevenueYesterday / confirmedYesterday.length : 0;
+
+  const pendingOrdersCount = orders.filter(isPending).length;
+
+  // Revenue chart — last 7 days, split confirmed vs pending
   const revenueChart = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(now);
     d.setDate(d.getDate() - (6 - i));
     const ds = dateStr(d);
-    const rev = orders
-      .filter(o => toDate(o.created_at) === ds)
-      .reduce((s, o) => s + (Number(o.total) || 0), 0);
+    const dayOrders = orders.filter(o => toDate(o.created_at) === ds);
     return {
-      date: d.toLocaleDateString("en-GB", { month: "short", day: "numeric" }),
-      revenue: Math.round(rev * 100) / 100,
+      date:      d.toLocaleDateString("en-GB", { month: "short", day: "numeric" }),
+      confirmed: Math.round(sum(dayOrders.filter(isConfirmed)) * 100) / 100,
+      pending:   Math.round(sum(dayOrders.filter(isPending))   * 100) / 100,
     };
   });
 
-  // Recent orders — last 5
-  const recentOrders = orders.slice(0, 5).map(o => ({
-    id:         o.id,
-    ref:        o.order_ref,
-    customer:   o.customer_name,
-    email:      o.customer_email,
-    total:      Number(o.total) || 0,
-    status:     o.status,
-    created_at: o.created_at,
+  // Recent orders — last 8, include payment_status for confirm action
+  const recentOrders = orders.slice(0, 8).map(o => ({
+    id:             o.id,
+    ref:            o.order_ref,
+    customer:       o.customer_name,
+    email:          o.customer_email,
+    total:          Number(o.total) || 0,
+    status:         o.status,
+    payment_status: o.payment_status ?? null,
+    created_at:     o.created_at,
   }));
 
   // ── Quotes ────────────────────────────────────────────────────────────────
@@ -102,36 +134,45 @@ export async function GET() {
     .filter(q => q.status === "new" || q.status === "reviewed")
     .slice(0, 5)
     .map(q => ({
-      id:            q.id,
-      ref:           q.ref_number,
-      name:          q.full_name,
-      company:       q.company_name ?? null,
-      tyre_category: q.tyre_category,
-      country:       q.country,
-      created_at:    q.created_at,
+      id: q.id, ref: q.ref_number, name: q.full_name,
+      company: q.company_name ?? null, tyre_category: q.tyre_category,
+      country: q.country, created_at: q.created_at,
     }));
 
   // ── Products (low stock) ──────────────────────────────────────────────────
   type RawProduct = { id: number; name: string; brand: string; sku: string; inventory?: number | null };
   const products: RawProduct[] = Array.isArray(productsRes?.data) ? productsRes.data : [];
-  const lowStock    = products.filter(p => p.inventory != null && p.inventory < 10);
+  const lowStock      = products.filter(p => p.inventory != null && p.inventory < 10);
   const lowStockCount = lowStock.length;
   const lowStockList  = lowStock.slice(0, 10).map(p => ({
-    id:    p.id,
-    name:  p.name,
-    brand: p.brand,
-    sku:   p.sku,
-    stock: p.inventory ?? 0,
+    id: p.id, name: p.name, brand: p.brand, sku: p.sku, stock: p.inventory ?? 0,
   }));
 
   return NextResponse.json({
-    revenueToday,    revenueYesterday,
-    ordersToday,     ordersYesterday,
-    avgOrderValueToday, avgOrderValueYesterday,
-    pendingOrders,   openQuotes,    lowStockCount,
-    revenueChart,    recentOrders,
-    pendingQuotesList, lowStockList,
-    // no newCustomers — customers endpoint not reliably available
-    newCustomersToday: 0, newCustomersYesterday: 0,
+    // Confirmed (real) revenue
+    revenueToday:     confirmedRevenueToday,
+    revenueYesterday: confirmedRevenueYesterday,
+    // Pending revenue shown as context
+    pendingRevenueToday,
+    pendingRevenueYesterday,
+    // Orders
+    ordersToday,
+    ordersYesterday,
+    ordersConfirmedToday,
+    ordersPendingToday,
+    // AOV — confirmed only
+    avgOrderValueToday,
+    avgOrderValueYesterday,
+    // Misc
+    pendingOrders: pendingOrdersCount,
+    openQuotes,
+    lowStockCount,
+    // Chart + feeds
+    revenueChart,
+    recentOrders,
+    pendingQuotesList,
+    lowStockList,
+    newCustomersToday:    0,
+    newCustomersYesterday: 0,
   });
 }

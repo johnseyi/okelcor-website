@@ -4,12 +4,19 @@ import { TrendingUp, TrendingDown, Minus, ShoppingCart, Users, Zap, BarChart2, D
 import { useCountUp } from "./count-up";
 
 type Metrics = {
-  revenueToday: number; revenueYesterday: number;
-  ordersToday: number;  ordersYesterday: number;
-  newCustomersToday: number; newCustomersYesterday: number;
-  activeSessionsNow: number;
-  sessionsToday: number;
-  avgOrderValueToday: number; avgOrderValueYesterday: number;
+  revenueToday:           number;
+  revenueYesterday:       number;
+  pendingRevenueToday:    number;
+  ordersToday:            number;
+  ordersYesterday:        number;
+  ordersConfirmedToday:   number;
+  ordersPendingToday:     number;
+  newCustomersToday:      number;
+  newCustomersYesterday:  number;
+  activeSessionsNow:      number;
+  sessionsToday:          number;
+  avgOrderValueToday:     number;
+  avgOrderValueYesterday: number;
 };
 
 function pctDelta(a: number, b: number): number | null {
@@ -17,12 +24,11 @@ function pctDelta(a: number, b: number): number | null {
   return Math.round(((a - b) / b) * 100);
 }
 
-function Trend({ current, prev, format = "number" }: { current: number; prev: number; format?: "number" | "currency" | "pct" }) {
+function Trend({ current, prev }: { current: number; prev: number }) {
   const delta = pctDelta(current, prev);
   if (delta === null) return <span className="text-[0.7rem] text-[#9ca3af]">no data</span>;
-  const up = delta >= 0;
-  const Icon = delta === 0 ? Minus : up ? TrendingUp : TrendingDown;
-  const color = delta === 0 ? "text-[#9ca3af]" : up ? "text-emerald-600" : "text-red-500";
+  const Icon  = delta === 0 ? Minus : delta > 0 ? TrendingUp : TrendingDown;
+  const color = delta === 0 ? "text-[#9ca3af]" : delta > 0 ? "text-emerald-600" : "text-red-500";
   return (
     <span className={`flex items-center gap-0.5 text-[0.72rem] font-semibold ${color}`}>
       <Icon size={11} strokeWidth={2.5} />
@@ -31,18 +37,110 @@ function Trend({ current, prev, format = "number" }: { current: number; prev: nu
   );
 }
 
-function fmt(n: number, type: "currency" | "number" | "pct") {
-  if (type === "currency") return `€${n >= 1000 ? (n / 1000).toFixed(1) + "k" : n.toFixed(2)}`;
-  if (type === "pct")      return `${n.toFixed(1)}%`;
-  return n.toLocaleString();
+function fmtCurrency(n: number): string {
+  return `€${n >= 1000 ? (n / 1000).toFixed(1) + "k" : n.toFixed(2)}`;
 }
+
+function CardSkeleton() {
+  return (
+    <div className="rounded-2xl bg-white p-5 shadow-sm">
+      <div className="mb-3 h-10 w-10 animate-pulse rounded-xl bg-[#e5e7eb]" />
+      <div className="h-3 w-20 animate-pulse rounded bg-[#e5e7eb]" />
+      <div className="mt-2 h-7 w-28 animate-pulse rounded bg-[#e5e7eb]" />
+    </div>
+  );
+}
+
+// ── Specialised Revenue card (shows confirmed + pending split) ────────────────
+
+function RevenueTodayCard({
+  confirmed,
+  confirmedYesterday,
+  pending,
+}: {
+  confirmed:          number;
+  confirmedYesterday: number;
+  pending:            number;
+}) {
+  const animated = useCountUp(Math.round(confirmed));
+
+  return (
+    <div className="group flex flex-col gap-3 rounded-2xl bg-white p-5 shadow-sm transition hover:shadow-md">
+      <div className="flex items-start justify-between">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#E85C1A]">
+          <DollarSign size={18} strokeWidth={1.8} className="text-white" />
+        </div>
+        <Trend current={confirmed} prev={confirmedYesterday} />
+      </div>
+      <div>
+        <p className="text-[0.68rem] font-bold uppercase tracking-[0.14em] text-[#5c5e62]">Revenue Today</p>
+        <p className="mt-0.5 text-2xl font-extrabold text-[#1a1a1a]">
+          {`€${animated >= 1000 ? (animated / 1000).toFixed(1) + "k" : animated.toFixed(2)}`}
+        </p>
+        {pending > 0 ? (
+          <p className="mt-0.5 text-[0.7rem] font-semibold text-[#E85C1A]">
+            + {fmtCurrency(pending)} pending
+          </p>
+        ) : (
+          <p className="mt-0.5 text-[0.7rem] text-[#9ca3af]">confirmed only</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Orders Today card (shows confirmed + pending split) ───────────────────────
+
+function OrdersTodayCard({
+  total,
+  totalYesterday,
+  confirmed,
+  pending,
+}: {
+  total:          number;
+  totalYesterday: number;
+  confirmed:      number;
+  pending:        number;
+}) {
+  const animated = useCountUp(total);
+
+  return (
+    <div className="group flex flex-col gap-3 rounded-2xl bg-white p-5 shadow-sm transition hover:shadow-md">
+      <div className="flex items-start justify-between">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500">
+          <ShoppingCart size={18} strokeWidth={1.8} className="text-white" />
+        </div>
+        <Trend current={total} prev={totalYesterday} />
+      </div>
+      <div>
+        <p className="text-[0.68rem] font-bold uppercase tracking-[0.14em] text-[#5c5e62]">Orders Today</p>
+        <p className="mt-0.5 text-2xl font-extrabold text-[#1a1a1a]">{animated.toLocaleString()}</p>
+        {(confirmed > 0 || pending > 0) ? (
+          <p className="mt-0.5 text-[0.7rem] text-[#5c5e62]">
+            <span className="text-emerald-600 font-semibold">{confirmed} confirmed</span>
+            {pending > 0 && (
+              <> · <span className="font-semibold text-[#E85C1A]">{pending} pending</span></>
+            )}
+          </p>
+        ) : (
+          <p className="mt-0.5 text-[0.7rem] text-[#9ca3af]">no orders yet</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Generic metric card ───────────────────────────────────────────────────────
 
 function MetricCard({
   label, value, sub, icon: Icon, accent, trend, format = "number",
 }: {
-  label: string; value: number; sub?: string;
-  icon: React.ElementType; accent: string;
-  trend?: { current: number; prev: number };
+  label:   string;
+  value:   number;
+  sub?:    string;
+  icon:    React.ElementType;
+  accent:  string;
+  trend?:  { current: number; prev: number };
   format?: "currency" | "number" | "pct";
 }) {
   const animated = useCountUp(value);
@@ -69,15 +167,7 @@ function MetricCard({
   );
 }
 
-function CardSkeleton() {
-  return (
-    <div className="rounded-2xl bg-white p-5 shadow-sm">
-      <div className="mb-3 h-10 w-10 animate-pulse rounded-xl bg-[#e5e7eb]" />
-      <div className="h-3 w-20 animate-pulse rounded bg-[#e5e7eb]" />
-      <div className="mt-2 h-7 w-28 animate-pulse rounded bg-[#e5e7eb]" />
-    </div>
-  );
-}
+// ── Page component ─────────────────────────────────────────────────────────────
 
 const REFRESH = 30_000;
 
@@ -90,26 +180,27 @@ export default function HeroMetrics() {
       fetch("/api/admin/dashboard/stats",   { cache: "no-store" }).then(r => r.ok ? r.json() : null).catch(() => null),
       fetch("/api/admin/posthog/dashboard", { cache: "no-store" }).then(r => r.ok ? r.json() : null).catch(() => null),
     ]);
-    const sessions = phRes?.sessionsToday ?? 0;
-    const orders   = statsRes?.ordersToday ?? 0;
     setM({
-      revenueToday:        statsRes?.revenueToday        ?? 0,
-      revenueYesterday:    statsRes?.revenueYesterday    ?? 0,
-      ordersToday:         orders,
-      ordersYesterday:     statsRes?.ordersYesterday     ?? 0,
-      newCustomersToday:   statsRes?.newCustomersToday   ?? 0,
-      newCustomersYesterday: statsRes?.newCustomersYesterday ?? 0,
-      activeSessionsNow:   phRes?.activeUsersNow         ?? 0,
-      sessionsToday:       sessions,
-      avgOrderValueToday:  statsRes?.avgOrderValueToday  ?? 0,
+      revenueToday:           statsRes?.revenueToday           ?? 0,
+      revenueYesterday:       statsRes?.revenueYesterday       ?? 0,
+      pendingRevenueToday:    statsRes?.pendingRevenueToday    ?? 0,
+      ordersToday:            statsRes?.ordersToday            ?? 0,
+      ordersYesterday:        statsRes?.ordersYesterday        ?? 0,
+      ordersConfirmedToday:   statsRes?.ordersConfirmedToday   ?? 0,
+      ordersPendingToday:     statsRes?.ordersPendingToday     ?? 0,
+      newCustomersToday:      statsRes?.newCustomersToday      ?? 0,
+      newCustomersYesterday:  statsRes?.newCustomersYesterday  ?? 0,
+      activeSessionsNow:      phRes?.activeUsersNow            ?? 0,
+      sessionsToday:          phRes?.sessionsToday             ?? 0,
+      avgOrderValueToday:     statsRes?.avgOrderValueToday     ?? 0,
       avgOrderValueYesterday: statsRes?.avgOrderValueYesterday ?? 0,
     });
     setL(false);
   }, []);
 
   useEffect(() => {
-    refresh();
-    const t = setInterval(refresh, REFRESH);
+    void refresh();
+    const t = setInterval(() => void refresh(), REFRESH);
     return () => clearInterval(t);
   }, [refresh]);
 
@@ -121,27 +212,27 @@ export default function HeroMetrics() {
     );
   }
 
+  // Conversion rate: confirmed orders / sessions today (not all orders)
   const convRate = m && m.sessionsToday > 0
-    ? Math.round((m.ordersToday / m.sessionsToday) * 1000) / 10
+    ? Math.round((m.ordersConfirmedToday / m.sessionsToday) * 1000) / 10
     : 0;
 
   return (
     <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
-      <MetricCard
-        label="Revenue Today"
-        value={Math.round(m?.revenueToday ?? 0)}
-        format="currency"
-        icon={DollarSign}
-        accent="bg-[#E85C1A]"
-        trend={{ current: m?.revenueToday ?? 0, prev: m?.revenueYesterday ?? 0 }}
+
+      <RevenueTodayCard
+        confirmed={m?.revenueToday ?? 0}
+        confirmedYesterday={m?.revenueYesterday ?? 0}
+        pending={m?.pendingRevenueToday ?? 0}
       />
-      <MetricCard
-        label="Orders Today"
-        value={m?.ordersToday ?? 0}
-        icon={ShoppingCart}
-        accent="bg-blue-500"
-        trend={{ current: m?.ordersToday ?? 0, prev: m?.ordersYesterday ?? 0 }}
+
+      <OrdersTodayCard
+        total={m?.ordersToday ?? 0}
+        totalYesterday={m?.ordersYesterday ?? 0}
+        confirmed={m?.ordersConfirmedToday ?? 0}
+        pending={m?.ordersPendingToday ?? 0}
       />
+
       <MetricCard
         label="New Customers"
         value={m?.newCustomersToday ?? 0}
@@ -150,6 +241,7 @@ export default function HeroMetrics() {
         accent="bg-violet-500"
         trend={{ current: m?.newCustomersToday ?? 0, prev: m?.newCustomersYesterday ?? 0 }}
       />
+
       <MetricCard
         label="Active Right Now"
         value={m?.activeSessionsNow ?? 0}
@@ -157,22 +249,26 @@ export default function HeroMetrics() {
         icon={Activity}
         accent="bg-emerald-500"
       />
+
       <MetricCard
         label="Conversion Rate"
         value={convRate}
-        sub="orders / sessions"
+        sub={m && m.sessionsToday > 0 ? `${m.ordersConfirmedToday} orders / ${m.sessionsToday} sessions` : "no session data"}
         format="pct"
         icon={BarChart2}
         accent="bg-amber-500"
       />
+
       <MetricCard
         label="Avg Order Value"
         value={Math.round(m?.avgOrderValueToday ?? 0)}
+        sub="confirmed orders only"
         format="currency"
         icon={Zap}
         accent="bg-cyan-500"
         trend={{ current: m?.avgOrderValueToday ?? 0, prev: m?.avgOrderValueYesterday ?? 0 }}
       />
+
     </div>
   );
 }
