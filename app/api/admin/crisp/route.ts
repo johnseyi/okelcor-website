@@ -129,7 +129,16 @@ export async function POST(request: NextRequest) {
         }
       );
       const json = await res.json().catch(() => ({}));
-      return NextResponse.json(json, { status: res.status });
+
+      if (!res.ok) {
+        console.error("[crisp/resolve] Crisp API error:", res.status, JSON.stringify(json));
+        return NextResponse.json(
+          { error: json?.reason ?? json?.error ?? `Crisp returned ${res.status}` },
+          { status: res.status }
+        );
+      }
+
+      return NextResponse.json({ ok: true }, { status: 200 });
     }
 
     return NextResponse.json({ error: "Invalid action." }, { status: 400 });

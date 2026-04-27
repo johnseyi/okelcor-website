@@ -279,13 +279,31 @@ export default function ChatsInbox() {
   const resolveConversation = async () => {
     if (!activeId || resolving) return;
     setResolving(true);
+    setMsgError(null);
     try {
-      await fetch("/api/admin/crisp", {
+      const res  = await fetch("/api/admin/crisp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "resolve", session_id: activeId }),
       });
+      const json = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setMsgError(json.error ?? `Could not resolve conversation (HTTP ${res.status})`);
+        return;
+      }
+
+      // Optimistic update — flip state immediately so the UI responds at once
+      setConversations(prev =>
+        prev.map(c =>
+          c.session_id === activeId ? { ...c, state: "resolved" as const } : c
+        )
+      );
+
+      // Confirm with a fresh list from Crisp
       await fetchConversations(true);
+    } catch {
+      setMsgError("Network error — could not resolve conversation.");
     } finally {
       setResolving(false);
     }
