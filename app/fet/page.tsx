@@ -82,10 +82,23 @@ export default function FetPage() {
           {/* Badge */}
           <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-[#22c55e]/20 px-4 py-1.5 ring-1 ring-[#22c55e]/30 backdrop-blur-sm">
             <span className="h-1.5 w-1.5 rounded-full bg-[#22c55e]" />
-           
+            <span className="text-[0.78rem] font-bold uppercase tracking-[0.2em] text-[#22c55e]">
+              Fuel Efficiency Technology
+            </span>
           </div>
 
-          
+          {/* H1 — primary SEO heading */}
+          <h1 className="text-4xl font-extrabold leading-[1.13] tracking-tight text-white md:text-5xl lg:text-6xl">
+            FET Engine Treatment —{" "}
+            <span className="text-[#22c55e]">Up to 15% Fuel Savings</span>{" "}
+            for Diesel &amp; Petrol Fleets
+          </h1>
+
+          <p className="mx-auto mt-5 max-w-[580px] text-[1rem] leading-7 text-white/70">
+            The catalytic engine treatment device that improves combustion efficiency,
+            reduces CO₂ emissions, and cuts fuel costs — trusted by fleet operators
+            across Europe.
+          </p>
 
           {/* Benefit pills */}
           <div className="mt-8 flex flex-wrap justify-center gap-2.5">
