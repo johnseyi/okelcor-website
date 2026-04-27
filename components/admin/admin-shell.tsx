@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { logoutAdmin } from "@/app/admin/actions";
 import { canAccess, PATH_SECTION } from "@/lib/admin-permissions";
+import CrispNotifier from "@/components/admin/crisp-notifier";
 
 // ── Navigation ────────────────────────────────────────────────────────────────
 
@@ -89,6 +90,7 @@ function Sidebar({
   collapsed,
   onClose,
   onToggleCollapse,
+  pendingChats,
 }: {
   pathname: string;
   role: string;
@@ -96,6 +98,7 @@ function Sidebar({
   collapsed: boolean;
   onClose: () => void;
   onToggleCollapse: () => void;
+  pendingChats: number;
 }) {
   const isActive = (href: string) =>
     href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
@@ -146,7 +149,7 @@ function Sidebar({
               onClick={onClose}
               title={collapsed ? label : undefined}
               className={[
-                "group flex items-center rounded-lg py-2.5 text-[0.875rem] font-medium transition-all",
+                "group relative flex items-center rounded-lg py-2.5 text-[0.875rem] font-medium transition-all",
                 collapsed ? "justify-center px-2" : "gap-3 px-3",
                 active
                   ? "bg-[#E85C1A] text-white shadow-sm"
@@ -155,7 +158,18 @@ function Sidebar({
             >
               <Icon size={16} strokeWidth={active ? 2.2 : 1.8} className="shrink-0" />
               {!collapsed && <span className="flex-1 truncate">{label}</span>}
-              {!collapsed && active && (
+              {!collapsed && label === "Live Chats" && pendingChats > 0 && (
+                <span className="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#E85C1A] px-1 text-[9px] font-extrabold text-white">
+                  {pendingChats > 9 ? "9+" : pendingChats}
+                </span>
+              )}
+              {collapsed && label === "Live Chats" && pendingChats > 0 && (
+                <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[#E85C1A]" />
+              )}
+              {!collapsed && active && label !== "Live Chats" && (
+                <ChevronRight size={13} strokeWidth={2.5} className="shrink-0 opacity-60" />
+              )}
+              {!collapsed && active && label === "Live Chats" && pendingChats === 0 && (
                 <ChevronRight size={13} strokeWidth={2.5} className="shrink-0 opacity-60" />
               )}
             </Link>
@@ -238,6 +252,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const [displayName, setDisplayName]       = useState("");
   const [mustChange, setMustChange]         = useState(false);
   const [dropdownOpen, setDropdownOpen]     = useState(false);
+  const [pendingChats, setPendingChats]     = useState(0);
   const dropdownRef                         = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -320,6 +335,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           collapsed={sidebarCollapsed}
           onClose={() => setSidebarOpen(false)}
           onToggleCollapse={handleToggleCollapse}
+          pendingChats={pendingChats}
         />
       </aside>
 
@@ -437,6 +453,10 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         </main>
 
       </div>
+
+      {/* Live chat notification sound + toast — polls every 20 s */}
+      <CrispNotifier onPendingCount={setPendingChats} />
+
     </div>
   );
 }
