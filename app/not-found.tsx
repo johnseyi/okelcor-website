@@ -1,11 +1,29 @@
 import Link from "next/link";
-import Navbar from "@/components/navbar";
+import Image from "next/image";
 import Footer from "@/components/footer";
 
 export default function NotFound() {
   return (
     <main>
-      <Navbar />
+      {/* Minimal header — avoids depending on context providers that may be absent */}
+      <header className="fixed left-0 top-0 z-50 w-full border-b border-black/[0.04] bg-white/96 backdrop-blur-xl">
+        <div className="tesla-shell flex h-[76px] items-center lg:h-20">
+          <Link href="/" className="flex flex-col items-center">
+            <Image
+              src="/logo/okelcor-logo.png"
+              alt="Okelcor"
+              width={120}
+              height={22}
+              priority
+              style={{ height: "22px", width: "auto" }}
+              className="object-contain"
+            />
+            <span className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.22em] text-[#E85C1A]">
+              Growing Together
+            </span>
+          </Link>
+        </div>
+      </header>
 
       <section className="flex min-h-screen w-full flex-col items-center justify-center bg-[#f5f5f5] px-6 pt-20 text-center">
         <p className="text-[13px] font-bold uppercase tracking-[0.28em] text-[var(--primary)]">

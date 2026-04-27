@@ -123,10 +123,28 @@ export function SearchProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// ─── No-op fallback (used when Navbar renders outside the provider tree) ──────
+
+const NO_OP: SearchContextValue = {
+  isOpen:     false,
+  query:      "",
+  results:    { products: [], articles: [], total: 0 },
+  isSearching: false,
+  openSearch:  () => {},
+  closeSearch: () => {},
+  setQuery:    () => {},
+  inputRef:   { current: null } as React.RefObject<HTMLInputElement | null>,
+};
+
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useSearch(): SearchContextValue {
   const ctx = useContext(SearchContext);
-  if (!ctx) throw new Error("useSearch must be used inside <SearchProvider>");
+  if (!ctx) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("useSearch: called outside <SearchProvider> — returning no-op fallback");
+    }
+    return NO_OP;
+  }
   return ctx;
 }
