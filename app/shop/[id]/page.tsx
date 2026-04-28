@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { SHOP_REQUIRES_LOGIN } from "@/lib/flags";
 import { cookies } from "next/headers";
 import type { Metadata } from "next";
 import Navbar from "@/components/navbar";
@@ -112,7 +113,7 @@ export default async function ProductDetailPage({ params }: Props) {
   const { id } = await params;
   const [locale, token] = await Promise.all([getServerLocale(), getToken()]);
 
-  if (!token) redirect(`/login?redirect=/shop/${id}`);
+  if (SHOP_REQUIRES_LOGIN && !token) redirect(`/login?redirect=/shop/${id}`);
 
   const product = await fetchProduct(Number(id), locale, token);
   if (!product) notFound();

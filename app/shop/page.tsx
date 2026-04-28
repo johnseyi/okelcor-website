@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import ShopPageClient from "@/components/shop/shop-page-client";
+import { SHOP_REQUIRES_LOGIN } from "@/lib/flags";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -31,9 +32,11 @@ const SUPPORTED_PARAMS = ["q", "type", "brand", "size", "season", "speed", "load
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 export default async function ShopPage({ searchParams }: { searchParams: SearchParams }) {
-  const cookieStore = await cookies();
-  if (!cookieStore.get("customer_token")?.value) {
-    redirect("/login?redirect=/shop");
+  if (SHOP_REQUIRES_LOGIN) {
+    const cookieStore = await cookies();
+    if (!cookieStore.get("customer_token")?.value) {
+      redirect("/login?redirect=/shop");
+    }
   }
 
   const params = await searchParams;
