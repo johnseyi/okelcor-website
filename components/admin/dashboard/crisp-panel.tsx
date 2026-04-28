@@ -33,15 +33,27 @@ export default function CrispPanel() {
   const [error, setError]   = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    const res = await fetch("/api/admin/crisp?action=conversations", { cache: "no-store" })
-      .then(r => r.json()).catch(() => null);
+    try {
+      const res  = await fetch("/api/admin/crisp?action=conversations", { cache: "no-store" });
+      const json = await res.json().catch(() => ({}));
 
-    if (res?.error) { setError(res.error); setLoad(false); return; }
-    const list: Conversation[] = Array.isArray(res?.data) ? res.data : [];
-    const open = list.filter(c => c.state !== "resolved").slice(0, 5);
-    setConvos(open);
-    setError(null);
-    setLoad(false);
+      if (!res.ok || json?.error) {
+        const raw = json?.error;
+        const msg = typeof raw === "string" ? raw : "Crisp unavailable.";
+        setError(msg.includes("not configured") ? "Crisp not configured." : "Could not load conversations.");
+        setLoad(false);
+        return;
+      }
+
+      const list: Conversation[] = Array.isArray(json?.data) ? json.data : [];
+      const open = list.filter((c: Conversation) => c.state !== "resolved").slice(0, 5);
+      setConvos(open);
+      setError(null);
+      setLoad(false);
+    } catch {
+      setError("Could not load conversations.");
+      setLoad(false);
+    }
   }, []);
 
   useEffect(() => { refresh(); }, [refresh]);

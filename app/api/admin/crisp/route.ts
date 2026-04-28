@@ -13,10 +13,10 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
-const CRISP_BASE    = "https://api.crisp.chat/v1";
-const WEBSITE_ID    = process.env.NEXT_PUBLIC_CRISP_WEBSITE_ID ?? "";
-const IDENTIFIER    = process.env.CRISP_IDENTIFIER ?? "";
-const KEY           = process.env.CRISP_KEY ?? "";
+const CRISP_BASE = "https://api.crisp.chat/v1";
+const WEBSITE_ID = process.env.NEXT_PUBLIC_CRISP_WEBSITE_ID ?? "";
+const IDENTIFIER = process.env.CRISP_IDENTIFIER ?? "";
+const KEY        = process.env.CRISP_KEY ?? "";
 
 function crispAuth(): string {
   return "Basic " + Buffer.from(`${IDENTIFIER}:${KEY}`).toString("base64");
@@ -45,14 +45,28 @@ async function crispFetch(path: string, options?: RequestInit) {
   });
 }
 
+/** Normalise a non-OK Crisp response into a consistent error shape the panel can detect. */
+function crispError(status: number, reason: string, body: unknown) {
+  console.error(`[crisp] API error — HTTP ${status} | reason: ${reason} | body:`, JSON.stringify(body));
+  return NextResponse.json(
+    { error: reason, crisp_status: "error" },
+    { status }
+  );
+}
+
 // ── GET ───────────────────────────────────────────────────────────────────────
 
 export async function GET(request: NextRequest) {
   if (!(await requireAdmin())) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }
+
   if (!crispConfigured()) {
-    return NextResponse.json({ error: "Crisp API not configured. Add CRISP_IDENTIFIER and CRISP_KEY to .env.local." }, { status: 503 });
+    console.error("[crisp] Not configured — NEXT_PUBLIC_CRISP_WEBSITE_ID, CRISP_IDENTIFIER or CRISP_KEY is missing.");
+    return NextResponse.json(
+      { error: "Crisp not configured. Add NEXT_PUBLIC_CRISP_WEBSITE_ID, CRISP_IDENTIFIER and CRISP_KEY to environment variables.", crisp_status: "unconfigured" },
+      { status: 503 }
+    );
   }
 
   const { searchParams } = request.nextUrl;
@@ -60,27 +74,50 @@ export async function GET(request: NextRequest) {
   const sessionId = searchParams.get("session_id");
   const page      = searchParams.get("page") ?? "1";
 
-  try {
-    if (action === "conversations") {
-      const res = await crispFetch(
-        `/website/${WEBSITE_ID}/conversations/${page}`
-      );
-      const json = await res.json().catch(() => ({}));
-      return NextResponse.json(json, { status: res.status });
-    }
+  // ── Conversations ───────────────────────────────────────────────────────────
 
-    if (action === "messages" && sessionId) {
-      const res = await crispFetch(
-        `/website/${WEBSITE_ID}/conversation/${sessionId}/messages`
-      );
+  if (action === "conversations") {
+    try {
+      const res  = await crispFetch(`/website/${WEBSITE_ID}/conversations/${page}`);
       const json = await res.json().catch(() => ({}));
-      return NextResponse.json(json, { status: res.status });
-    }
 
-    return NextResponse.json({ error: "Invalid action." }, { status: 400 });
-  } catch {
-    return NextResponse.json({ error: "Could not reach Crisp API." }, { status: 502 });
+      if (!res.ok) {
+        return crispError(res.status, json?.reason ?? `HTTP ${res.status}`, json);
+      }
+
+      return NextResponse.json({ ...json, crisp_status: "connected" }, { status: 200 });
+    } catch (err) {
+      console.error("[crisp] Network error fetching conversations:", err);
+      return NextResponse.json(
+        { error: "Could not reach Crisp API.", crisp_status: "error" },
+        { status: 502 }
+      );
+    }
   }
+
+  // ── Messages ────────────────────────────────────────────────────────────────
+
+  if (action === "messages" && sessionId) {
+    try {
+      const res  = await crispFetch(`/website/${WEBSITE_ID}/conversation/${sessionId}/messages`);
+      const json = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        console.error(`[crisp] Messages fetch failed — HTTP ${res.status}:`, JSON.stringify(json));
+        return NextResponse.json(
+          { error: json?.reason ?? `HTTP ${res.status}` },
+          { status: res.status }
+        );
+      }
+
+      return NextResponse.json(json, { status: 200 });
+    } catch (err) {
+      console.error("[crisp] Network error fetching messages:", err);
+      return NextResponse.json({ error: "Could not reach Crisp API." }, { status: 502 });
+    }
+  }
+
+  return NextResponse.json({ error: "Invalid action." }, { status: 400 });
 }
 
 // ── POST ──────────────────────────────────────────────────────────────────────
@@ -102,27 +139,40 @@ export async function POST(request: NextRequest) {
 
   const { action, session_id, content } = body;
 
-  try {
-    if (action === "reply" && session_id && content?.trim()) {
+  // ── Reply ──────────────────────────────────────────────────────────────────
+
+  if (action === "reply" && session_id && content?.trim()) {
+    try {
       const res = await crispFetch(
         `/website/${WEBSITE_ID}/conversation/${session_id}/message`,
         {
           method: "POST",
-          body: JSON.stringify({
-            type:    "text",
-            content: content.trim(),
-            from:    "operator",
-            origin:  "chat",
-          }),
+          body: JSON.stringify({ type: "text", content: content.trim(), from: "operator", origin: "chat" }),
         }
       );
       const json = await res.json().catch(() => ({}));
-      return NextResponse.json(json, { status: res.status });
-    }
 
-    if (action === "resolve" && session_id) {
+      if (!res.ok) {
+        console.error(`[crisp] Reply failed — HTTP ${res.status}:`, JSON.stringify(json));
+        return NextResponse.json(
+          { error: json?.reason ?? `Could not send reply (HTTP ${res.status})` },
+          { status: res.status }
+        );
+      }
+
+      return NextResponse.json(json, { status: 200 });
+    } catch (err) {
+      console.error("[crisp] Network error sending reply:", err);
+      return NextResponse.json({ error: "Could not reach Crisp API." }, { status: 502 });
+    }
+  }
+
+  // ── Resolve ────────────────────────────────────────────────────────────────
+
+  if (action === "resolve" && session_id) {
+    try {
       const res = await crispFetch(
-        `/website/${WEBSITE_ID}/conversation/${session_id}`,
+        `/website/${WEBSITE_ID}/conversation/${session_id}/state`,
         {
           method: "PATCH",
           body: JSON.stringify({ state: "resolved" }),
@@ -131,18 +181,19 @@ export async function POST(request: NextRequest) {
       const json = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        console.error("[crisp/resolve] Crisp API error:", res.status, JSON.stringify(json));
+        console.error(`[crisp] Resolve failed — HTTP ${res.status}:`, JSON.stringify(json));
         return NextResponse.json(
-          { error: json?.reason ?? json?.error ?? `Crisp returned ${res.status}` },
+          { error: json?.reason ?? `Could not resolve conversation (HTTP ${res.status})` },
           { status: res.status }
         );
       }
 
       return NextResponse.json({ ok: true }, { status: 200 });
+    } catch (err) {
+      console.error("[crisp] Network error resolving conversation:", err);
+      return NextResponse.json({ error: "Could not reach Crisp API." }, { status: 502 });
     }
-
-    return NextResponse.json({ error: "Invalid action." }, { status: 400 });
-  } catch {
-    return NextResponse.json({ error: "Could not reach Crisp API." }, { status: 502 });
   }
+
+  return NextResponse.json({ error: "Invalid action." }, { status: 400 });
 }
