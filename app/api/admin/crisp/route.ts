@@ -209,7 +209,7 @@ export async function POST(request: NextRequest) {
 
     if (action === "resolve" && session_id) {
       const res = await crispFetch(
-        `/website/${WEBSITE_ID}/conversation/${session_id}`,
+        `/website/${WEBSITE_ID}/conversation/${session_id}/state`,
         {
           method: "PATCH",
           body: JSON.stringify({ state: "resolved" }),
