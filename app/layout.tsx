@@ -15,6 +15,7 @@ import { getSiteSettings } from "@/lib/site-settings";
 import CrispChat from "@/components/crisp-chat";
 import AnnouncementBar from "@/components/announcement-bar";
 import PostHogProvider from "@/components/posthog-provider";
+import { Analytics } from "@vercel/analytics/next";
 
 const SITE_URL = (() => {
   try {
@@ -86,6 +87,7 @@ export default async function RootLayout({
           </SiteSettingsProvider>
         </CustomerAuthProvider>
         </PostHogProvider>
+        <Analytics />
       </body>
     </html>
   );
