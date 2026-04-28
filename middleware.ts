@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { SHOP_REQUIRES_LOGIN } from "@/lib/flags";
 
 // ── Admin role table ──────────────────────────────────────────────────────────
 // Keep in sync with lib/admin-permissions.ts ROLE_ACCESS map.
@@ -69,7 +70,7 @@ export function middleware(request: NextRequest) {
   }
 
   // ── Customer protected routes ─────────────────────────────────────────────
-  const isProtected = PROTECTED_ROUTES.some((route) =>
+  const isProtected = SHOP_REQUIRES_LOGIN && PROTECTED_ROUTES.some((route) =>
     pathname === route || pathname.startsWith(route + "/")
   );
 
