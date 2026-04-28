@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import CarFinder from "@/components/shop/car-finder";
 import ShopCatalogue from "@/components/shop/shop-catalogue";
+import { SHOP_REQUIRES_LOGIN } from "@/lib/flags";
 
 export default function ShopPageClient({
   initialFilters,
@@ -16,14 +17,13 @@ export default function ShopPageClient({
   const [prefilledSize, setPrefilledSize] = useState("");
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (SHOP_REQUIRES_LOGIN && !isLoading && !isAuthenticated) {
       router.replace("/login?redirect=/shop");
     }
   }, [isLoading, isAuthenticated, router]);
 
-  // While auth is being verified, show a neutral loading state so
-  // unauthenticated users never see a flash of shop content.
-  if (isLoading || !isAuthenticated) {
+  // Block render only when login is required and auth hasn't resolved yet.
+  if (SHOP_REQUIRES_LOGIN && (isLoading || !isAuthenticated)) {
     return (
       <div
         className="flex min-h-screen items-center justify-center"
