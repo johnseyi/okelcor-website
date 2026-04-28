@@ -9,8 +9,11 @@ export async function GET(request: NextRequest) {
   const search = request.nextUrl.search;
   const upstream = `${API_URL}/products${search}`;
 
-  // The Laravel /products endpoint requires auth — forward the customer token
+  // The Laravel /products endpoint requires auth — forward the customer token.
+  // Fall back to a guest token (SHOP_GUEST_TOKEN env var) for unauthenticated visitors.
   const customerToken = request.cookies.get("customer_token")?.value;
+  const guestToken    = process.env.SHOP_GUEST_TOKEN ?? "";
+  const authToken     = customerToken || guestToken;
 
   console.log("[api/shop/products] →", upstream.replace(API_URL, "<API>"));
 
@@ -19,7 +22,7 @@ export async function GET(request: NextRequest) {
       cache: "no-store",
       headers: {
         Accept: "application/json",
-        ...(customerToken ? { Authorization: `Bearer ${customerToken}` } : {}),
+        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
       },
     });
 

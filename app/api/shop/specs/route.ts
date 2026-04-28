@@ -7,12 +7,14 @@ const API_URL =
 
 export async function GET(request: NextRequest) {
   const customerToken = request.cookies.get("customer_token")?.value;
+  const guestToken    = process.env.SHOP_GUEST_TOKEN ?? "";
+  const authToken     = customerToken || guestToken;
   try {
     const res = await fetch(`${API_URL}/products/specs`, {
       next: { revalidate: 300 },
       headers: {
         Accept: "application/json",
-        ...(customerToken ? { Authorization: `Bearer ${customerToken}` } : {}),
+        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
       },
     });
     const data = await res.json();
