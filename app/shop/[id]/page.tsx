@@ -49,7 +49,11 @@ export const dynamic = "force-dynamic";
 
 async function getToken(): Promise<string | undefined> {
   const cookieStore = await cookies();
-  return cookieStore.get("customer_token")?.value;
+  return (
+    cookieStore.get("customer_token")?.value ||
+    process.env.SHOP_GUEST_TOKEN ||
+    undefined
+  );
 }
 
 async function fetchProduct(id: number, locale: string, token?: string): Promise<Product | undefined> {
