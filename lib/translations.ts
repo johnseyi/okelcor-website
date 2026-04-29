@@ -387,7 +387,7 @@ const en: Translations = {
     hero: {
       eyebrow: "Quote Request",
       title: "Request a Tyre Supply Quote",
-      subtitle: "Tell us what you need and our team will prepare a tailored quotation for your business.",
+      subtitle: "Whether you are stocking a retail tire shop or outfitting a commercial fleet, Okelcor delivers. Share your inventory requirements below to receive a custom quote and lock in your exclusive wholesale rates.",
     },
     form: {
       eyebrow: "Quote Request Form", heading: "Tell us what you need.",
