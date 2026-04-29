@@ -88,16 +88,16 @@ export default function FetPage() {
           </div>
 
           {/* H1 — primary SEO heading */}
-          <h1 className="text-4xl font-extrabold leading-[1.13] tracking-tight text-white md:text-5xl lg:text-6xl">
-            FET Engine Fuel Efficiency{" "}
-            <span className="text-[#22c55e]">Reduce Consumption Up To 15%</span>{" "}
-            for Diesel &amp; and Gasoline.
+          <h1 className="text-4xl font-extrabold leading-[1.1] tracking-[-0.02em] text-white md:text-5xl lg:text-[3.75rem]">
+            FET Engine Fuel Efficiency
+            <br />
+            <span className="text-[#22c55e]">Reduce Consumption Up To 15%</span>
           </h1>
 
-          <p className="mx-auto mt-5 max-w-[580px] text-[1rem] leading-7 text-white/70">
-            The catalytic engine fuel efficiency device that improves combustion efficiency,
-            reduces CO₂ emissions, and cuts fuel costs — trusted by fleet operators
-            across Europe.
+          <p className="mx-auto mt-6 max-w-[520px] text-[0.97rem] leading-[1.75] tracking-[0.01em] text-white/70">
+            The catalytic fuel efficiency device that improves combustion, reduces CO₂
+            emissions, and cuts fuel costs — compatible with diesel and gasoline engines,
+            trusted by fleet operators across Europe.
           </p>
 
           {/* Benefit pills */}
