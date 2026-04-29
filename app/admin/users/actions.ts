@@ -13,7 +13,6 @@ import {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 const FROM_EMAIL = process.env.FROM_EMAIL || "Okelcor <noreply@okelcor.com>";
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 const ROLE_LABELS: Record<string, string> = {
   super_admin: "Super Admin",
@@ -120,6 +119,7 @@ async function sendAdminWelcomeEmail(
   role: string
 ): Promise<void> {
   if (!process.env.RESEND_API_KEY || !email) return;
+  const resend = new Resend(process.env.RESEND_API_KEY);
   try {
     await resend.emails.send({
       from: FROM_EMAIL,

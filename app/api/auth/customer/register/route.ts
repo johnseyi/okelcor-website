@@ -13,7 +13,6 @@ const API_URL =
   "http://localhost:8000/api/v1";
 
 const FROM_EMAIL = process.env.FROM_EMAIL || "Okelcor <noreply@okelcor.com>";
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 // ── Email helpers ──────────────────────────────────────────────────────────────
 
@@ -21,9 +20,10 @@ function esc(s: string) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-function buildWelcomeHtml(firstName: string): string {
+function buildVerifyHtml(firstName: string): string {
   const name = esc(firstName || "there");
-  const link = `${SITE_URL}/forgot-password`;
+  const verifyLink = `${SITE_URL}/verify-email`;
+  const loginLink  = `${SITE_URL}/login`;
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
@@ -35,27 +35,30 @@ function buildWelcomeHtml(firstName: string): string {
     <td style="background:#171a20;padding:36px 40px 28px;">
       <div style="display:inline-block;width:36px;height:4px;background:#f4511e;border-radius:2px;margin-bottom:18px;"></div>
       <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.02em;line-height:1.2;">Welcome to Okelcor</h1>
-      <p style="margin:8px 0 0;color:rgba(255,255,255,0.55);font-size:14px;">Your account has been created</p>
+      <p style="margin:8px 0 0;color:rgba(255,255,255,0.55);font-size:14px;">One last step — verify your email address</p>
     </td>
   </tr>
   <tr>
     <td style="padding:36px 40px 28px;">
       <p style="margin:0 0 18px;font-size:16px;font-weight:600;color:#171a20;">Hi ${name},</p>
       <p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:#5c5e62;">
-        Your Okelcor account has been created. To activate your account and set your password, click the button below:
+        Your Okelcor account has been created. Please verify your email address to activate your account.
+        Your password is already set — you just need to confirm your email.
       </p>
-      <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+      <table cellpadding="0" cellspacing="0" style="margin:0 0 16px;">
         <tr>
           <td style="background:#f4511e;border-radius:100px;padding:0;">
-            <a href="${link}" style="display:inline-block;padding:14px 36px;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;letter-spacing:0.01em;">
-              Activate Your Account
+            <a href="${verifyLink}" style="display:inline-block;padding:14px 36px;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;letter-spacing:0.01em;">
+              Verify Email Address
             </a>
           </td>
         </tr>
       </table>
-      <p style="margin:0 0 8px;font-size:13px;line-height:1.6;color:#8c8f94;">
-        Or copy this link into your browser:<br/>
-        <a href="${link}" style="color:#f4511e;text-decoration:none;word-break:break-all;">${link}</a>
+      <p style="margin:0 0 24px;font-size:13px;line-height:1.6;color:#8c8f94;">
+        Or copy this link: <a href="${verifyLink}" style="color:#f4511e;text-decoration:none;word-break:break-all;">${verifyLink}</a>
+      </p>
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#8c8f94;">
+        Already verified? <a href="${loginLink}" style="color:#f4511e;text-decoration:none;font-weight:600;">Sign in here →</a>
       </p>
     </td>
   </tr>
@@ -76,12 +79,15 @@ function buildWelcomeHtml(firstName: string): string {
 </html>`;
 }
 
-function buildWelcomeText(firstName: string): string {
+function buildVerifyText(firstName: string): string {
   return `Hi ${firstName || "there"},
 
-Your Okelcor account has been created. To activate your account and set your password, visit:
+Your Okelcor account has been created. Please verify your email address to activate your account.
+Your password is already set — you just need to confirm your email.
 
-${SITE_URL}/forgot-password
+Verify your email: ${SITE_URL}/verify-email
+
+Already verified? Sign in at: ${SITE_URL}/login
 
 ${COMPANY_LEGAL_NAME} · ${COMPANY_ADDRESS_STREET} · ${COMPANY_ADDRESS_CITY}
 You received this email because you registered an account on okelcor.com.
@@ -94,14 +100,15 @@ async function sendWelcomeEmail(
   lastName: string
 ): Promise<void> {
   if (!process.env.RESEND_API_KEY || !email) return;
+  const resend = new Resend(process.env.RESEND_API_KEY);
   const toName = [firstName, lastName].filter(Boolean).join(" ");
   try {
     await resend.emails.send({
       from: FROM_EMAIL,
       to: [toName ? `${toName} <${email}>` : email],
-      subject: "Your Okelcor account is ready — activate now",
-      html: buildWelcomeHtml(firstName),
-      text: buildWelcomeText(firstName),
+      subject: "Verify your Okelcor account",
+      html: buildVerifyHtml(firstName),
+      text: buildVerifyText(firstName),
     });
   } catch (err) {
     console.error("[register] Resend fallback email failed:", err);

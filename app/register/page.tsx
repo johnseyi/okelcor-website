@@ -166,13 +166,12 @@ export default function RegisterPage() {
     if (!form.vat_number.trim()) return;
     setVatStatus("loading");
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
-      const res = await fetch(`${API_URL}/vat/validate`, {
+      const res = await fetch("/api/vat/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ vat_number: form.vat_number.trim() }),
       });
-      if (res.status === 502 || res.status === 503 || res.status === 504) {
+      if (!res.ok) {
         setVatStatus("unavailable");
         return;
       }
@@ -180,8 +179,6 @@ export default function RegisterPage() {
       setVatStatus(data.data?.valid === true ? "valid" : "invalid");
     } catch {
       setVatStatus("unavailable");
-    } finally {
-      // nothing
     }
   };
 
