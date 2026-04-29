@@ -40,7 +40,7 @@ async function crispFetch(path: string, options?: RequestInit) {
       ...(options?.headers ?? {}),
       // Auth headers always last — must not be overridable by callers
       Authorization: crispAuth(),
-      "X-Crisp-Tier": "plugin",
+      "X-Crisp-Tier": "website",
     },
     cache: "no-store",
   });
@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
 
   if (action === "conversations") {
     try {
-      const res  = await crispFetch(`/website/${WEBSITE_ID}/conversations/${page}`);
+      const res  = await crispFetch(`/website/${WEBSITE_ID}/conversations/list/${page}`);
       const json = await res.json().catch(() => ({}));
 
       if (!res.ok) {
