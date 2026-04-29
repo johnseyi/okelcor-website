@@ -37,9 +37,10 @@ async function crispFetch(path: string, options?: RequestInit) {
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
+      ...(options?.headers ?? {}),
+      // Auth headers always last — must not be overridable by callers
       Authorization: crispAuth(),
       "X-Crisp-Tier": "plugin",
-      ...(options?.headers ?? {}),
     },
     cache: "no-store",
   });
