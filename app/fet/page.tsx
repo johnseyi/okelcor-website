@@ -89,13 +89,13 @@ export default function FetPage() {
 
           {/* H1 — primary SEO heading */}
           <h1 className="text-4xl font-extrabold leading-[1.13] tracking-tight text-white md:text-5xl lg:text-6xl">
-            FET Engine Treatment —{" "}
-            <span className="text-[#22c55e]">Up to 15% Fuel Savings</span>{" "}
-            for Diesel &amp; Petrol Fleets
+            FET Engine Fuel Efficiency{" "}
+            <span className="text-[#22c55e]">Reduce Consumption Up To 15%</span>{" "}
+            for Diesel &amp; and Gasoline.
           </h1>
 
           <p className="mx-auto mt-5 max-w-[580px] text-[1rem] leading-7 text-white/70">
-            The catalytic engine treatment device that improves combustion efficiency,
+            The catalytic engine fuel efficiency device that improves combustion efficiency,
             reduces CO₂ emissions, and cuts fuel costs — trusted by fleet operators
             across Europe.
           </p>
