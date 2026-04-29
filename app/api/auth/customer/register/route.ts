@@ -147,20 +147,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(data, { status: res.status });
   }
 
-  // 5xx — Laravel saved the record but email dispatch failed
-  // Send our own Resend welcome email as a reliable fallback
-  if (!res.ok) {
-    await sendWelcomeEmail(
-      (body.email as string) ?? "",
-      (body.first_name as string) ?? "",
-      (body.last_name as string) ?? ""
-    );
-    return NextResponse.json(
-      { message: "Account created. Check your email to activate your account." },
-      { status: 201 }
-    );
-  }
+  // 2xx or 5xx — account was created; always send Resend email since Laravel's
+  // mail service is unreliable (broken queue returns 2xx with no email sent)
+  await sendWelcomeEmail(
+    (body.email as string) ?? "",
+    (body.first_name as string) ?? "",
+    (body.last_name as string) ?? ""
+  );
 
-  // 2xx — Laravel handled the email successfully
-  return NextResponse.json(data, { status: res.status });
+  return NextResponse.json(
+    res.ok ? data : { message: "Account created. Check your email to activate your account." },
+    { status: res.ok ? res.status : 201 }
+  );
 }

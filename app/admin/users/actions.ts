@@ -173,7 +173,8 @@ export async function createUser(data: {
     return { error: json.message || "Failed to create user." };
   }
 
-  // 2xx — Laravel sent the temp password email successfully; don't duplicate it
+  // 2xx — success; still send Resend notification since Laravel's mail is unreliable
+  await sendAdminWelcomeEmail(data.email, data.name, data.role);
   revalidatePath("/admin/users");
   return { id: json.data?.id as number | undefined };
 }
