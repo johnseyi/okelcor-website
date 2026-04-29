@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
 
   if (action === "conversations") {
     try {
-      const res  = await crispFetch(`/website/${WEBSITE_ID}/conversations/list/${page}`);
+      const res  = await crispFetch(`/website/${WEBSITE_ID}/conversations/${page}`);
       const json = await res.json().catch(() => ({}));
 
       if (!res.ok) {
