@@ -182,7 +182,7 @@ export default function ChatsInbox() {
       if (!res.ok) {
         const diagnostic =
           res.status === 404
-            ? `404 — API route not found on this server. The production deployment is likely outdated and does not include the Live Chats route (/api/admin/crisp). Redeploy the frontend to fix this.`
+            ? `404 — Crisp returned "not found" for the conversations endpoint. This usually means your CRISP_WEBSITE_ID is incorrect or the workspace has no conversations. Check your environment variables.`
             : res.status === 503
             ? `503 — Crisp credentials not configured on the server. Add NEXT_PUBLIC_CRISP_WEBSITE_ID, CRISP_IDENTIFIER and CRISP_KEY to the server environment variables, then restart.`
             : res.status === 401
