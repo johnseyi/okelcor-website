@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Eye, EyeOff, CheckCircle2, Check, MailWarning, RefreshCcw } from "lucide-react";
 import Navbar from "@/components/navbar";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
-import { forgotPassword } from "@/lib/customer-auth";
+import { forgotPassword, resendVerification } from "@/lib/customer-auth";
 import type { Metadata } from "next";
 
 // ─── Input styles ─────────────────────────────────────────────────────────────
@@ -87,6 +87,7 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("redirect") ?? searchParams.get("callbackUrl") ?? "";
+  const verifiedParam = searchParams.get("verified"); // "true" | "false" | null
   const { login, refreshCustomer } = useCustomerAuth();
 
   const [email, setEmail] = useState("");
@@ -95,10 +96,16 @@ export default function LoginPage() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Email verification state
+  // Email verification state (triggered by login attempt with unverified account)
   const [showVerifyMessage, setShowVerifyMessage] = useState(false);
   const [resendingVerify, setResendingVerify] = useState(false);
   const [resendVerifyDone, setResendVerifyDone] = useState(false);
+
+  // Resend state for ?verified=false banner
+  const [reVerifyEmail, setReVerifyEmail] = useState("");
+  const [reVerifySending, setReVerifySending] = useState(false);
+  const [reVerifyDone, setReVerifyDone] = useState(false);
+  const [reVerifyError, setReVerifyError] = useState<string | null>(null);
 
   const validate = () => {
     const errs: typeof errors = {};
@@ -166,6 +173,21 @@ export default function LoginPage() {
       // Ignore
     } finally {
       setResendingVerify(false);
+    }
+  };
+
+  const handleReVerify = async () => {
+    if (!reVerifyEmail.trim()) { setReVerifyError("Please enter your email address."); return; }
+    setReVerifySending(true);
+    setReVerifyError(null);
+    try {
+      await resendVerification(reVerifyEmail.trim());
+      setReVerifyDone(true);
+    } catch (err: unknown) {
+      const e = err as Record<string, unknown>;
+      setReVerifyError((e?.message as string) ?? "Failed to resend. Please try again.");
+    } finally {
+      setReVerifySending(false);
     }
   };
 
@@ -272,6 +294,51 @@ export default function LoginPage() {
                 Welcome back to Okelcor
               </p>
             </div>
+
+            {/* ── Verified=true banner ────────────────────────────────────── */}
+            {verifiedParam === "true" && (
+              <div role="status" className="mb-5 flex items-start gap-3 rounded-[12px] border border-emerald-200 bg-emerald-50 px-4 py-3.5 text-[0.85rem] text-emerald-800">
+                <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-emerald-500" />
+                <span>Your email has been verified. You can now log in.</span>
+              </div>
+            )}
+
+            {/* ── Verified=false banner ───────────────────────────────────── */}
+            {verifiedParam === "false" && (
+              <div className="mb-5 rounded-[12px] border border-red-200 bg-red-50 px-4 py-4 text-[0.85rem]">
+                <p className="font-semibold text-red-700">Verification link is invalid or has expired.</p>
+                <p className="mt-1 text-red-600">Enter your email address to receive a new verification link.</p>
+                {reVerifyDone ? (
+                  <div className="mt-3 flex items-center gap-2 text-[0.83rem] text-emerald-700">
+                    <CheckCircle2 size={14} /> Verification email sent — check your inbox.
+                  </div>
+                ) : (
+                  <div className="mt-3 flex flex-col gap-2">
+                    {reVerifyError && (
+                      <p role="alert" className="text-[0.78rem] text-red-600">{reVerifyError}</p>
+                    )}
+                    <div className="flex gap-2">
+                      <input
+                        type="email"
+                        placeholder="your@email.com"
+                        value={reVerifyEmail}
+                        onChange={(e) => { setReVerifyEmail(e.target.value); setReVerifyError(null); }}
+                        className="flex-1 rounded-[10px] border border-red-200 bg-white px-3 py-2 text-[0.83rem] text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] focus:border-red-400 focus:ring-2 focus:ring-red-200"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleReVerify}
+                        disabled={reVerifySending}
+                        className="flex shrink-0 items-center gap-1.5 rounded-[10px] bg-red-600 px-3 py-2 text-[0.8rem] font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
+                      >
+                        <RefreshCcw size={13} className={reVerifySending ? "animate-spin" : ""} />
+                        {reVerifySending ? "Sending…" : "Resend"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
               {authError && (

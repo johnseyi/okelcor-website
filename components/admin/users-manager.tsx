@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus, Pencil, Trash2, X, AlertCircle, CheckCircle2, Mail } from "lucide-react";
-import { createUser, updateUser, deleteUser } from "@/app/admin/users/actions";
+import { Plus, Pencil, Trash2, X, AlertCircle, CheckCircle2, Mail, RefreshCcw, AlertTriangle } from "lucide-react";
+import { createUser, updateUser, deleteUser, resendCredentials } from "@/app/admin/users/actions";
 import type { AdminUser } from "@/lib/admin-api";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -67,6 +67,12 @@ export default function UsersManager({ users: initialUsers }: { users: AdminUser
   // Create success notice
   const [createSuccess, setCreateSuccess] = useState<string | null>(null);
 
+  // Email-not-sent warning after create
+  const [emailNotSentId, setEmailNotSentId] = useState<number | null>(null);
+  const [resendingCreds, setResendingCreds] = useState(false);
+  const [resendCredsDone, setResendCredsDone] = useState(false);
+  const [resendCredsError, setResendCredsError] = useState<string | null>(null);
+
   // Delete
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -103,14 +109,21 @@ export default function UsersManager({ users: initialUsers }: { users: AdminUser
       if (modalMode === "create") {
         const res = await createUser({ name: name.trim(), email: createdEmail, role });
         if (res.error) { setFormError(res.error); setSaving(false); return; }
+        const newId = res.id ?? Date.now();
         setUsers((prev) => [
           ...prev,
-          { id: res.id ?? Date.now(), name: name.trim(), email: createdEmail, role, last_login_at: null },
+          { id: newId, name: name.trim(), email: createdEmail, role, last_login_at: null },
         ]);
         setSaving(false);
         closeModal();
-        setCreateSuccess(createdEmail);
-        setTimeout(() => setCreateSuccess(null), 6000);
+        if (res.email_sent === false) {
+          setEmailNotSentId(newId);
+          setResendCredsDone(false);
+          setResendCredsError(null);
+        } else {
+          setCreateSuccess(createdEmail);
+          setTimeout(() => setCreateSuccess(null), 6000);
+        }
       } else if (editingUser) {
         const res = await updateUser(editingUser.id, {
           name: name.trim(),
@@ -128,6 +141,20 @@ export default function UsersManager({ users: initialUsers }: { users: AdminUser
         setSaving(false);
         closeModal();
       }
+    });
+  };
+
+  // ── Resend credentials ───────────────────────────────────────────────────────
+
+  const handleResendCredentials = (id: number) => {
+    setResendingCreds(true);
+    setResendCredsError(null);
+    startTransition(async () => {
+      const res = await resendCredentials(id);
+      setResendingCreds(false);
+      if (res.error) { setResendCredsError(res.error); return; }
+      setResendCredsDone(true);
+      setTimeout(() => setEmailNotSentId(null), 4000);
     });
   };
 
@@ -173,6 +200,47 @@ export default function UsersManager({ users: initialUsers }: { users: AdminUser
         <div className="mb-4 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-[0.83rem] text-emerald-700">
           <CheckCircle2 size={13} className="shrink-0" />
           User created. Login details sent to <strong>{createSuccess}</strong>.
+        </div>
+      )}
+
+      {emailNotSentId !== null && (
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[0.83rem]">
+          <div className="flex items-start gap-2">
+            <AlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-600" />
+            <div className="flex-1">
+              <p className="font-semibold text-amber-800">
+                User created but the welcome email could not be delivered.
+              </p>
+              <p className="mt-0.5 text-amber-700">
+                Use &ldquo;Resend Credentials&rdquo; to retry sending login details.
+              </p>
+              {resendCredsError && (
+                <p className="mt-1 text-[0.78rem] text-red-600">{resendCredsError}</p>
+              )}
+              {resendCredsDone ? (
+                <div className="mt-2 flex items-center gap-1.5 text-emerald-700">
+                  <CheckCircle2 size={13} /> Credentials resent successfully.
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleResendCredentials(emailNotSentId)}
+                  disabled={resendingCreds}
+                  className="mt-2.5 flex items-center gap-1.5 rounded-full bg-amber-600 px-3.5 py-1.5 text-[0.78rem] font-semibold text-white transition hover:bg-amber-700 disabled:opacity-60"
+                >
+                  <RefreshCcw size={12} className={resendingCreds ? "animate-spin" : ""} />
+                  {resendingCreds ? "Sending…" : "Resend Credentials"}
+                </button>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setEmailNotSentId(null)}
+              className="shrink-0 text-amber-500 transition hover:text-amber-700"
+            >
+              <X size={13} />
+            </button>
+          </div>
         </div>
       )}
 

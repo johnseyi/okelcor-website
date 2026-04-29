@@ -81,6 +81,14 @@ export async function forgotPassword(email: string) {
   });
 }
 
+export async function resendVerification(email: string) {
+  return apiFetch("/api/auth/customer/resend-verification", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+}
+
 export async function resetPassword(
   token: string,
   email: string,

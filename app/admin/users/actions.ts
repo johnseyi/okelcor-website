@@ -139,7 +139,7 @@ export async function createUser(data: {
   name: string;
   email: string;
   role: string;
-}): Promise<{ error?: string; id?: number }> {
+}): Promise<{ error?: string; id?: number; email_sent?: boolean }> {
   const token = await getToken();
   if (!token) return { error: "Not authenticated." };
 
@@ -168,7 +168,7 @@ export async function createUser(data: {
     if (res.status >= 500) {
       await sendAdminWelcomeEmail(data.email, data.name, data.role);
       revalidatePath("/admin/users");
-      return { id: (json.data?.id as number | undefined) };
+      return { id: (json.data?.id as number | undefined), email_sent: false };
     }
     return { error: json.message || "Failed to create user." };
   }
@@ -176,7 +176,36 @@ export async function createUser(data: {
   // 2xx — success; still send Resend notification since Laravel's mail is unreliable
   await sendAdminWelcomeEmail(data.email, data.name, data.role);
   revalidatePath("/admin/users");
-  return { id: json.data?.id as number | undefined };
+  return {
+    id: json.data?.id as number | undefined,
+    email_sent: (json.email_sent as boolean | undefined) ?? true,
+  };
+}
+
+export async function resendCredentials(id: number): Promise<{ error?: string }> {
+  const token = await getToken();
+  if (!token) return { error: "Not authenticated." };
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/admin/users/${id}/resend-credentials`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+    });
+  } catch {
+    return { error: "Could not reach the server." };
+  }
+
+  const json = await res.json().catch(() => ({}));
+
+  if (res.status === 403) return { error: "Only super admins can manage users." };
+  if (!res.ok) return { error: json.message || "Failed to resend credentials." };
+
+  return {};
 }
 
 export async function updateUser(

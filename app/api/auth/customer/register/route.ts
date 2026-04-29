@@ -22,8 +22,7 @@ function esc(s: string) {
 
 function buildVerifyHtml(firstName: string): string {
   const name = esc(firstName || "there");
-  const verifyLink = `${SITE_URL}/verify-email`;
-  const loginLink  = `${SITE_URL}/login`;
+  const loginLink = `${SITE_URL}/login`;
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
@@ -35,31 +34,29 @@ function buildVerifyHtml(firstName: string): string {
     <td style="background:#171a20;padding:36px 40px 28px;">
       <div style="display:inline-block;width:36px;height:4px;background:#f4511e;border-radius:2px;margin-bottom:18px;"></div>
       <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.02em;line-height:1.2;">Welcome to Okelcor</h1>
-      <p style="margin:8px 0 0;color:rgba(255,255,255,0.55);font-size:14px;">One last step — verify your email address</p>
+      <p style="margin:8px 0 0;color:rgba(255,255,255,0.55);font-size:14px;">Your account has been created</p>
     </td>
   </tr>
   <tr>
     <td style="padding:36px 40px 28px;">
       <p style="margin:0 0 18px;font-size:16px;font-weight:600;color:#171a20;">Hi ${name},</p>
       <p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:#5c5e62;">
-        Your Okelcor account has been created. Please verify your email address to activate your account.
-        Your password is already set — you just need to confirm your email.
+        Your Okelcor account has been created successfully. We have sent you a separate email
+        containing a verification link — click that link to activate your account and gain
+        full access.
       </p>
-      <table cellpadding="0" cellspacing="0" style="margin:0 0 16px;">
+      <p style="margin:0 0 24px;font-size:15px;line-height:1.7;color:#5c5e62;">
+        Once verified, you can sign in using the email address and password you chose during registration.
+      </p>
+      <table cellpadding="0" cellspacing="0" style="margin:0 0 8px;">
         <tr>
-          <td style="background:#f4511e;border-radius:100px;padding:0;">
-            <a href="${verifyLink}" style="display:inline-block;padding:14px 36px;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;letter-spacing:0.01em;">
-              Verify Email Address
+          <td style="border:1px solid rgba(0,0,0,0.1);border-radius:100px;padding:0;">
+            <a href="${loginLink}" style="display:inline-block;padding:13px 32px;color:#171a20;font-size:14px;font-weight:700;text-decoration:none;letter-spacing:0.01em;">
+              Go to Login →
             </a>
           </td>
         </tr>
       </table>
-      <p style="margin:0 0 24px;font-size:13px;line-height:1.6;color:#8c8f94;">
-        Or copy this link: <a href="${verifyLink}" style="color:#f4511e;text-decoration:none;word-break:break-all;">${verifyLink}</a>
-      </p>
-      <p style="margin:0;font-size:13px;line-height:1.6;color:#8c8f94;">
-        Already verified? <a href="${loginLink}" style="color:#f4511e;text-decoration:none;font-weight:600;">Sign in here →</a>
-      </p>
     </td>
   </tr>
   <tr>
@@ -82,12 +79,11 @@ function buildVerifyHtml(firstName: string): string {
 function buildVerifyText(firstName: string): string {
   return `Hi ${firstName || "there"},
 
-Your Okelcor account has been created. Please verify your email address to activate your account.
-Your password is already set — you just need to confirm your email.
+Your Okelcor account has been created successfully.
 
-Verify your email: ${SITE_URL}/verify-email
+We have sent you a separate email containing a verification link. Click that link to activate your account.
 
-Already verified? Sign in at: ${SITE_URL}/login
+Once verified, sign in at: ${SITE_URL}/login
 
 ${COMPANY_LEGAL_NAME} · ${COMPANY_ADDRESS_STREET} · ${COMPANY_ADDRESS_CITY}
 You received this email because you registered an account on okelcor.com.
