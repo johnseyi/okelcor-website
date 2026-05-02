@@ -14,26 +14,30 @@ export async function POST(request: NextRequest) {
   const cookieStore = await cookies();
   const customerToken = cookieStore.get("customer_token")?.value;
 
-  let body: string;
+  let bodyObj: unknown;
   try {
-    body = await request.text();
+    bodyObj = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
+
+  const body = JSON.stringify(bodyObj);
+  console.log("[stripe-session] forwarding to Laravel:", body);
 
   try {
     const res = await fetch(`${API_URL}/payments/create-session`, {
       method: "POST",
       headers: {
-        "Content-Type": request.headers.get("content-type") ?? "application/json",
+        "Content-Type": "application/json",
         Accept: "application/json",
         ...(customerToken ? { Authorization: `Bearer ${customerToken}` } : {}),
       },
-      body: body || "{}",
+      body,
       cache: "no-store",
     });
 
     const text = await res.text();
+    console.log("[stripe-session] Laravel responded:", res.status, text.slice(0, 500));
     return new NextResponse(text, {
       status: res.status,
       headers: {
