@@ -7,7 +7,7 @@ import {
   RefreshCw, MapPin, Ship, Clock, Package,
 } from "lucide-react";
 import { updateOrderStatus, cancelOrder, deleteOrder } from "@/app/admin/orders/actions";
-import type { AdminOrderFull } from "@/lib/admin-api";
+import type { AdminOrderFull, AdminOrderLog } from "@/lib/admin-api";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -223,6 +223,82 @@ function TrackingWidget({ containerNumber }: { containerNumber: string }) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ── Activity Log ─────────────────────────────────────────────────────────────
+
+function formatAction(action: string): string {
+  return action
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function LogEntry({ log }: { log: AdminOrderLog }) {
+  const hasChange = log.old_value != null || log.new_value != null;
+  return (
+    <li className="relative pl-6">
+      {/* timeline dot */}
+      <span className="absolute left-0 top-[5px] flex h-3 w-3 items-center justify-center rounded-full border-2 border-[#E85C1A] bg-white" />
+
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <span className="text-[0.83rem] font-semibold text-[#1a1a1a]">
+          {formatAction(log.action)}
+        </span>
+        {log.admin_user_email && (
+          <span className="text-[0.75rem] text-[#5c5e62]">by {log.admin_user_email}</span>
+        )}
+        {log.ip_address && (
+          <span className="font-mono text-[0.72rem] text-[#9ca3af]">({log.ip_address})</span>
+        )}
+      </div>
+
+      {hasChange && (
+        <p className="mt-0.5 text-[0.78rem] text-[#5c5e62]">
+          {log.old_value != null && (
+            <>
+              <span className="rounded bg-red-50 px-1 py-0.5 font-medium text-red-600 line-through">
+                {log.old_value}
+              </span>
+              <span className="mx-1.5 text-[#9ca3af]">→</span>
+            </>
+          )}
+          {log.new_value != null && (
+            <span className="rounded bg-emerald-50 px-1 py-0.5 font-medium text-emerald-700">
+              {log.new_value}
+            </span>
+          )}
+        </p>
+      )}
+
+      {log.notes && (
+        <p className="mt-0.5 text-[0.78rem] italic text-[#5c5e62]">{log.notes}</p>
+      )}
+
+      <p className="mt-0.5 text-[0.72rem] text-[#9ca3af]">{shortDate(log.created_at)}</p>
+    </li>
+  );
+}
+
+function ActivityLog({ logs }: { logs?: AdminOrderLog[] }) {
+  return (
+    <div className="rounded-2xl bg-white p-6 shadow-sm">
+      <p className="mb-4 text-[0.7rem] font-bold uppercase tracking-[0.15em] text-[#E85C1A]">
+        Activity Log
+      </p>
+
+      {!logs?.length ? (
+        <p className="text-[0.875rem] text-[#5c5e62]">
+          No activity has been recorded for this order yet.
+        </p>
+      ) : (
+        <ol className="relative border-l border-black/[0.07] pl-3 space-y-5">
+          {logs.map((log) => (
+            <LogEntry key={log.id} log={log} />
+          ))}
+        </ol>
+      )}
     </div>
   );
 }
@@ -565,6 +641,9 @@ export default function OrderDetail({
           </div>
         )}
       </div>
+
+      {/* ── Activity log ── */}
+      <ActivityLog logs={order.logs} />
 
       {/* ── Delete confirmation modal ── */}
       {deleteModalOpen && (

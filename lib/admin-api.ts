@@ -162,6 +162,17 @@ export type AdminOrderItem = {
   subtotal: number;
 };
 
+export type AdminOrderLog = {
+  id: number;
+  action: string;
+  old_value?: string | null;
+  new_value?: string | null;
+  notes?: string | null;
+  admin_user_email?: string | null;
+  ip_address?: string | null;
+  created_at: string;
+};
+
 export type AdminOrderFull = AdminOrder & {
   phone?: string;
   company_name?: string;
@@ -172,6 +183,7 @@ export type AdminOrderFull = AdminOrder & {
   tracking_status?: string;
   eta?: string;
   items: AdminOrderItem[];
+  logs?: AdminOrderLog[];
   updated_at?: string;
 };
 
