@@ -255,8 +255,10 @@ export default function CheckoutFlow() {
         body: JSON.stringify(orderPayload()),
       });
       const data = await res.json();
-      const checkoutData = data?.data ?? {};
-      const checkoutUrl = checkoutData.checkout_url;
+      const checkoutData    = data?.data ?? {};
+      const checkoutUrl     = checkoutData.checkout_url;
+      const checkoutSession = String(checkoutData.checkout_session_id ?? "");
+      const orderRef        = String(checkoutData.order_ref ?? "");
 
       if (!res.ok || data.error || typeof checkoutUrl !== "string") {
         setSubmitError(data.error ?? data.message ?? "Failed to start Stripe Checkout. Please try again.");
@@ -264,12 +266,10 @@ export default function CheckoutFlow() {
         return;
       }
 
-      if (checkoutData.checkout_session_id) {
-        sessionStorage.setItem("stripe_checkout_session_id", checkoutData.checkout_session_id);
-      }
-      if (checkoutData.order_ref) {
-        sessionStorage.setItem("stripe_order_ref", checkoutData.order_ref);
-      }
+      // Always write both keys before redirect so the return page can read
+      // them via sessionStorage when order_ref is absent from the Stripe URL.
+      sessionStorage.setItem("stripe_checkout_session_id", checkoutSession);
+      sessionStorage.setItem("stripe_order_ref", orderRef);
 
       clearCart();
 
