@@ -401,7 +401,8 @@ See prior entries for:
 | **Account VAT** | **Complete** — `/account/vat`; VAT status + VIES link |
 | Quote page | Complete |
 | Cart drawer | Complete |
-| Checkout page | Complete — Adyen Drop-in |
+| **Checkout page** | **Updated** — Stripe Checkout; proxy `app/api/checkout/stripe-session/route.ts` → Laravel `/api/v1/payments/create-session` |
+| **Checkout return** | **Updated** — `/checkout/return`; "Order received" copy; `order_ref` from URL param + sessionStorage fallback |
 | Fuel Echo Tech page | Complete — `/fet`; green theme; ROI calculator |
 | About / Contact / News | Complete |
 | 404 / Error / Loading | Complete |
@@ -488,6 +489,117 @@ app/template.tsx     ← GSAP page fade + ScrollTrigger.refresh() on every route
 
 ---
 
+## Completed in Session — Stripe Checkout Fixes (2026-05-02)
+
+### Stripe Session Proxy — Body Forwarding Fix
+
+**File:** `app/api/checkout/stripe-session/route.ts`
+
+**Problem:** `request.text()` can return an empty string under certain Next.js 16 conditions, causing the proxy to forward `{}` to Laravel. Laravel validated `payment_method` as required and returned a 422 error visible to the user.
+
+**Fix:**
+- Switched from `request.text()` to `request.json()` + `JSON.stringify()` — body is explicitly parsed then re-serialised, throwing cleanly if empty/invalid
+- Hardcoded `Content-Type: application/json` on the outbound request (no longer reflects the incoming header, which could carry a charset suffix)
+
+**Diagnostic logging added (temporary):**
+```
+[stripe-session] target URL      — exact Laravel endpoint (confirms API_URL env var)
+[stripe-session] request body    — full payload forwarded
+[stripe-session] HTTP status     — Laravel response code
+[stripe-session] has checkout_url — whether data.checkout_url is a string
+[stripe-session] has order_ref   — whether data.order_ref is a string
+[stripe-session] raw response    — first 600 chars of Laravel response
+```
+
+**API URL resolution order:**
+```
+process.env.API_URL  >  process.env.NEXT_PUBLIC_API_URL  >  "http://localhost:8000/api/v1"
+```
+Ensure `NEXT_PUBLIC_API_URL=https://api.okelcor.com/api/v1` is set in all deployment environments.
+
+---
+
+### Checkout Return Page — Stripe-Only Rewrite
+
+**File:** `app/checkout/return/page.tsx`
+
+Full rewrite to remove dead Mollie code and align with Stripe Checkout + backend webhook flow.
+
+**Changes:**
+- Removed: loading / pending / failed states, Mollie status-check fetch, `amount` state, `Loader2` import
+- Two states only:
+  - `session_id` in URL → **"Order received"** card (success)
+  - No `session_id` → **"Check your email"** card (fallback / direct nav)
+- Copy: *"Your payment was submitted successfully. We'll email your confirmation once Stripe confirms the payment."* — avoids claiming payment is confirmed from URL alone (webhook is source of truth)
+- `order_ref` display: shown as a pill when present
+- All colours use CSS variables (`var(--primary)`, `var(--foreground)`, `var(--muted)`)
+
+**`order_ref` reading (reliable, two-source):**
+```typescript
+// 1. URL param — present if backend includes order_ref in Stripe success_url
+const queryOrderRef = searchParams.get("order_ref") ?? "";
+
+// 2. sessionStorage fallback — written by checkout-flow.tsx before redirect
+const [sessionRef, setSessionRef] = useState("");
+useEffect(() => {
+  const stored = sessionStorage.getItem("stripe_order_ref") ?? "";
+  if (stored) setSessionRef(stored);
+  sessionStorage.removeItem("stripe_checkout_session_id");
+  sessionStorage.removeItem("stripe_order_ref");
+}, []);
+
+const orderRef = queryOrderRef || sessionRef;
+```
+
+Key fix from previous bug: `orderRef` is derived reactively from `queryOrderRef` (not frozen in a lazy `useState` initialiser), so it updates correctly after `useSearchParams()` resolves during hydration.
+
+---
+
+### Checkout Flow — Reliable sessionStorage Writes
+
+**File:** `components/checkout/checkout-flow.tsx`
+
+**Problem:** sessionStorage was only written inside `if` guards — if the backend response omitted `order_ref`, the key was never set and the return page fallback silently had nothing to read.
+
+**Fix:** Unconditional writes with explicit variable extraction:
+```typescript
+const checkoutSession = String(checkoutData.checkout_session_id ?? "");
+const orderRef        = String(checkoutData.order_ref ?? "");
+
+sessionStorage.setItem("stripe_checkout_session_id", checkoutSession);
+sessionStorage.setItem("stripe_order_ref", orderRef);
+// → then clearCart() + window.location.href = checkoutUrl
+```
+
+Both keys are **always written before the Stripe redirect**, even if empty, so the return page always finds consistent keys in sessionStorage.
+
+**Backend response shape expected:**
+```json
+{
+  "data": {
+    "checkout_url": "https://checkout.stripe.com/...",
+    "checkout_session_id": "cs_...",
+    "order_ref": "OKL-XXXXX"
+  }
+}
+```
+
+---
+
+### Stripe Checkout — Frontend/Backend Contract (Confirmed)
+
+| Thing | Who handles it |
+|---|---|
+| Customer confirmation email | Backend (auto, on `checkout.session.completed` webhook) |
+| Admin notification email | Backend (auto, on webhook) |
+| `/checkout/return` page | Frontend ✅ |
+| `/checkout/cancel` page | Frontend ✅ |
+| Showing `order_ref` on return page | Frontend reads from URL param → sessionStorage fallback |
+
+**Important timing:** Stripe redirect fires before the webhook. Never fetch order status on the return page — the webhook may not have fired yet. Email is the source of truth.
+
+---
+
 ## Completed in Session — Domain Migration & Customer Email Blast (2026-04-22/23)
 
 ### Domain: okelcor.de → okelcor.com
@@ -528,17 +640,19 @@ Email template: dark Okelcor header, migration announcement, "Set Your Password 
 
 ### Medium Priority
 
-1. **Adyen live credentials** — Switch `NEXT_PUBLIC_ADYEN_ENVIRONMENT=live` and update client key.
+1. **Stripe `order_ref` in return URL** — Backend Stripe `success_url` currently does not append `order_ref` as a query param. The frontend falls back to `sessionStorage("stripe_order_ref")` written before the redirect. Confirm with the backend team that `success_url` is built as `{FRONTEND_URL}/checkout/return?session_id={CHECKOUT_SESSION_ID}&order_ref=OKL-XXXXX`.
 
-2. **Admin existing sessions after RBAC** — Users who logged in before `admin_role` cookie was introduced will see all nav items. They need to log out and back in once.
+2. **Stripe diagnostic logging** — Temporary `console.log` lines in `app/api/checkout/stripe-session/route.ts` (target URL, request body, HTTP status, has checkout_url, has order_ref). Remove once the backend confirms the response shape.
 
-3. **DNS redirect** — Configure okelcor.de → okelcor.com redirect at DNS/hosting level.
+3. **Admin existing sessions after RBAC** — Users who logged in before `admin_role` cookie was introduced will see all nav items. They need to log out and back in once.
+
+4. **DNS redirect** — Configure okelcor.de → okelcor.com redirect at DNS/hosting level.
 
 ### Low Priority
 
-4. **Newsletter backend** — `components/newsletter-strip.tsx` shows success UI but does not POST to any endpoint.
+5. **Newsletter backend** — `components/newsletter-strip.tsx` shows success UI but does not POST to any endpoint.
 
-5. **Unused public assets** — Old placeholder SVGs in `public/brands/` safe to delete.
+6. **Unused public assets** — Old placeholder SVGs in `public/brands/` safe to delete.
 
 ---
 
