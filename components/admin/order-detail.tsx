@@ -6,7 +6,7 @@ import {
   AlertCircle, CheckCircle2, ChevronDown, Loader2,
   RefreshCw, MapPin, Ship, Clock, Package,
 } from "lucide-react";
-import { updateOrderStatus } from "@/app/admin/orders/actions";
+import { updateOrderStatus, cancelOrder, deleteOrder } from "@/app/admin/orders/actions";
 import type { AdminOrderFull } from "@/lib/admin-api";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -229,7 +229,13 @@ function TrackingWidget({ containerNumber }: { containerNumber: string }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function OrderDetail({ order }: { order: AdminOrderFull }) {
+export default function OrderDetail({
+  order,
+  adminRole,
+}: {
+  order: AdminOrderFull;
+  adminRole: string;
+}) {
   const router = useRouter();
 
   const [status, setStatus] = useState<OrderStatus>(
@@ -243,6 +249,22 @@ export default function OrderDetail({ order }: { order: AdminOrderFull }) {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved,     setSaved]     = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  // Cancel state
+  const [cancelError,   setCancelError]   = useState<string | null>(null);
+  const [cancelSuccess, setCancelSuccess] = useState(false);
+  const [isCancelPending, startCancelTransition] = useTransition();
+
+  // Delete modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteRef,       setDeleteRef]       = useState("");
+  const [deleteError,     setDeleteError]     = useState<string | null>(null);
+  const [isDeletePending, startDeleteTransition] = useTransition();
+
+  // Role-based access
+  const canCancel = ["admin", "order_manager", "super_admin"].includes(adminRole);
+  const canDelete = adminRole === "super_admin";
+  const cancelDisabled = ["cancelled", "delivered"].includes(status);
 
   const isDirty =
     status          !== order.status                     ||
@@ -265,6 +287,39 @@ export default function OrderDetail({ order }: { order: AdminOrderFull }) {
         router.push("/admin/orders");
       }
     });
+  };
+
+  const handleCancel = () => {
+    setCancelError(null);
+    setCancelSuccess(false);
+    startCancelTransition(async () => {
+      const result = await cancelOrder(order.id);
+      if (result.error) {
+        setCancelError(result.error);
+      } else {
+        setCancelSuccess(true);
+        setStatus("cancelled");
+        setTimeout(() => setCancelSuccess(false), 4000);
+      }
+    });
+  };
+
+  const handleDelete = () => {
+    setDeleteError(null);
+    startDeleteTransition(async () => {
+      const result = await deleteOrder(order.id, deleteRef);
+      if (result.error) {
+        setDeleteError(result.error);
+      } else if (result.deleted) {
+        router.push("/admin/orders");
+      }
+    });
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteModalOpen(false);
+    setDeleteRef("");
+    setDeleteError(null);
   };
 
   // ── Active container to show the tracking widget
@@ -466,6 +521,102 @@ export default function OrderDetail({ order }: { order: AdminOrderFull }) {
 
       {/* ── Container tracking widget (only when container_number is saved on order) ── */}
       {savedContainer && <TrackingWidget containerNumber={savedContainer} />}
+
+      {/* ── Order Actions ── */}
+      <div className="rounded-2xl bg-white p-6 shadow-sm">
+        <p className="mb-4 text-[0.7rem] font-bold uppercase tracking-[0.15em] text-[#5c5e62]">
+          Order Actions
+        </p>
+
+        <div className="flex flex-wrap gap-3">
+          {canCancel && (
+            <button
+              type="button"
+              onClick={handleCancel}
+              disabled={isCancelPending || cancelDisabled}
+              className="h-9 rounded-full border border-amber-300 bg-amber-50 px-5 text-[0.83rem] font-semibold text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+              title={cancelDisabled ? `Order is already ${status}` : undefined}
+            >
+              {isCancelPending ? "Cancelling…" : "Cancel Order"}
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setDeleteModalOpen(true)}
+            disabled={!canDelete}
+            className="h-9 rounded-full border border-red-200 bg-red-50 px-5 text-[0.83rem] font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40"
+            title={!canDelete ? "Only super admins can delete orders" : undefined}
+          >
+            Delete Order
+          </button>
+        </div>
+
+        {cancelError && (
+          <div className="mt-3 flex items-center gap-2 text-[0.83rem] text-red-600">
+            <AlertCircle size={14} className="shrink-0" />
+            {cancelError}
+          </div>
+        )}
+        {cancelSuccess && (
+          <div className="mt-3 flex items-center gap-2 text-[0.83rem] text-emerald-600">
+            <CheckCircle2 size={14} className="shrink-0" />
+            Order cancelled successfully.
+          </div>
+        )}
+      </div>
+
+      {/* ── Delete confirmation modal ── */}
+      {deleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <p className="mb-1 text-[0.75rem] font-bold uppercase tracking-[0.15em] text-red-600">
+              Delete Order
+            </p>
+            <p className="mb-5 text-[0.875rem] text-[#1a1a1a]">
+              This is permanent and cannot be undone. Type the order reference to confirm.
+            </p>
+
+            <p className="mb-1.5 text-[0.7rem] font-bold uppercase tracking-[0.1em] text-[#5c5e62]">
+              Order Reference
+            </p>
+            <input
+              type="text"
+              value={deleteRef}
+              onChange={(e) => setDeleteRef(e.target.value)}
+              placeholder={order.order_ref}
+              autoFocus
+              className="mb-4 h-10 w-full rounded-xl border border-black/[0.09] bg-white px-3.5 font-mono text-[0.875rem] text-[#1a1a1a] outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+            />
+
+            {deleteError && (
+              <div className="mb-4 flex items-start gap-2 rounded-xl border border-red-100 bg-red-50 px-3 py-2.5 text-[0.83rem] text-red-700">
+                <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                {deleteError}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={closeDeleteModal}
+                disabled={isDeletePending}
+                className="h-9 rounded-full border border-black/[0.09] bg-white px-5 text-[0.83rem] font-semibold text-[#5c5e62] transition hover:border-black/20 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={isDeletePending || deleteRef !== order.order_ref}
+                className="h-9 rounded-full bg-red-600 px-5 text-[0.83rem] font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
+              >
+                {isDeletePending ? "Deleting…" : "Confirm Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
