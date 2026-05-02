@@ -10,15 +10,19 @@ export default function CheckoutReturnPage() {
   const sessionId     = searchParams.get("session_id") ?? "";
   const queryOrderRef = searchParams.get("order_ref") ?? searchParams.get("orderRef") ?? "";
 
-  const [orderRef] = useState(() =>
-    queryOrderRef ||
-    (typeof window !== "undefined" ? sessionStorage.getItem("stripe_order_ref") ?? "" : "")
-  );
+  const [sessionRef, setSessionRef] = useState("");
 
   useEffect(() => {
+    // Read sessionStorage BEFORE clearing it so the fallback is captured.
+    const stored = sessionStorage.getItem("stripe_order_ref") ?? "";
+    if (stored) setSessionRef(stored);
     sessionStorage.removeItem("stripe_checkout_session_id");
     sessionStorage.removeItem("stripe_order_ref");
   }, []);
+
+  // queryOrderRef (from URL) takes precedence; sessionRef is the fallback for
+  // cases where the param is absent but the ref was stored before the redirect.
+  const orderRef = queryOrderRef || sessionRef;
 
   // Stripe Checkout success — session_id is always present in the success_url redirect.
   if (sessionId) {
