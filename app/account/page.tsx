@@ -69,6 +69,12 @@ function B2CDashboard() {
         description="Track and manage your tyre orders"
       />
       <DashCard
+        href="/account/invoices"
+        icon={Receipt}
+        title="Receipts & Invoices"
+        description="View receipts for your purchases"
+      />
+      <DashCard
         href="/account/addresses"
         icon={MapPin}
         title="Saved Addresses"
@@ -105,7 +111,7 @@ function B2BDashboard() {
         href="/account/invoices"
         icon={Receipt}
         title="Invoices"
-        description="Download and manage your invoices"
+        description="View paid invoices and billing records for your company."
       />
       <DashCard
         href="/account/company"

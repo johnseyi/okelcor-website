@@ -65,7 +65,15 @@ export default async function InvoicesPage() {
   const customer = await getCustomerFromCookie();
   if (!customer) redirect("/login?redirect=/account/invoices");
 
+  const isB2B = customer.customer_type === "b2b";
   const invoices = await fetchInvoices(token);
+
+  const pageLabel    = isB2B ? "Invoices"           : "Receipts & Invoices";
+  const accountLabel = isB2B ? "B2B"                : "Personal";
+  const emptyTitle   = isB2B ? "No invoices yet"    : "No receipts yet";
+  const emptyBody    = isB2B
+    ? "Paid orders will appear here after checkout."
+    : "Your paid orders will appear here.";
 
   return (
     <main className="min-h-screen bg-[#f5f5f5]">
@@ -77,13 +85,17 @@ export default async function InvoicesPage() {
         <nav className="mb-6 flex items-center gap-1.5 text-[0.8rem] text-[var(--muted)]">
           <Link href="/account" className="hover:text-[var(--foreground)]">My Account</Link>
           <ChevronRight size={13} strokeWidth={2} />
-          <span className="text-[var(--foreground)] font-medium">Invoices</span>
+          <span className="text-[var(--foreground)] font-medium">{pageLabel}</span>
         </nav>
 
         {/* Header */}
         <div className="mb-6">
-          <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--primary)]">B2B</p>
-          <h1 className="text-2xl font-extrabold tracking-tight text-[var(--foreground)]">Invoices</h1>
+          <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--primary)]">
+            {accountLabel}
+          </p>
+          <h1 className="text-2xl font-extrabold tracking-tight text-[var(--foreground)]">
+            {pageLabel}
+          </h1>
         </div>
 
         {invoices.length === 0 ? (
@@ -92,9 +104,9 @@ export default async function InvoicesPage() {
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#f5f5f5]">
               <Receipt size={24} strokeWidth={1.5} className="text-[var(--muted)]" />
             </div>
-            <p className="mt-4 text-[1rem] font-bold text-[var(--foreground)]">No invoices yet</p>
+            <p className="mt-4 text-[1rem] font-bold text-[var(--foreground)]">{emptyTitle}</p>
             <p className="mt-1 max-w-[320px] text-[0.85rem] leading-6 text-[var(--muted)]">
-              Invoices for your orders will appear here once issued by our team.
+              {emptyBody}
             </p>
             <Link
               href="/contact"
@@ -141,7 +153,7 @@ export default async function InvoicesPage() {
                       <Icon size={11} />
                       {s.label}
                     </span>
-                    {inv.pdf_url && (
+                    {inv.pdf_url ? (
                       <a
                         href={inv.pdf_url}
                         target="_blank"
@@ -151,6 +163,10 @@ export default async function InvoicesPage() {
                       >
                         <Download size={13} strokeWidth={2} />
                       </a>
+                    ) : (
+                      <span className="rounded-full border border-black/[0.06] px-2.5 py-0.5 text-[0.68rem] font-medium text-[var(--muted)]">
+                        PDF pending
+                      </span>
                     )}
                   </div>
                 </div>
