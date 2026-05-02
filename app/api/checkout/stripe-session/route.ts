@@ -22,10 +22,12 @@ export async function POST(request: NextRequest) {
   }
 
   const body = JSON.stringify(bodyObj);
-  console.log("[stripe-session] forwarding to Laravel:", body);
+  const targetUrl = `${API_URL}/payments/create-session`;
+  console.log("[stripe-session] target URL :", targetUrl);
+  console.log("[stripe-session] request body:", body);
 
   try {
-    const res = await fetch(`${API_URL}/payments/create-session`, {
+    const res = await fetch(targetUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -37,7 +39,16 @@ export async function POST(request: NextRequest) {
     });
 
     const text = await res.text();
-    console.log("[stripe-session] Laravel responded:", res.status, text.slice(0, 500));
+
+    // Parse response to audit whether the fields the frontend needs are present.
+    let parsed: Record<string, unknown> = {};
+    try { parsed = JSON.parse(text); } catch { /* non-JSON response */ }
+    const responseData = (parsed?.data ?? {}) as Record<string, unknown>;
+    console.log("[stripe-session] HTTP status     :", res.status);
+    console.log("[stripe-session] has checkout_url :", typeof responseData.checkout_url === "string");
+    console.log("[stripe-session] has order_ref    :", typeof responseData.order_ref === "string");
+    console.log("[stripe-session] raw response     :", text.slice(0, 600));
+
     return new NextResponse(text, {
       status: res.status,
       headers: {
