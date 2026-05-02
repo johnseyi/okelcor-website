@@ -9,19 +9,31 @@ type Status = "loading" | "paid" | "pending" | "failed";
 
 export default function CheckoutReturnPage() {
   const searchParams = useSearchParams();
-  const orderRef     = searchParams.get("orderRef") ?? "";
+  const sessionId    = searchParams.get("session_id") ?? "";
+  const queryOrderRef = searchParams.get("order_ref") ?? searchParams.get("orderRef") ?? "";
 
-  const [status, setStatus] = useState<Status>("loading");
+  const [status, setStatus] = useState<Status>(sessionId ? "paid" : "loading");
   const [amount, setAmount]  = useState<string>("");
+  const [orderRef] = useState(() =>
+    queryOrderRef ||
+    (typeof window !== "undefined" ? sessionStorage.getItem("stripe_order_ref") ?? "" : "")
+  );
 
   useEffect(() => {
+    sessionStorage.removeItem("stripe_checkout_session_id");
+    sessionStorage.removeItem("stripe_order_ref");
+
+    if (sessionId) {
+      return;
+    }
+
     const paymentId = sessionStorage.getItem("mollie_payment_id");
     sessionStorage.removeItem("mollie_payment_id");
     sessionStorage.removeItem("mollie_order_ref");
 
     if (!paymentId) {
       // No paymentId stored — treat as unknown/pending
-      setStatus("pending");
+      queueMicrotask(() => setStatus("pending"));
       return;
     }
 
@@ -38,7 +50,7 @@ export default function CheckoutReturnPage() {
         }
       })
       .catch(() => setStatus("pending"));
-  }, []);
+  }, [queryOrderRef, sessionId]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#f5f5f5] px-4 py-16">

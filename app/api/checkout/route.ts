@@ -9,24 +9,29 @@ import {
 /**
  * app/api/checkout/route.ts
  *
- * Checkout order handler.
+ * Legacy manual checkout order handler.
+ *
+ * Active checkout is Stripe-primary:
+ *   components/checkout/checkout-flow.tsx posts to /api/checkout/stripe-session
+ *   and the proxy forwards to Laravel /api/v1/payments/create-session.
+ *
+ * This route is retained for the older manual/offline checkout path only.
  *
  * CURRENT BEHAVIOUR (no payment credentials):
  *   Validates the order, sends a notification email to the Okelcor team via
  *   Resend, and returns a manual-order success with an order reference.
  *   The customer sees a success screen; the team handles payment offline.
  *
- * WHEN CREDENTIALS ARE READY:
- *   Each provider has a clearly marked integration point below.
- *   Fill in the SDK call, set the env vars — live payments activate
- *   automatically with no structural changes to this file.
+ * LEGACY PROVIDERS:
+ *   Adyen/PayPal integration notes are inactive until Okelcor account/API
+ *   credentials are approved.
  *
  * ── INTEGRATION POINTS ────────────────────────────────────────────────────────
  *
- * Adyen (card / Apple Pay / Google Pay / Klarna / PayPal via Drop-in):
+ * Adyen (legacy inactive: card / Apple Pay / Google Pay / Klarna / PayPal):
  *   Package:  @adyen/adyen-web (already installed)
  *   Env vars: NEXT_PUBLIC_ADYEN_CLIENT_KEY, NEXT_PUBLIC_ADYEN_ENVIRONMENT
- *   Sessions: POST /api/payments/create-session → Laravel → Adyen Sessions API
+ *   Prior sessions idea: POST /api/payments/create-session -> Laravel -> Adyen.
  *
  * PayPal (standalone):
  *   Install:  npm install @paypal/paypal-server-sdk
@@ -202,13 +207,11 @@ export async function POST(req: NextRequest): Promise<NextResponse<CheckoutRespo
   let isLive     = false;
 
   // ── Payment processing ─────────────────────────────────────────────────────
-  // Each block is the integration point for a live provider.
-  // When credentials are configured, uncomment and implement the SDK call.
-  // On payment failure, return an error response before the email block.
+  // Legacy provider placeholders. Do not use this route for active checkout;
+  // Stripe Checkout is handled by /api/checkout/stripe-session.
 
   if (adyenConfigured) {
-    // Adyen Drop-in handles card/Apple Pay/Google Pay/Klarna/PayPal.
-    // Live payment is completed client-side via /api/payments/create-session.
+    // Legacy/inactive Adyen placeholder retained for later approval.
     // This route handles email notification and order reference generation only.
     isLive = false;
   }

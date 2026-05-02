@@ -1,5 +1,10 @@
 import { createMollieClient } from "@mollie/api-client";
 
+/**
+ * LEGACY/INACTIVE: Mollie helpers are retained for historical routes only.
+ * Active checkout uses Stripe Checkout via /api/checkout/stripe-session,
+ * which forwards to Laravel /api/v1/payments/create-session.
+ */
 export function getMollieClient() {
   const apiKey = process.env.MOLLIE_API_KEY;
   if (!apiKey) throw new Error("MOLLIE_API_KEY is not set.");

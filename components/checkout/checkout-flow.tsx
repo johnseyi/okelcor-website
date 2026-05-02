@@ -245,7 +245,7 @@ export default function CheckoutFlow() {
     }),
   });
 
-  // ── Submit → Mollie redirect ────────────────────────────────────────────────
+  // Submit -> Stripe Checkout redirect via Laravel /api/v1/payments/create-session.
 
   const handleSubmit = async () => {
     if (!validateDelivery()) {
@@ -267,27 +267,31 @@ export default function CheckoutFlow() {
     });
 
     try {
-      const res = await fetch("/api/payments/mollie/create", {
+      const res = await fetch("/api/checkout/stripe-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(orderPayload()),
       });
       const data = await res.json();
+      const checkoutData = data?.data ?? {};
+      const checkoutUrl = checkoutData.checkout_url;
 
-      if (!res.ok || data.error) {
-        setSubmitError(data.error ?? "Failed to create payment. Please try again.");
+      if (!res.ok || data.error || typeof checkoutUrl !== "string") {
+        setSubmitError(data.error ?? data.message ?? "Failed to start Stripe Checkout. Please try again.");
         setSubmitting(false);
         return;
       }
 
-      // Store paymentId in sessionStorage so the return page can verify status
-      sessionStorage.setItem("mollie_payment_id", data.paymentId);
-      sessionStorage.setItem("mollie_order_ref", data.orderRef);
+      if (checkoutData.checkout_session_id) {
+        sessionStorage.setItem("stripe_checkout_session_id", checkoutData.checkout_session_id);
+      }
+      if (checkoutData.order_ref) {
+        sessionStorage.setItem("stripe_order_ref", checkoutData.order_ref);
+      }
 
       clearCart();
 
-      // Redirect to Mollie hosted checkout
-      window.location.href = data.checkoutUrl;
+      window.location.href = checkoutUrl;
     } catch {
       setSubmitError("Network error. Please check your connection and try again.");
       setSubmitting(false);
@@ -396,7 +400,7 @@ export default function CheckoutFlow() {
           {/* Payment method selection */}
           <SectionCard title={c.paymentMethod}>
             <p className="mb-4 text-[0.88rem] leading-6 text-[var(--muted)]">
-              Select your preferred payment method. You will be redirected to Mollie&apos;s secure checkout to complete the payment.
+              Select your preferred payment method. You will be redirected to Stripe Checkout to complete the payment securely.
             </p>
 
             <div className="flex flex-col gap-2.5">
@@ -445,7 +449,7 @@ export default function CheckoutFlow() {
               </span>
               <span className="flex items-center gap-1.5">
                 <Lock size={14} className="text-green-500" />
-                PCI DSS compliant via Mollie
+                PCI DSS compliant via Stripe
               </span>
             </div>
           </SectionCard>
@@ -475,7 +479,7 @@ export default function CheckoutFlow() {
             ) : (
               <>
                 <Lock size={17} strokeWidth={2.2} />
-                Pay securely with Mollie
+                Pay securely with Stripe
               </>
             )}
           </button>

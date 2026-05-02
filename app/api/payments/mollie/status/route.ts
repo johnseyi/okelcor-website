@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getMollieClient } from "@/lib/mollie";
 
+/**
+ * LEGACY/INACTIVE: Mollie status lookup is retained for historical return
+ * handling only. Active checkout uses Stripe Checkout via
+ * /api/checkout/stripe-session -> /api/v1/payments/create-session.
+ */
 export async function GET(request: NextRequest) {
   const paymentId = request.nextUrl.searchParams.get("paymentId");
 
