@@ -60,7 +60,87 @@ Development environment: Windows 11, VS Code, Node.js / npm
 
 ---
 
-## Completed in Latest Session — Admin RBAC, Product Card & Bug Fixes (2026-04-19/20)
+## Completed in Latest Session — Admin Order Actions, Activity Log & Invoice UX (2026-05-03)
+
+### Admin Order Detail — Cancel & Delete Actions
+
+**Files:** `app/admin/orders/actions.ts`, `app/admin/orders/[id]/page.tsx`, `components/admin/order-detail.tsx`
+
+Two new server actions added to `app/admin/orders/actions.ts`:
+
+- **`cancelOrder(id)`** — `PATCH /admin/orders/{id}/status` with `{ status: "cancelled" }`. Revalidates both list and detail paths.
+- **`deleteOrder(id, confirmRef)`** — `DELETE /admin/orders/{id}` with `{ confirm_ref }`. Explicit handling: 422 → ref mismatch message, 409 → paid order cannot be deleted message. Returns `{ deleted: true }` on success.
+
+`app/admin/orders/[id]/page.tsx` updated to read `admin_role` cookie server-side and pass it as `adminRole` prop to `OrderDetail`.
+
+`components/admin/order-detail.tsx` updated:
+- **Cancel Order button**: visible to `admin`, `order_manager`, `super_admin`; disabled when status is `cancelled` or `delivered`; on success updates local status state to `cancelled` so button self-disables
+- **Delete Order button**: always rendered; disabled (with tooltip) unless `super_admin`
+- **Delete confirmation modal**: input must exactly match `order.order_ref` before confirm enables; inline error display for 422/409; on success navigates to `/admin/orders`
+- New state: `cancelError`, `cancelSuccess`, `isCancelPending`, `deleteModalOpen`, `deleteRef`, `deleteError`, `isDeletePending`
+
+---
+
+### Admin Order Detail — Activity Log
+
+**Files:** `lib/admin-api.ts`, `components/admin/order-detail.tsx`
+
+New type added to `lib/admin-api.ts`:
+```typescript
+export type AdminOrderLog = {
+  id: number;
+  action: string;
+  old_value?: string | null;
+  new_value?: string | null;
+  notes?: string | null;
+  admin_user_email?: string | null;
+  ip_address?: string | null;
+  created_at: string;
+};
+```
+`logs?: AdminOrderLog[]` added to `AdminOrderFull`.
+
+New `ActivityLog` + `LogEntry` components added to `order-detail.tsx`:
+- Timeline with orange dot markers consistent with the container tracking widget
+- `formatAction()` converts snake_case action strings to Title Case
+- Old value shown as red strikethrough badge, new value as green badge
+- Admin email, IP address (monospace), notes, and timestamp per entry
+- Empty state: "No activity has been recorded for this order yet."
+- Card placed below Order Actions, above the delete modal
+
+---
+
+### Invoice Discovery & UX — B2B and B2C
+
+**Files:** `app/account/page.tsx`, `app/account/invoices/page.tsx`
+
+`app/account/page.tsx`:
+- **B2C dashboard**: added "Receipts & Invoices" card (icon: `Receipt`, links to `/account/invoices`, description: "View receipts for your purchases") — previously invoices were only visible to B2B
+- **B2B dashboard**: updated Invoices card description to "View paid invoices and billing records for your company."
+
+`app/account/invoices/page.tsx`:
+- Reads `customer.customer_type` to determine `isB2B`
+- Fixed hardcoded `"B2B"` account badge — now shows `"Personal"` for B2C customers
+- Page title: B2B → "Invoices", B2C → "Receipts & Invoices"
+- Breadcrumb label updated to match page title
+- Empty state: B2B → "No invoices yet. Paid orders will appear here after checkout." / B2C → "No receipts yet. Your paid orders will appear here."
+- When `pdf_url` is absent: shows `"PDF pending"` pill badge instead of nothing
+
+---
+
+### Stripe Order Reference Audit (no code changes)
+
+**Root cause identified:** Laravel's `POST /payments/create-session` does not return `order_ref` in its response. The order is created by the webhook (`checkout.session.completed`), not at session creation time. Frontend code is correct on both channels (URL param + sessionStorage fallback), but both are empty because the backend never supplies the value.
+
+**Backend fix required:** Create the order record at session creation time, generate `order_ref`, return it in the response body (`data.order_ref`) AND embed it in the Stripe `success_url`:
+```
+{FRONTEND_URL}/checkout/return?session_id={CHECKOUT_SESSION_ID}&order_ref=OKL-XXXXX
+```
+Frontend requires no changes once the backend supplies the field.
+
+---
+
+## Completed in Previous Session — Admin RBAC, Product Card & Bug Fixes (2026-04-19/20)
 
 ### Product Card — Full-Bleed Image
 
@@ -402,7 +482,7 @@ See prior entries for:
 | Quote page | Complete |
 | Cart drawer | Complete |
 | **Checkout page** | **Updated** — Stripe Checkout; proxy `app/api/checkout/stripe-session/route.ts` → Laravel `/api/v1/payments/create-session` |
-| **Checkout return** | **Updated** — `/checkout/return`; "Order received" copy; `order_ref` from URL param + sessionStorage fallback |
+| **Checkout return** | **Updated** — `/checkout/return`; "Order received" copy; `order_ref` from URL param + sessionStorage fallback (awaiting backend fix to supply `order_ref`) |
 | Fuel Echo Tech page | Complete — `/fet`; green theme; ROI calculator |
 | About / Contact / News | Complete |
 | 404 / Error / Loading | Complete |
@@ -415,6 +495,10 @@ See prior entries for:
 | **Admin RBAC** | **Complete** — `lib/admin-permissions.ts`; canAccess(); route guard; nav filtering by role |
 | Admin profile | Complete — first/last/display name fields; role label from API |
 | Admin users | Complete — create without password; temp password notice; role_label display |
+| **Admin order actions** | **New** — Cancel Order (admin/order_manager/super_admin); Delete Order (super_admin only, confirm-ref modal); 422/409 error handling |
+| **Admin order activity log** | **New** — `ActivityLog` card in order detail; timeline with old→new diff, actor email, IP, notes |
+| **Account invoices (B2C)** | **Updated** — Receipts & Invoices card added to B2C dashboard; previously B2B only |
+| **Account invoices page** | **Updated** — customer-type-aware title/badge/empty state; PDF pending pill |
 | Admin products / articles / orders / quotes / brands / hero-slides / settings / supplier | Complete |
 
 ---
@@ -640,7 +724,7 @@ Email template: dark Okelcor header, migration announcement, "Set Your Password 
 
 ### Medium Priority
 
-1. **Stripe `order_ref` in return URL** — Backend Stripe `success_url` currently does not append `order_ref` as a query param. The frontend falls back to `sessionStorage("stripe_order_ref")` written before the redirect. Confirm with the backend team that `success_url` is built as `{FRONTEND_URL}/checkout/return?session_id={CHECKOUT_SESSION_ID}&order_ref=OKL-XXXXX`.
+1. **Stripe `order_ref` not displayed on return page — backend fix required** — Root cause confirmed via audit: Laravel's `POST /payments/create-session` does not return `order_ref` because the order is created by the Stripe webhook, not at session creation time. Frontend code is correct. Backend must: (a) create the order record at session creation time, (b) return `order_ref` in `data.order_ref`, and (c) embed it in the Stripe `success_url` as `?order_ref=OKL-XXXXX`. No frontend changes needed once backend supplies the field.
 
 2. **Stripe diagnostic logging** — Temporary `console.log` lines in `app/api/checkout/stripe-session/route.ts` (target URL, request body, HTTP status, has checkout_url, has order_ref). Remove once the backend confirms the response shape.
 
