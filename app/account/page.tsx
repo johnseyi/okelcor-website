@@ -69,6 +69,12 @@ function B2CDashboard() {
         description="Track and manage your tyre orders"
       />
       <DashCard
+        href="/account/quotes"
+        icon={FileText}
+        title="Quote Requests"
+        description="Track the status of your tyre quote requests"
+      />
+      <DashCard
         href="/account/invoices"
         icon={Receipt}
         title="Receipts & Invoices"
