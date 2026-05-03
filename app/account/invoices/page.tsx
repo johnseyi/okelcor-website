@@ -155,7 +155,7 @@ export default async function InvoicesPage() {
                     </span>
                     {inv.pdf_url ? (
                       <a
-                        href={inv.pdf_url}
+                        href={`/api/account/invoices/${inv.id}/download`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex h-8 w-8 items-center justify-center rounded-full border border-black/[0.08] text-[var(--muted)] transition hover:border-[var(--primary)]/40 hover:text-[var(--primary)]"
