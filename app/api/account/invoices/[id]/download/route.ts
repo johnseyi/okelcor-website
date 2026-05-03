@@ -18,9 +18,13 @@ export async function GET(
   }
 
   const { id } = await params;
+  const targetUrl = `${API_URL}/invoices/${id}/download`;
+
+  console.log("[invoice-download] token present :", !!token);
+  console.log("[invoice-download] target URL    :", targetUrl);
 
   try {
-    const res = await fetch(`${API_URL}/invoices/${id}/download`, {
+    const res = await fetch(targetUrl, {
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: "application/pdf,application/octet-stream,*/*",
@@ -28,8 +32,12 @@ export async function GET(
       cache: "no-store",
     });
 
+    console.log("[invoice-download] Laravel status :", res.status);
+    console.log("[invoice-download] content-type   :", res.headers.get("Content-Type"));
+
     if (!res.ok) {
       const errText = await res.text();
+      console.log("[invoice-download] error body     :", errText.slice(0, 300));
       return new NextResponse(errText, {
         status: res.status,
         headers: { "Content-Type": "application/json" },
