@@ -11,9 +11,11 @@ const inputCls =
 export default function VatField({
   value,
   onChange,
+  onValidationChange,
 }: {
   value: string;
   onChange: (v: string) => void;
+  onValidationChange?: (valid: boolean) => void;
 }) {
   const [status, setStatus] = useState<VatStatus>("idle");
 
@@ -29,18 +31,25 @@ export default function VatField({
       });
       if (res.status === 503 || res.status === 502 || res.status === 504) {
         setStatus("unavailable");
+        onValidationChange?.(false);
         return;
       }
       const data = await res.json();
-      setStatus(data.data?.valid === true ? "valid" : "invalid");
+      const valid = data.data?.valid === true;
+      setStatus(valid ? "valid" : "invalid");
+      onValidationChange?.(valid);
     } catch {
       setStatus("unavailable");
+      onValidationChange?.(false);
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(e.target.value);
-    if (status !== "idle") setStatus("idle");
+    if (status !== "idle") {
+      setStatus("idle");
+      onValidationChange?.(false);
+    }
   };
 
   return (

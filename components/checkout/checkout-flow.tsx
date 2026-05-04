@@ -181,6 +181,7 @@ export default function CheckoutFlow() {
   });
   const [deliveryErrors, setDeliveryErrors] = useState<DeliveryErrors>({});
   const [vatNumber, setVatNumber]           = useState("");
+  const [vatValid, setVatValid]             = useState(false);
   const [submitting, setSubmitting]         = useState(false);
   const [submitError, setSubmitError]       = useState<string | null>(null);
   const [fetAdded, setFetAdded]         = useState(false);
@@ -352,7 +353,11 @@ export default function CheckoutFlow() {
           {/* VAT — b2b only */}
           {showVatField && (
             <SectionCard title="Business Details">
-              <VatField value={vatNumber} onChange={setVatNumber} />
+              <VatField
+                value={vatNumber}
+                onChange={setVatNumber}
+                onValidationChange={setVatValid}
+              />
             </SectionCard>
           )}
 
@@ -448,6 +453,10 @@ export default function CheckoutFlow() {
               unitPrice: FET_PRODUCT.unit_price,
               qty:       fetQty,
             } : null}
+            country={delivery.country}
+            vatNumber={vatNumber}
+            vatValid={vatValid}
+            customerType={customer?.customer_type}
           />
         </div>
 
