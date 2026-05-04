@@ -1,7 +1,11 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { useCart } from "@/context/cart-context";
 import { useLanguage } from "@/context/language-context";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type FetAddon = {
   name: string;
@@ -9,10 +13,27 @@ type FetAddon = {
   qty: number;
 };
 
+type TaxPreview = {
+  subtotal_net: number;
+  delivery_cost: number;
+  tax_rate: number;
+  tax_amount: number;
+  tax_treatment: string;
+  is_reverse_charge: boolean;
+  total: number;
+  note: string | null;
+};
+
 type Props = {
   deliveryCost: number;
   fetAddon?: FetAddon | null;
+  country: string;
+  vatNumber: string;
+  vatValid: boolean;
+  customerType?: string;
 };
+
+// ─── SummaryRow ───────────────────────────────────────────────────────────────
 
 function SummaryRow({
   label,
@@ -45,16 +66,106 @@ function SummaryRow({
   );
 }
 
-export default function OrderSummary({ deliveryCost, fetAddon }: Props) {
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export default function OrderSummary({
+  deliveryCost,
+  fetAddon,
+  country,
+  vatNumber,
+  vatValid,
+  customerType,
+}: Props) {
   const { items, subtotal, totalItems } = useCart();
   const { t } = useLanguage();
   const c = t.checkout;
 
   const fetLineTotal = fetAddon ? fetAddon.unitPrice * fetAddon.qty : 0;
-  const total = subtotal + deliveryCost + fetLineTotal;
+  const cartTotal = subtotal + deliveryCost + fetLineTotal;
+
+  // Keep vatNumber readable inside the effect without making it a trigger.
+  // Per spec, tax preview fires on vatValid change, not on every keystroke.
+  const vatNumberRef = useRef(vatNumber);
+  useEffect(() => { vatNumberRef.current = vatNumber; });
+
+  const [taxPreview, setTaxPreview] = useState<TaxPreview | null>(null);
+  const [taxLoading, setTaxLoading] = useState(false);
+  const [taxError, setTaxError] = useState(false);
+
+  useEffect(() => {
+    if (!country) {
+      setTaxPreview(null);
+      setTaxLoading(false);
+      setTaxError(false);
+      return;
+    }
+
+    setTaxLoading(true);
+    setTaxError(false);
+
+    const controller = new AbortController();
+
+    const payload = {
+      items: [
+        ...items.map((i) => ({
+          product_id: i.product.id,
+          unit_price: i.product.price,
+          quantity: i.quantity,
+        })),
+        ...(fetAddon
+          ? [{ unit_price: fetAddon.unitPrice, quantity: fetAddon.qty }]
+          : []),
+      ],
+      delivery_cost: deliveryCost,
+      country,
+      vat_number: vatValid ? vatNumberRef.current : undefined,
+      vat_valid: vatValid,
+      customer_type: customerType,
+    };
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/checkout/tax-preview", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
+
+        if (!res.ok) throw new Error("preview_failed");
+
+        const json = await res.json();
+        const data: TaxPreview | null = json?.data ?? null;
+        if (!data || typeof data.total !== "number") throw new Error("invalid_response");
+
+        setTaxPreview(data);
+        setTaxError(false);
+      } catch (err) {
+        if ((err as Error).name === "AbortError") return;
+        setTaxPreview(null);
+        setTaxError(true);
+      } finally {
+        setTaxLoading(false);
+      }
+    }, 400);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  // vatNumber intentionally excluded: only vatValid triggers the call (per spec).
+  // vatNumberRef.current is synced on every render and read inside the timer.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, deliveryCost, fetAddon, country, vatValid, customerType]);
+
+  // ── Derived display values ─────────────────────────────────────────────────
+
+  const displaySubtotal = taxPreview ? taxPreview.subtotal_net : subtotal;
+  const displayDelivery = taxPreview ? taxPreview.delivery_cost : deliveryCost;
+  const displayTotal    = taxPreview ? taxPreview.total : cartTotal;
 
   return (
-    <div className="rounded-[22px] bg-[#efefef] overflow-hidden">
+    <div className="overflow-hidden rounded-[22px] bg-[#efefef]">
       {/* Header */}
       <div className="border-b border-black/[0.07] px-6 py-4">
         <p className="text-[1rem] font-extrabold text-[var(--foreground)]">
@@ -71,7 +182,6 @@ export default function OrderSummary({ deliveryCost, fetAddon }: Props) {
           const lineTotal = item.product.price * item.quantity;
           return (
             <div key={item.product.id} className="flex gap-3 py-4">
-              {/* Thumbnail */}
               <div className="h-[56px] w-[56px] shrink-0 overflow-hidden rounded-[10px] bg-white">
                 <img
                   src={item.product.image}
@@ -80,8 +190,6 @@ export default function OrderSummary({ deliveryCost, fetAddon }: Props) {
                   className="h-full w-full object-cover"
                 />
               </div>
-
-              {/* Info */}
               <div className="flex min-w-0 flex-1 flex-col justify-between">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
@@ -113,7 +221,7 @@ export default function OrderSummary({ deliveryCost, fetAddon }: Props) {
         {fetAddon && (
           <div className="flex gap-3 py-4">
             <div className="flex h-[56px] w-[56px] shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-[#dcfce7]">
-              <span className="text-[10px] font-extrabold leading-tight text-[#166534] text-center">FET</span>
+              <span className="text-center text-[10px] font-extrabold leading-tight text-[#166534]">FET</span>
             </div>
             <div className="flex min-w-0 flex-1 flex-col justify-between">
               <div className="flex items-start justify-between gap-2">
@@ -141,24 +249,68 @@ export default function OrderSummary({ deliveryCost, fetAddon }: Props) {
       </div>
 
       {/* Totals */}
-      <div className="border-t border-black/[0.07] px-6 py-5 flex flex-col gap-3">
-        <SummaryRow label={c.subtotal} value={`€${subtotal.toFixed(2)}`} />
+      <div className="flex flex-col gap-3 border-t border-black/[0.07] px-6 py-5">
+        {/* Subtotal */}
+        <SummaryRow label={c.subtotal} value={`€${displaySubtotal.toFixed(2)}`} />
+
+        {/* Delivery */}
         <SummaryRow
           label={c.delivery}
-          value={deliveryCost === 0 ? c.free : `€${deliveryCost.toFixed(2)}`}
+          value={displayDelivery === 0 ? c.free : `€${displayDelivery.toFixed(2)}`}
         />
-        <SummaryRow label={c.tax} value={c.taxNote} />
+
+        {/* VAT row — three states */}
+        {taxLoading ? (
+          <div className="flex items-center gap-2 text-[0.82rem] text-[var(--muted)]">
+            <Loader2 size={13} strokeWidth={2} className="shrink-0 animate-spin" />
+            <span>Calculating VAT…</span>
+          </div>
+        ) : taxPreview ? (
+          taxPreview.is_reverse_charge ? (
+            <>
+              <SummaryRow label="VAT reverse charge (0%)" value="€0.00" />
+              {taxPreview.note && (
+                <p className="text-[0.75rem] italic text-[var(--muted)]">{taxPreview.note}</p>
+              )}
+            </>
+          ) : taxPreview.tax_treatment === "exempt" ? (
+            <>
+              <SummaryRow label="VAT exempt (0%)" value="€0.00" />
+              {taxPreview.note && (
+                <p className="text-[0.75rem] italic text-[var(--muted)]">{taxPreview.note}</p>
+              )}
+            </>
+          ) : (
+            <SummaryRow
+              label={`${c.tax} (${taxPreview.tax_rate}%)`}
+              value={`€${taxPreview.tax_amount.toFixed(2)}`}
+            />
+          )
+        ) : (
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[0.82rem] text-[var(--muted)]">{c.tax}</span>
+            <span className="text-[0.78rem] italic text-[var(--muted)]">
+              {taxError
+                ? "VAT will be confirmed at Stripe Checkout."
+                : c.taxNote}
+            </span>
+          </div>
+        )}
+
+        {/* Total */}
         <div className="mt-1 border-t border-black/[0.07] pt-3">
           <SummaryRow
             label={c.total}
-            value={`€${total.toFixed(2)}`}
+            value={taxLoading ? "—" : `€${displayTotal.toFixed(2)}`}
             bold
             large
           />
         </div>
-        <p className="text-[0.75rem] text-[var(--muted)]">
-          {c.taxDisclaimer}
-        </p>
+
+        {/* Disclaimer — only shown when no live preview */}
+        {!taxPreview && !taxLoading && (
+          <p className="text-[0.75rem] italic text-[var(--muted)]">{c.taxDisclaimer}</p>
+        )}
       </div>
     </div>
   );
