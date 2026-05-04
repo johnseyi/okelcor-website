@@ -18,6 +18,9 @@ type Metrics = {
   avgOrderValueToday:     number;
   avgOrderValueYesterday: number;
   conversionRate:         number;
+  aovPeriodLabel:         string | null;
+  aovPaidOrdersCount:     number | null;
+  aovManualOrdersCount:   number | null;
 };
 
 function pctDelta(a: number, b: number): number | null {
@@ -134,11 +137,12 @@ function OrdersTodayCard({
 // ── Generic metric card ───────────────────────────────────────────────────────
 
 function MetricCard({
-  label, value, sub, icon: Icon, accent, trend, format = "number",
+  label, value, sub, note, icon: Icon, accent, trend, format = "number",
 }: {
   label:   string;
   value:   number;
   sub?:    string;
+  note?:   string;
   icon:    React.ElementType;
   accent:  string;
   trend?:  { current: number; prev: number };
@@ -163,6 +167,7 @@ function MetricCard({
             : animated.toLocaleString()}
         </p>
         {sub && <p className="mt-0.5 text-[0.7rem] text-[#9ca3af]">{sub}</p>}
+        {note && <p className="mt-0.5 text-[0.68rem] italic text-[#c0c3c8]">{note}</p>}
       </div>
     </div>
   );
@@ -196,6 +201,9 @@ export default function HeroMetrics() {
       avgOrderValueToday:     statsRes?.avgOrderValueToday     ?? 0,
       avgOrderValueYesterday: statsRes?.avgOrderValueYesterday ?? 0,
       conversionRate:         statsRes?.conversionRate         ?? 0,
+      aovPeriodLabel:         statsRes?.aovPeriodLabel         ?? null,
+      aovPaidOrdersCount:     statsRes?.aovPaidOrdersCount     ?? null,
+      aovManualOrdersCount:   statsRes?.aovManualOrdersCount   ?? null,
     });
     setL(false);
   }, []);
@@ -259,7 +267,11 @@ export default function HeroMetrics() {
       <MetricCard
         label="Avg Order Value"
         value={Math.round(m?.avgOrderValueToday ?? 0)}
-        sub="confirmed orders only"
+        sub={[
+          m?.aovPeriodLabel,
+          m?.aovPaidOrdersCount != null ? `${m.aovPaidOrdersCount} paid orders` : null,
+        ].filter(Boolean).join(" · ") || "confirmed orders only"}
+        note={(m?.aovManualOrdersCount ?? 0) > 0 ? "includes manual/imported orders" : undefined}
         format="currency"
         icon={Zap}
         accent="bg-cyan-500"

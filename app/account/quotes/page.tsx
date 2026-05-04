@@ -26,7 +26,28 @@ type QuoteRequest = {
   product_details: string;
   quantity: number;
   notes?: string;
+  admin_notes?: string; // future: Okelcor team response
 };
+
+// ─── Note Helpers ─────────────────────────────────────────────────────────────
+
+const NOTE_BLOCKLIST = [
+  "this is for testing purpose",
+  "this is for testing purposes",
+  "test",
+  "testing",
+  "lorem ipsum",
+  "n/a",
+  "na",
+  "-",
+  ".",
+];
+
+function isMeaningfulNote(text?: string | null): boolean {
+  if (!text) return false;
+  const normalized = text.trim().toLowerCase();
+  return normalized.length > 0 && !NOTE_BLOCKLIST.includes(normalized);
+}
 
 // ─── Status Mapping ───────────────────────────────────────────────────────────
 
@@ -230,17 +251,55 @@ export default async function QuotesPage() {
                   {/* Progress tracker */}
                   <ProgressTracker status={normalized} />
 
-                  {/* Notes */}
-                  {q.notes && (
+                  {/* Quoted CTA */}
+                  {normalized === "quoted" && (
+                    <div className="mt-4 rounded-[10px] border border-green-100 bg-green-50/60 px-4 py-3.5">
+                      <p className="text-[0.82rem] font-semibold text-green-800">
+                        Your quote is ready.
+                      </p>
+                      <p className="mt-0.5 text-[0.8rem] leading-relaxed text-green-700">
+                        Contact our team to confirm pricing, availability, and next steps.
+                      </p>
+                      <Link
+                        href={`/contact?quote_ref=${encodeURIComponent(q.ref || String(q.id))}`}
+                        className="mt-3 inline-flex items-center gap-2 rounded-full bg-[var(--primary)] px-4 py-2 text-[0.82rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
+                      >
+                        Contact Okelcor about this quote <ArrowRight size={13} strokeWidth={2.5} />
+                      </Link>
+                    </div>
+                  )}
+
+                  {/* Customer message */}
+                  {isMeaningfulNote(q.notes) && (
                     <div className="mt-4 flex gap-2.5 rounded-[10px] border border-black/[0.05] bg-[#fafafa] px-4 py-3">
                       <MessageSquare
                         size={13}
                         strokeWidth={1.8}
                         className="mt-0.5 shrink-0 text-[var(--muted)]"
                       />
-                      <p className="text-[0.82rem] italic leading-relaxed text-[var(--muted)]">
-                        {q.notes}
-                      </p>
+                      <div>
+                        <p className="mb-1 text-[0.65rem] font-bold uppercase tracking-wider text-[var(--muted)]">
+                          Your message
+                        </p>
+                        <p className="text-[0.82rem] leading-relaxed text-[var(--muted)]">
+                          {q.notes}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Okelcor response — rendered when backend supplies admin_notes */}
+                  {isMeaningfulNote(q.admin_notes) && (
+                    <div className="mt-2 flex gap-2.5 rounded-[10px] border border-[var(--primary)]/20 bg-[#fff5f3] px-4 py-3">
+                      <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-[var(--primary)]" />
+                      <div>
+                        <p className="mb-1 text-[0.65rem] font-bold uppercase tracking-wider text-[var(--primary)]">
+                          Okelcor response
+                        </p>
+                        <p className="text-[0.82rem] leading-relaxed text-[var(--foreground)]">
+                          {q.admin_notes}
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>

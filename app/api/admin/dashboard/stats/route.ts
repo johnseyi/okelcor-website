@@ -72,12 +72,16 @@ export async function GET() {
   // ── Laravel dashboard endpoint (primary source for 6 KPI fields) ──────────
   // Response may be wrapped in .data or flat depending on backend version.
   const db = (dashboardRes?.data ?? dashboardRes ?? {}) as Record<string, unknown>;
-  const apiRevenueToday    = db.revenue_today        != null ? Number(db.revenue_today)        : null;
-  const apiOrdersTodayPaid = db.orders_today_paid     != null ? Number(db.orders_today_paid)     : null;
-  const apiNewCustomers    = db.new_customers_today   != null ? Number(db.new_customers_today)   : null;
-  const apiConversionRate  = db.conversion_rate       != null ? Number(db.conversion_rate)       : null;
-  const apiAOV             = db.average_order_value   != null ? Number(db.average_order_value)   : null;
-  const apiChartRaw        = Array.isArray(db.revenue_last_7_days) ? db.revenue_last_7_days as Record<string, unknown>[] : null;
+  const apiRevenueToday         = db.revenue_today           != null ? Number(db.revenue_today)           : null;
+  const apiOrdersTodayPaid      = db.orders_today_paid        != null ? Number(db.orders_today_paid)        : null;
+  const apiNewCustomers         = db.new_customers_today      != null ? Number(db.new_customers_today)      : null;
+  const apiConversionRate       = db.conversion_rate          != null ? Number(db.conversion_rate)          : null;
+  const apiAOV                  = db.average_order_value      != null ? Number(db.average_order_value)      : null;
+  const apiAovPeriodLabel       = db.aov_period_label         != null ? String(db.aov_period_label)         : null;
+  const apiAovPaidOrdersCount   = db.aov_paid_orders_count    != null ? Number(db.aov_paid_orders_count)    : null;
+  const apiAovStripeOrdersCount = db.aov_stripe_orders_count  != null ? Number(db.aov_stripe_orders_count)  : null;
+  const apiAovManualOrdersCount = db.aov_manual_orders_count  != null ? Number(db.aov_manual_orders_count)  : null;
+  const apiChartRaw             = Array.isArray(db.revenue_last_7_days) ? db.revenue_last_7_days as Record<string, unknown>[] : null;
 
   // ── Orders ────────────────────────────────────────────────────────────────
   const orders: RawOrder[] = Array.isArray(ordersRes?.data) ? ordersRes.data : [];
@@ -189,6 +193,10 @@ export async function GET() {
     newCustomersToday:    apiNewCustomers ?? 0,
     newCustomersYesterday: 0,
     conversionRate:   apiConversionRate  ?? 0,
+    aovPeriodLabel:       apiAovPeriodLabel       ?? null,
+    aovPaidOrdersCount:   apiAovPaidOrdersCount   ?? null,
+    aovStripeOrdersCount: apiAovStripeOrdersCount ?? null,
+    aovManualOrdersCount: apiAovManualOrdersCount ?? null,
     // Operational feeds (always computed from orders/quotes/products)
     pendingOrders: pendingOrdersCount,
     openQuotes,
