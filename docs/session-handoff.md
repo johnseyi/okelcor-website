@@ -60,7 +60,51 @@ Development environment: Windows 11, VS Code, Node.js / npm
 
 ---
 
-## Completed in Latest Session — Invoice Proxy, Quote UX, File Upload & Dashboard (2026-05-04)
+## Completed in Latest Session — Admin Quote → Order Conversion UI (2026-05-04)
+
+### Admin Quote Detail — Convert to Order
+
+**Files:** `lib/admin-api.ts`, `app/admin/quotes/actions.ts`, `components/admin/quote-convert-modal.tsx` (new), `components/admin/quote-detail.tsx`
+
+Implemented the full Quote → Order conversion flow in the admin panel.
+
+#### Type changes (`lib/admin-api.ts`)
+- `AdminQuote` (list type) gains `order_id?: number | null`, `order_ref?: string | null`
+- `AdminQuoteFull` (detail type) gains `brand_preference?: string`, `tyre_size?: string`, `admin_notes?: string`
+
+#### Server action (`app/admin/quotes/actions.ts`)
+Added `convertQuoteToOrder(id, payload)`:
+- `POST /api/v1/admin/quote-requests/{id}/convert-to-order`
+- Explicit 422 handling: "Quote must be in Quoted status" message
+- Explicit 409 handling: "Already converted" message
+- Returns `{ data: ConvertToOrderResult }` on success — `order_ref`, `order_id` (reads `data.order_id ?? data.id`), `quote_ref`, `status`, `payment_status`, `total`
+- Revalidates `/admin/quotes` and `/admin/quotes/{id}` on success
+- Exported types: `ConvertOrderItem`, `ConvertToOrderPayload`, `ConvertToOrderResult`
+
+#### Conversion modal (`components/admin/quote-convert-modal.tsx`)
+New `"use client"` component with:
+- **Delivery section**: address (required), city (required), postal_code (required), country (defaults to `quote.country`), phone (defaults to `quote.phone`)
+- **Items section**: pre-fills one item from `quote.brand_preference` + `quote.tyre_size`; inline per-row subtotal; Add Item / Remove Item (× button) with Trash2 icon; each row: name, brand, size, sku, unit_price, quantity
+- **Order Summary**: live-computed subtotal, editable delivery cost field, total
+- **Payment method**: select — Bank Transfer (default), Card (Stripe), Cash
+- **Admin Notes**: optional textarea
+- Client-side validation before submit (required fields, price/qty > 0)
+- Error display from server action (422 / 409 / network)
+- Spinner + "Converting…" text while pending
+- `onSuccess(result)` callback called on success; `onClose()` on cancel/overlay click
+
+#### Quote detail integration (`components/admin/quote-detail.tsx`)
+New "Order Conversion" card added below the Status card:
+- **status !== "quoted"**: shows explanatory text — "set status to Quoted to enable conversion"
+- **status === "quoted" and not yet converted**: shows "Convert to Order" button (ShoppingCart icon) → opens modal
+- **Converted** (either `quote.order_id` from initial load or `convertedOrder` state from this session): shows green success badge "Converted to order: OKL-..."
+  - "View Order" link → `/admin/orders/{order_id}` when ID is available; falls back to `/admin/orders?q={order_ref}` when only ref is known
+- `convertedOrder` state set from modal `onSuccess` without requiring a page reload
+- Request Details card now also shows `brand_preference` and `tyre_size` rows (these were missing before)
+
+---
+
+## Completed in Previous Session — Invoice Proxy, Quote UX, File Upload & Dashboard (2026-05-04)
 
 ### Invoice PDF Download — Auth Proxy
 
@@ -603,7 +647,8 @@ See prior entries for:
 | **Account invoices (B2C)** | **Updated** — Receipts & Invoices card added to B2C dashboard; previously B2B only |
 | **Account invoices page** | **Updated** — customer-type-aware title/badge/empty state; PDF download via auth proxy |
 | **Quote form** | **Updated** — file attachment upload (PDF/CSV/XLS/XLSX, max 10 MB); multipart forwarding to Laravel |
-| **Admin quote detail** | **Updated** — attachment card above notes; resolves all 6 backend field name variants |
+| **Admin quote detail** | **Updated** — attachment card, brand_preference/tyre_size rows, Convert to Order card + modal |
+| **Admin quote → order** | **New** — `QuoteConvertModal`; delivery + items + summary form; 422/409 handling; View Order link |
 | **Admin dashboard KPIs** | **Updated** — connected to real `/admin/dashboard` endpoint; AOV card shows period label + paid order count |
 | Admin products / articles / orders / quotes / brands / hero-slides / settings / supplier | Complete |
 

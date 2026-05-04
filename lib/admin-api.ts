@@ -198,12 +198,17 @@ export type AdminQuote = {
   quantity?: string;
   status: "new" | "reviewed" | "quoted" | "closed" | string;
   created_at: string;
+  order_id?: number | null;
+  order_ref?: string | null;
 };
 
 export type AdminQuoteFull = AdminQuote & {
   phone?: string;
   delivery_location?: string;
   notes?: string;
+  admin_notes?: string;
+  brand_preference?: string;
+  tyre_size?: string;
   updated_at?: string;
   // Attachment — backend may use any of these field names
   attachment_url?: string;           // full URL if backend provides one
