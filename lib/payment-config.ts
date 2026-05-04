@@ -1,7 +1,12 @@
 /**
  * lib/payment-config.ts
  *
- * Mollie payment gateway configuration.
+ * Legacy Mollie payment gateway configuration.
+ *
+ * Mollie and Adyen are inactive until Okelcor account/API credentials are
+ * approved. Stripe Checkout is the active gateway. The frontend posts to
+ * /api/checkout/stripe-session, which forwards to Laravel
+ * /api/v1/payments/create-session.
  *
  * ── HOW TO ACTIVATE ───────────────────────────────────────────────────────────
  *

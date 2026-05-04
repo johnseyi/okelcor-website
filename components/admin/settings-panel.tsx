@@ -42,26 +42,26 @@ const SCHEMA: GroupDef[] = [
   },
   {
     group: "payment",
-    label: "Payment Methods",
+    label: "Payment Methods (Legacy)",
     fields: [
       {
-        key: "adyen_enabled", label: "Adyen — Card / Apple Pay / Google Pay / Klarna",
+        key: "adyen_enabled", label: "Adyen (legacy inactive) - Card / Apple Pay / Google Pay / Klarna",
         type: "toggle", default: "false",
-        note: "Activates the Adyen Drop-in at checkout. Requires NEXT_PUBLIC_ADYEN_CLIENT_KEY to be set.",
+        note: "Legacy/inactive until Okelcor account/API credentials are approved. Active checkout uses Stripe Checkout.",
       },
       {
         key: "paypal_enabled", label: "PayPal",
         type: "toggle", default: "false",
       },
       {
-        key: "klarna_enabled", label: "Klarna — Buy Now, Pay Later",
+        key: "klarna_enabled", label: "Klarna (legacy inactive) - Buy Now, Pay Later",
         type: "toggle", default: "false",
-        note: "Klarna is included in the Adyen Drop-in when Adyen is enabled.",
+        note: "Legacy/inactive as part of the Adyen setup until account/API credentials are approved.",
       },
       {
-        key: "adyen_client_key", label: "Adyen Client Key",
+        key: "adyen_client_key", label: "Adyen Client Key (legacy inactive)",
         type: "text", default: "", span: true, hint: "test_XXXX… or live_XXXX…",
-        note: "Safe to store here — this is the public client key. Never enter an API key.",
+        note: "Retained for later approval. Stripe Checkout is the active payment route.",
       },
       {
         key: "paypal_client_id", label: "PayPal Client ID",

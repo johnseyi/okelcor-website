@@ -62,10 +62,14 @@ function buildNotificationHtml(b: Record<string, any>, refNumber: string): strin
       ${row("Quantity", b.quantity)}
       ${row("Budget Range", b.budget_range)}
       ${section("Logistics")}
-      ${row("Delivery Location", b.delivery_location)}
+      ${row("Delivery Address", b.delivery_address)}
+      ${row("City", b.delivery_city)}
+      ${row("Postal Code", b.delivery_postal_code)}
+      ${row("Delivery Location / Port", b.delivery_location)}
       ${row("Delivery Timeline", b.delivery_timeline)}
       ${section("Notes")}
       <tr><td colspan="2" style="padding:8px 16px;font-size:14px;color:#5c5e62;line-height:1.7;white-space:pre-wrap;">${esc(b.notes)}</td></tr>
+      ${row("Attachment", b.attachment_name)}
     </table>
   </td></tr>
   <tr><td style="background:#f5f5f5;padding:16px 40px;border-top:1px solid #efefef;">
@@ -82,13 +86,42 @@ function buildNotificationHtml(b: Record<string, any>, refNumber: string): strin
 
 export async function POST(request: NextRequest) {
   const customerToken = request.cookies.get("customer_token")?.value;
+  const contentType = request.headers.get("content-type") ?? "";
+  const isMultipart = contentType.includes("multipart/form-data");
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let body: Record<string, any>;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ message: "Invalid request body." }, { status: 400 });
+  let backendBody: BodyInit;
+  let backendContentType: string | null = null; // null → let fetch set boundary for multipart
+
+  if (isMultipart) {
+    let formData: FormData;
+    try {
+      formData = await request.formData();
+    } catch {
+      return NextResponse.json({ message: "Invalid form data." }, { status: 400 });
+    }
+
+    // Extract text fields + attachment filename for email notification
+    body = {};
+    for (const [key, value] of formData.entries()) {
+      if (typeof value === "string") {
+        body[key] = value;
+      } else {
+        // File entry — capture name for email row
+        body["attachment_name"] = value.name;
+      }
+    }
+
+    backendBody = formData; // fetch sets Content-Type + boundary automatically
+  } else {
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ message: "Invalid request body." }, { status: 400 });
+    }
+    backendBody = JSON.stringify(body);
+    backendContentType = "application/json";
   }
 
   // ── 1. Save quote to backend ─────────────────────────────────────────────────
@@ -100,11 +133,11 @@ export async function POST(request: NextRequest) {
     const res = await fetch(`${API_URL}/quote-requests`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
         Accept: "application/json",
+        ...(backendContentType ? { "Content-Type": backendContentType } : {}),
         ...(customerToken ? { Authorization: `Bearer ${customerToken}` } : {}),
       },
-      body: JSON.stringify(body),
+      body: backendBody,
     });
 
     backendData = await res.json();

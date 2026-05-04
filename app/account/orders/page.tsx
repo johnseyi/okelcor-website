@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, Package } from "lucide-react";
+import { ChevronRight, Package, CreditCard } from "lucide-react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { getCustomerFromCookie } from "@/lib/get-customer";
@@ -26,10 +26,15 @@ export type OrderItem = {
 
 export type Order = {
   ref: string;
+  order_ref?: string;
   created_at: string;
   status: OrderStatus;
   items: OrderItem[];
   total: number;
+  payment_method?: string;
+  payment_status?: string;
+  payment_url?: string | null;
+  checkout_url?: string | null;
   carrier?: string;
   tracking_number?: string;
   estimated_delivery?: string;
@@ -192,15 +197,40 @@ export default async function OrdersPage() {
                         €{Number(order.total).toFixed(2)}
                       </td>
                       <td className="px-6 py-4">
-                        <StatusBadge status={order.status} />
+                        <div className="flex flex-col items-start gap-1.5">
+                          <StatusBadge status={order.status} />
+                          {order.payment_method === "stripe" && order.payment_status === "pending" && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-amber-700">
+                              <CreditCard size={10} strokeWidth={2.5} />
+                              Payment due
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <Link
-                          href={`/account/orders/${order.ref}`}
-                          className="inline-flex h-[36px] items-center gap-1.5 rounded-full bg-[var(--primary)] px-4 text-[0.8rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
-                        >
-                          Track Order <ChevronRight size={14} strokeWidth={2.2} />
-                        </Link>
+                        {(() => {
+                          const paymentUrl = order.payment_url ?? order.checkout_url ?? null;
+                          if (order.payment_method === "stripe" && order.payment_status === "pending" && paymentUrl) {
+                            return (
+                              <a
+                                href={paymentUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex h-[36px] items-center gap-1.5 rounded-full bg-[var(--primary)] px-4 text-[0.8rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
+                              >
+                                <CreditCard size={13} strokeWidth={2.2} /> Pay Now
+                              </a>
+                            );
+                          }
+                          return (
+                            <Link
+                              href={`/account/orders/${order.ref}`}
+                              className="inline-flex h-[36px] items-center gap-1.5 rounded-full bg-[var(--primary)] px-4 text-[0.8rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
+                            >
+                              Track Order <ChevronRight size={14} strokeWidth={2.2} />
+                            </Link>
+                          );
+                        })()}
                       </td>
                     </tr>
                   ))}
@@ -217,7 +247,15 @@ export default async function OrdersPage() {
                       <p className="font-mono text-[0.88rem] font-bold text-[var(--foreground)]">{order.ref}</p>
                       <p className="mt-0.5 text-[0.78rem] text-[var(--muted)]">{formatDate(order.created_at)}</p>
                     </div>
-                    <StatusBadge status={order.status} />
+                    <div className="flex flex-col items-end gap-1.5">
+                      <StatusBadge status={order.status} />
+                      {order.payment_method === "stripe" && order.payment_status === "pending" && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-amber-700">
+                          <CreditCard size={10} strokeWidth={2.5} />
+                          Payment due
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <p className="mt-2 text-[0.82rem] text-[var(--muted)]">
                     {order.items.length} item{order.items.length !== 1 ? "s" : ""}
@@ -229,12 +267,29 @@ export default async function OrdersPage() {
                     <p className="text-[0.95rem] font-extrabold text-[var(--foreground)]">
                       €{Number(order.total).toFixed(2)}
                     </p>
-                    <Link
-                      href={`/account/orders/${order.ref}`}
-                      className="inline-flex h-[36px] items-center gap-1.5 rounded-full bg-[var(--primary)] px-4 text-[0.8rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
-                    >
-                      Track <ChevronRight size={13} strokeWidth={2.2} />
-                    </Link>
+                    {(() => {
+                      const paymentUrl = order.payment_url ?? order.checkout_url ?? null;
+                      if (order.payment_method === "stripe" && order.payment_status === "pending" && paymentUrl) {
+                        return (
+                          <a
+                            href={paymentUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex h-[36px] items-center gap-1.5 rounded-full bg-[var(--primary)] px-4 text-[0.8rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
+                          >
+                            <CreditCard size={13} strokeWidth={2.2} /> Pay Now
+                          </a>
+                        );
+                      }
+                      return (
+                        <Link
+                          href={`/account/orders/${order.ref}`}
+                          className="inline-flex h-[36px] items-center gap-1.5 rounded-full bg-[var(--primary)] px-4 text-[0.8rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
+                        >
+                          Track <ChevronRight size={13} strokeWidth={2.2} />
+                        </Link>
+                      );
+                    })()}
                   </div>
                 </div>
               ))}

@@ -29,7 +29,7 @@ Corporate website for **Okelcor GmbH** — a global tyre sourcing and supply com
 | `/contact` | Contact form and company information |
 | `/news` | News and industry updates |
 | `/auth` | Sign in / sign up (UI only) |
-| `/checkout` | Checkout flow (UI only) |
+| `/checkout` | Checkout flow using Stripe Checkout redirect |
 
 ---
 
@@ -101,7 +101,11 @@ Full design system documentation is in [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYS
 
 ## Status
 
-Frontend-only implementation. Form submissions (contact, quote) use simulated state — no backend wiring yet. Cart and checkout flows are UI-complete pending API integration.
+The frontend is integrated with the Laravel API. Checkout is Stripe-primary:
+`components/checkout/checkout-flow.tsx` posts to `/api/checkout/stripe-session`,
+which proxies Laravel `/api/v1/payments/create-session` and redirects to the
+returned Stripe Checkout URL. Legacy Adyen/Mollie frontend code is retained but
+inactive until Okelcor account/API credentials are approved.
 
 ---
 

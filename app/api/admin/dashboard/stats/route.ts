@@ -62,11 +62,26 @@ export async function GET() {
   const yd        = new Date(now); yd.setDate(yd.getDate() - 1);
   const yesterday = dateStr(yd);
 
-  const [ordersRes, quotesRes, productsRes] = await Promise.all([
+  const [dashboardRes, ordersRes, quotesRes, productsRes] = await Promise.all([
+    apiFetch("/dashboard",      token),
     apiFetch("/orders",         token, { per_page: "500", sort: "latest" }),
     apiFetch("/quote-requests", token, { per_page: "200", sort: "latest" }),
     apiFetch("/products",       token, { per_page: "300", is_active: "1" }),
   ]);
+
+  // ── Laravel dashboard endpoint (primary source for 6 KPI fields) ──────────
+  // Response may be wrapped in .data or flat depending on backend version.
+  const db = (dashboardRes?.data ?? dashboardRes ?? {}) as Record<string, unknown>;
+  const apiRevenueToday         = db.revenue_today           != null ? Number(db.revenue_today)           : null;
+  const apiOrdersTodayPaid      = db.orders_today_paid        != null ? Number(db.orders_today_paid)        : null;
+  const apiNewCustomers         = db.new_customers_today      != null ? Number(db.new_customers_today)      : null;
+  const apiConversionRate       = db.conversion_rate          != null ? Number(db.conversion_rate)          : null;
+  const apiAOV                  = db.average_order_value      != null ? Number(db.average_order_value)      : null;
+  const apiAovPeriodLabel       = db.aov_period_label         != null ? String(db.aov_period_label)         : null;
+  const apiAovPaidOrdersCount   = db.aov_paid_orders_count    != null ? Number(db.aov_paid_orders_count)    : null;
+  const apiAovStripeOrdersCount = db.aov_stripe_orders_count  != null ? Number(db.aov_stripe_orders_count)  : null;
+  const apiAovManualOrdersCount = db.aov_manual_orders_count  != null ? Number(db.aov_manual_orders_count)  : null;
+  const apiChartRaw             = Array.isArray(db.revenue_last_7_days) ? db.revenue_last_7_days as Record<string, unknown>[] : null;
 
   // ── Orders ────────────────────────────────────────────────────────────────
   const orders: RawOrder[] = Array.isArray(ordersRes?.data) ? ordersRes.data : [];
@@ -98,18 +113,33 @@ export async function GET() {
 
   const pendingOrdersCount = orders.filter(isPending).length;
 
-  // Revenue chart — last 7 days, split confirmed vs pending
-  const revenueChart = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(now);
-    d.setDate(d.getDate() - (6 - i));
-    const ds = dateStr(d);
-    const dayOrders = orders.filter(o => toDate(o.created_at) === ds);
-    return {
-      date:      d.toLocaleDateString("en-GB", { month: "short", day: "numeric" }),
-      confirmed: Math.round(sum(dayOrders.filter(isConfirmed)) * 100) / 100,
-      pending:   Math.round(sum(dayOrders.filter(isPending))   * 100) / 100,
-    };
-  });
+  // Revenue chart — prefer API data, fall back to computed from orders
+  const revenueChart = apiChartRaw
+    ? apiChartRaw.map((point) => {
+        const rawDate = String(point.date ?? "");
+        // Parse ISO date (YYYY-MM-DD) without timezone shift
+        let label = rawDate;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
+          const [y, mo, d] = rawDate.split("-").map(Number);
+          label = new Date(y, mo - 1, d).toLocaleDateString("en-GB", { month: "short", day: "numeric" });
+        }
+        return {
+          date:      label,
+          confirmed: Math.round(Number(point.revenue ?? point.confirmed ?? point.amount ?? 0) * 100) / 100,
+          pending:   Math.round(Number(point.pending ?? 0) * 100) / 100,
+        };
+      })
+    : Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(now);
+        d.setDate(d.getDate() - (6 - i));
+        const ds = dateStr(d);
+        const dayOrders = orders.filter(o => toDate(o.created_at) === ds);
+        return {
+          date:      d.toLocaleDateString("en-GB", { month: "short", day: "numeric" }),
+          confirmed: Math.round(sum(dayOrders.filter(isConfirmed)) * 100) / 100,
+          pending:   Math.round(sum(dayOrders.filter(isPending))   * 100) / 100,
+        };
+      });
 
   // Recent orders — last 8, include payment_status for confirm action
   const recentOrders = orders.slice(0, 8).map(o => ({
@@ -149,30 +179,31 @@ export async function GET() {
   }));
 
   return NextResponse.json({
-    // Confirmed (real) revenue
-    revenueToday:     confirmedRevenueToday,
+    // Primary KPIs — Laravel dashboard endpoint takes precedence, computed values as fallback
+    revenueToday:     apiRevenueToday    ?? confirmedRevenueToday,
     revenueYesterday: confirmedRevenueYesterday,
-    // Pending revenue shown as context
     pendingRevenueToday,
     pendingRevenueYesterday,
-    // Orders
-    ordersToday,
+    ordersToday:      apiOrdersTodayPaid ?? ordersToday,
     ordersYesterday,
     ordersConfirmedToday,
     ordersPendingToday,
-    // AOV — confirmed only
-    avgOrderValueToday,
+    avgOrderValueToday:     apiAOV       ?? avgOrderValueToday,
     avgOrderValueYesterday,
-    // Misc
+    newCustomersToday:    apiNewCustomers ?? 0,
+    newCustomersYesterday: 0,
+    conversionRate:   apiConversionRate  ?? 0,
+    aovPeriodLabel:       apiAovPeriodLabel       ?? null,
+    aovPaidOrdersCount:   apiAovPaidOrdersCount   ?? null,
+    aovStripeOrdersCount: apiAovStripeOrdersCount ?? null,
+    aovManualOrdersCount: apiAovManualOrdersCount ?? null,
+    // Operational feeds (always computed from orders/quotes/products)
     pendingOrders: pendingOrdersCount,
     openQuotes,
     lowStockCount,
-    // Chart + feeds
     revenueChart,
     recentOrders,
     pendingQuotesList,
     lowStockList,
-    newCustomersToday:    0,
-    newCustomersYesterday: 0,
   });
 }

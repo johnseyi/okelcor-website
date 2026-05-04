@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, ChevronRight, Lock, ShieldCheck, Check } from "lucide-react";
+import { CheckCircle2, ChevronRight, Lock, ShieldCheck } from "lucide-react";
 import { useCart } from "@/context/cart-context";
 import { useLanguage } from "@/context/language-context";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
@@ -27,16 +27,6 @@ type DeliveryErrors = Partial<DeliveryData>;
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const DELIVERY_COST = 0;
-
-const PAYMENT_METHODS = [
-  { id: "creditcard", label: "Credit / Debit Card", sub: "Visa, Mastercard, Amex" },
-  { id: "ideal",      label: "iDEAL",               sub: "Dutch bank transfer" },
-  { id: "paypal",     label: "PayPal",               sub: "Pay with PayPal" },
-  { id: "klarna",     label: "Klarna",               sub: "Pay later / instalments" },
-  { id: "bancontact", label: "Bancontact",            sub: "Belgian bank cards" },
-] as const;
-
-type PaymentMethodId = typeof PAYMENT_METHODS[number]["id"];
 
 const COUNTRIES = [
   "Germany", "United Kingdom", "Netherlands", "Belgium", "France",
@@ -193,9 +183,6 @@ export default function CheckoutFlow() {
   const [vatNumber, setVatNumber]           = useState("");
   const [submitting, setSubmitting]         = useState(false);
   const [submitError, setSubmitError]       = useState<string | null>(null);
-  const [selectedMethod, setSelectedMethod] = useState<PaymentMethodId | null>(null);
-  const [methodError, setMethodError]       = useState(false);
-
   const [fetAdded, setFetAdded]         = useState(false);
   const [fetQty, setFetQty]             = useState(1);
   const [fetDismissed, setFetDismissed] = useState(false);
@@ -222,7 +209,7 @@ export default function CheckoutFlow() {
 
   const orderPayload = () => ({
     delivery,
-    payment_method: selectedMethod,
+    payment_method: "stripe",
     vat_number: vatNumber.trim() || undefined,
     items: items.map((item) => ({
       product: {
@@ -245,21 +232,16 @@ export default function CheckoutFlow() {
     }),
   });
 
-  // ── Submit → Mollie redirect ────────────────────────────────────────────────
+  // Submit -> Stripe Checkout redirect via Laravel /api/v1/payments/create-session.
 
   const handleSubmit = async () => {
     if (!validateDelivery()) {
       deliveryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
-    if (!selectedMethod) {
-      setMethodError(true);
-      return;
-    }
 
     setSubmitting(true);
     setSubmitError(null);
-    setMethodError(false);
 
     trackCheckoutStarted({
       value:     items.reduce((s, i) => s + i.product.price * i.quantity, 0),
@@ -267,27 +249,31 @@ export default function CheckoutFlow() {
     });
 
     try {
-      const res = await fetch("/api/payments/mollie/create", {
+      const res = await fetch("/api/checkout/stripe-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(orderPayload()),
       });
       const data = await res.json();
+      const checkoutData    = data?.data ?? {};
+      const checkoutUrl     = checkoutData.checkout_url;
+      const checkoutSession = String(checkoutData.checkout_session_id ?? "");
+      const orderRef        = String(checkoutData.order_ref ?? "");
 
-      if (!res.ok || data.error) {
-        setSubmitError(data.error ?? "Failed to create payment. Please try again.");
+      if (!res.ok || data.error || typeof checkoutUrl !== "string") {
+        setSubmitError(data.error ?? data.message ?? "Failed to start Stripe Checkout. Please try again.");
         setSubmitting(false);
         return;
       }
 
-      // Store paymentId in sessionStorage so the return page can verify status
-      sessionStorage.setItem("mollie_payment_id", data.paymentId);
-      sessionStorage.setItem("mollie_order_ref", data.orderRef);
+      // Always write both keys before redirect so the return page can read
+      // them via sessionStorage when order_ref is absent from the Stripe URL.
+      sessionStorage.setItem("stripe_checkout_session_id", checkoutSession);
+      sessionStorage.setItem("stripe_order_ref", orderRef);
 
       clearCart();
 
-      // Redirect to Mollie hosted checkout
-      window.location.href = data.checkoutUrl;
+      window.location.href = checkoutUrl;
     } catch {
       setSubmitError("Network error. Please check your connection and try again.");
       setSubmitting(false);
@@ -393,49 +379,14 @@ export default function CheckoutFlow() {
             />
           )}
 
-          {/* Payment method selection */}
-          <SectionCard title={c.paymentMethod}>
-            <p className="mb-4 text-[0.88rem] leading-6 text-[var(--muted)]">
-              Select your preferred payment method. You will be redirected to Mollie&apos;s secure checkout to complete the payment.
+          {/* Secure payment */}
+          <SectionCard title="Secure payment">
+            <p className="mb-3 text-[0.88rem] leading-6 text-[var(--muted)]">
+              You will be redirected to Stripe Checkout to complete your payment securely.
             </p>
-
-            <div className="flex flex-col gap-2.5">
-              {PAYMENT_METHODS.map((method) => {
-                const active = selectedMethod === method.id;
-                return (
-                  <button
-                    key={method.id}
-                    type="button"
-                    onClick={() => { setSelectedMethod(method.id); setMethodError(false); }}
-                    className={[
-                      "flex w-full items-center justify-between rounded-[14px] border-2 px-4 py-3.5 text-left transition",
-                      active
-                        ? "border-[var(--primary)] bg-[var(--primary)]/5"
-                        : "border-black/[0.08] bg-white hover:border-black/20",
-                    ].join(" ")}
-                  >
-                    <div>
-                      <p className={`text-[0.9rem] font-semibold ${active ? "text-[var(--primary)]" : "text-[var(--foreground)]"}`}>
-                        {method.label}
-                      </p>
-                      <p className="mt-0.5 text-[0.78rem] text-[var(--muted)]">{method.sub}</p>
-                    </div>
-                    <div className={[
-                      "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition",
-                      active ? "border-[var(--primary)] bg-[var(--primary)]" : "border-black/20",
-                    ].join(" ")}>
-                      {active && <Check size={11} strokeWidth={3} className="text-white" />}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            {methodError && (
-              <p className="mt-3 text-[0.78rem] font-semibold text-red-500">
-                Please select a payment method to continue.
-              </p>
-            )}
+            <p className="text-[0.82rem] leading-6 text-[var(--muted)]">
+              Stripe Checkout supports cards and other available payment methods based on your location.
+            </p>
 
             {/* Trust badges */}
             <div className="mt-4 flex flex-wrap items-center gap-4 text-[0.75rem] text-[#5c5e62]">
@@ -445,7 +396,7 @@ export default function CheckoutFlow() {
               </span>
               <span className="flex items-center gap-1.5">
                 <Lock size={14} className="text-green-500" />
-                PCI DSS compliant via Mollie
+                PCI DSS compliant via Stripe
               </span>
             </div>
           </SectionCard>
@@ -475,7 +426,7 @@ export default function CheckoutFlow() {
             ) : (
               <>
                 <Lock size={17} strokeWidth={2.2} />
-                Pay securely with Mollie
+                Pay securely with Stripe
               </>
             )}
           </button>

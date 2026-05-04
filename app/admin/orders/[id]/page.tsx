@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { ArrowLeft } from "lucide-react";
 import {
   adminApiFetch,
@@ -29,11 +30,14 @@ export default async function OrderDetailPage({ params }: Props) {
   if (!numId) notFound();
 
   let order: AdminOrderFull;
+  let adminRole: string;
   try {
-    const res = await adminApiFetch<AdminOrderFull>(`/orders/${numId}`, {
-      revalidate: false,
-    });
+    const [res, cookieStore] = await Promise.all([
+      adminApiFetch<AdminOrderFull>(`/orders/${numId}`, { revalidate: false }),
+      cookies(),
+    ]);
     order = res.data;
+    adminRole = cookieStore.get("admin_role")?.value ?? "";
   } catch (e) {
     if (e instanceof AdminUnauthorizedError) redirect("/admin/login");
     notFound();
@@ -57,7 +61,7 @@ export default async function OrderDetailPage({ params }: Props) {
         </p>
       </div>
 
-      <OrderDetail order={order} />
+      <OrderDetail order={order} adminRole={adminRole} />
     </div>
   );
 }

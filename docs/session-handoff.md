@@ -60,7 +60,276 @@ Development environment: Windows 11, VS Code, Node.js / npm
 
 ---
 
-## Completed in Latest Session — Admin RBAC, Product Card & Bug Fixes (2026-04-19/20)
+## Completed in Latest Session — Quote Form Delivery Address Fields (2026-05-04)
+
+### Customer Quote Form — Structured Delivery Address
+
+**Files:** `components/quote/quote-form.tsx`, `app/api/customer/quote-requests/route.ts`, `lib/translations.ts`, `lib/admin-api.ts`, `components/admin/quote-detail.tsx`, `components/admin/quote-convert-modal.tsx`
+
+Added 3 structured address fields to the customer quote form, submitted to the backend, shown in admin, and used to prefill the Convert to Order modal.
+
+#### Quote form (`components/quote/quote-form.tsx`)
+- `FormData` gains `deliveryAddress`, `deliveryCity`, `deliveryPostalCode`
+- New **"Delivery Details"** section (`sectionDelivery`) added between the timeline/budget fields and notes:
+  - **Street / Delivery Address** — full-width, optional
+  - **City** — half-width, optional
+  - **Postal Code** — half-width, optional
+  - **Preferred delivery location / port** — full-width, required (renamed from "Preferred Delivery Location"; placeholder now `"e.g. Hamburg Port, Lagos, Dubai"`)
+- Both multipart (`FormData`) and JSON submit paths include `delivery_address`, `delivery_city`, `delivery_postal_code`
+- `handleReset` clears the 3 new fields
+
+#### Email notification (`app/api/customer/quote-requests/route.ts`)
+- Logistics section email rows now include: Delivery Address, City, Postal Code, Delivery Location / Port (rows are empty/hidden automatically when not provided via the `row()` helper)
+
+#### Admin types (`lib/admin-api.ts`)
+- `AdminQuoteFull` gains `delivery_address?: string`, `delivery_city?: string`, `delivery_postal_code?: string`
+
+#### Admin quote detail (`components/admin/quote-detail.tsx`)
+- Request Details card now shows Delivery Address, City, Postal Code, Location / Port rows (only visible when populated)
+
+#### Convert to Order modal (`components/admin/quote-convert-modal.tsx`)
+- Delivery form prefills from quote:
+  - `address` ← `quote.delivery_address ?? ""`
+  - `city` ← `quote.delivery_city ?? ""`
+  - `postal_code` ← `quote.delivery_postal_code ?? ""`
+  - `country` ← `quote.country ?? ""` (unchanged)
+  - `phone` ← `quote.phone ?? ""` (unchanged)
+- Admin can edit all fields in the modal before converting
+
+#### Translations (`lib/translations.ts`)
+- Type definition gains: `sectionDelivery`, `labelDeliveryAddress`, `labelDeliveryCity`, `labelDeliveryPostalCode`, `placeholderDeliveryAddress`, `placeholderDeliveryCity`, `placeholderDeliveryPostalCode`
+- All 4 locales (EN/DE/FR/ES) updated with the new keys; `labelDelivery` and `placeholderDelivery` updated to reflect the renamed field
+
+---
+
+## Completed in Previous Session — Admin Quote → Order Conversion UI (2026-05-04)
+
+### Admin Quote Detail — Convert to Order
+
+**Files:** `lib/admin-api.ts`, `app/admin/quotes/actions.ts`, `components/admin/quote-convert-modal.tsx` (new), `components/admin/quote-detail.tsx`
+
+Implemented the full Quote → Order conversion flow in the admin panel.
+
+#### Type changes (`lib/admin-api.ts`)
+- `AdminQuote` (list type) gains `order_id?: number | null`, `order_ref?: string | null`
+- `AdminQuoteFull` (detail type) gains `brand_preference?: string`, `tyre_size?: string`, `admin_notes?: string`
+
+#### Server action (`app/admin/quotes/actions.ts`)
+Added `convertQuoteToOrder(id, payload)`:
+- `POST /api/v1/admin/quote-requests/{id}/convert-to-order`
+- Explicit 422 handling: "Quote must be in Quoted status" message
+- Explicit 409 handling: "Already converted" message
+- Returns `{ data: ConvertToOrderResult }` on success — `order_ref`, `order_id` (reads `data.order_id ?? data.id`), `quote_ref`, `status`, `payment_status`, `total`
+- Revalidates `/admin/quotes` and `/admin/quotes/{id}` on success
+- Exported types: `ConvertOrderItem`, `ConvertToOrderPayload`, `ConvertToOrderResult`
+
+#### Conversion modal (`components/admin/quote-convert-modal.tsx`)
+New `"use client"` component with:
+- **Delivery section**: address (required), city (required), postal_code (required), country (defaults to `quote.country`), phone (defaults to `quote.phone`)
+- **Items section**: pre-fills one item from `quote.brand_preference` + `quote.tyre_size`; inline per-row subtotal; Add Item / Remove Item (× button) with Trash2 icon; each row: name, brand, size, sku, unit_price, quantity
+- **Order Summary**: live-computed subtotal, editable delivery cost field, total
+- **Payment method**: select — Bank Transfer (default), Card (Stripe), Cash
+- **Admin Notes**: optional textarea
+- Client-side validation before submit (required fields, price/qty > 0)
+- Error display from server action (422 / 409 / network)
+- Spinner + "Converting…" text while pending
+- `onSuccess(result)` callback called on success; `onClose()` on cancel/overlay click
+
+#### Quote detail integration (`components/admin/quote-detail.tsx`)
+New "Order Conversion" card added below the Status card:
+- **status !== "quoted"**: shows explanatory text — "set status to Quoted to enable conversion"
+- **status === "quoted" and not yet converted**: shows "Convert to Order" button (ShoppingCart icon) → opens modal
+- **Converted** (either `quote.order_id` from initial load or `convertedOrder` state from this session): shows green success badge "Converted to order: OKL-..."
+  - "View Order" link → `/admin/orders/{order_id}` when ID is available; falls back to `/admin/orders?q={order_ref}` when only ref is known
+- `convertedOrder` state set from modal `onSuccess` without requiring a page reload
+- Request Details card now also shows `brand_preference` and `tyre_size` rows (these were missing before)
+
+---
+
+## Completed in Previous Session — Invoice Proxy, Quote UX, File Upload & Dashboard (2026-05-04)
+
+### Invoice PDF Download — Auth Proxy
+
+**Files:** `app/api/account/invoices/[id]/download/route.ts` (created), `app/account/invoices/page.tsx`
+
+Direct links to `inv.pdf_url` returned 401 because the browser cannot attach the httpOnly `customer_token` cookie as a Bearer header. A Next.js proxy route was created to bridge the gap:
+
+- Reads `customer_token` from cookies server-side
+- Forwards `GET /api/v1/invoices/{id}/download` with `Authorization: Bearer` header
+- Preserves `Content-Type` + `Content-Disposition` response headers
+- Returns binary body via `arrayBuffer()` (not `.json()`)
+- Returns 401 if cookie absent, 404/500 with JSON error if Laravel fails
+
+`app/account/invoices/page.tsx` download link `href` changed from `inv.pdf_url` to `/api/account/invoices/${inv.id}/download`. `inv.pdf_url` is still used as a boolean gate (shows "PDF pending" pill when absent).
+
+**Temporary debug logs** in the download route (token present, target URL, Laravel status, error body). Remove once confirmed working in production.
+
+---
+
+### Customer Quote Request Tracking — Full UX Overhaul
+
+**File:** `app/account/quotes/page.tsx`
+
+Complete rewrite of the quotes page. Key additions:
+
+- **`NormalizedStatus`** union: `"received" | "reviewed" | "quoted" | "closed"`
+- **`normalizeStatus()`** maps backend variants: `new/pending → received`, `reviewing/reviewed → reviewed`, `quoted/approved → quoted`, `closed/rejected → closed`
+- **`ProgressTracker`** component: 4 orange dots connected by lines; future steps dimmed; labels below each step
+- **Note blocklist + `isMeaningfulNote()`** filters out test/placeholder notes (`"test"`, `"n/a"`, `"."`, etc.)
+- **`admin_notes?: string`** field on `QuoteRequest` for future Okelcor team responses
+- **Quoted CTA block**: green callout + orange pill button → `/contact?quote_ref=...` shown only when `normalized === "quoted"`
+- **"Your message" label** on customer notes section; separate orange-tinted `admin_notes` block labelled "Okelcor response"
+- **Dynamic account type label**: `isB2B ? "B2B" : "Personal"` (removed hardcoded "B2B")
+
+`app/account/page.tsx`: Added "Quote Requests" `DashCard` to B2C dashboard (previously only in B2B).
+
+---
+
+### Quote Form — File Attachment Upload
+
+**Files:** `components/quote/quote-form.tsx`, `app/api/customer/quote-requests/route.ts`
+
+`components/quote/quote-form.tsx`:
+- Accepted formats: `.pdf`, `.csv`, `.xls`, `.xlsx` (max 10 MB)
+- `attachedFile: File | null` state; hidden `<input type="file">` via `useRef`
+- UI: click-to-browse area when no file; filename + size + × remove button when file attached; inline validation errors for type/size
+- `handleSubmit()`: if `attachedFile` → builds `FormData` with all text fields + `attachment` file, posts without `Content-Type` (browser sets boundary); else → existing JSON path
+- `handleReset()` clears file state + resets native input element
+
+`app/api/customer/quote-requests/route.ts`:
+- Detects `multipart/form-data` via `content-type` request header
+- Multipart path: `request.formData()` → extracts all text fields + `attachment_name` for email; forwards `FormData` directly to Laravel (no manual `Content-Type`)
+- Email template includes `Attachment` row when `attachment_name` is present
+- JSON path unchanged
+
+---
+
+### Admin Quote Detail — Attachment Display Fix
+
+**Files:** `lib/admin-api.ts`, `components/admin/quote-detail.tsx`, `app/admin/quotes/[id]/page.tsx`
+
+**Problem:** Backend sends `attachment_path` + `attachment_original_name` but the type only had `attachment_url` + `attachment_name`, so the attachment card never rendered.
+
+**Fix:**
+- `AdminQuoteFull` in `lib/admin-api.ts` now has all 6 variants: `attachment_url`, `attachment_path`, `attachment_name`, `attachment_original_name`, `attachment_mime`, `attachment_size`
+- `components/admin/quote-detail.tsx`: IIFE resolves `attachmentUrl = quote.attachment_url ?? quote.attachment_path ?? null` and `attachmentName = quote.attachment_original_name ?? quote.attachment_name ?? null`; render guard is `!!(attachmentUrl || attachmentName)`
+- Attachment card placed **above** the Notes section
+- Shows `formatBytes(size) · mime` subtitle; orange Download button (opens in new tab) when URL available; "Download unavailable" text otherwise
+- `formatBytes()` helper: B / KB / MB
+
+**Temporary debug log** in `app/admin/quotes/[id]/page.tsx` logs all 6 attachment field values to server console. Remove once confirmed.
+
+---
+
+### Admin Dashboard — Connected to Real Laravel Endpoint
+
+**File:** `app/api/admin/dashboard/stats/route.ts`
+
+Previously all KPI cards showed computed fallback values. The route now calls `GET /api/v1/admin/dashboard` in the same `Promise.all` as orders/quotes/products.
+
+- Response handling: `db = dashboardRes?.data ?? dashboardRes ?? {}` (handles both wrapped and flat responses)
+- 9 fields extracted from `db` with `null` fallbacks: `revenue_today`, `orders_today_paid`, `new_customers_today`, `conversion_rate`, `average_order_value`, `aov_period_label`, `aov_paid_orders_count`, `aov_stripe_orders_count`, `aov_manual_orders_count`
+- Chart: prefers `revenue_last_7_days` array from API; handles `revenue`/`confirmed`/`amount` keys; parses ISO dates with `new Date(y, m-1, d)` constructor (avoids UTC→local shift); falls back to computed from orders
+- Return object: API values take precedence, computed values are fallback
+- `aovPeriodLabel`, `aovPaidOrdersCount`, `aovStripeOrdersCount`, `aovManualOrdersCount` exposed in response
+
+`components/admin/dashboard/revenue-chart.tsx`: Added 30s `setInterval` auto-refresh (previously fired only once on mount).
+
+---
+
+### Admin Dashboard — AOV Card Backend Labels
+
+**File:** `components/admin/dashboard/hero-metrics.tsx`
+
+- `Metrics` type gains 3 new nullable fields: `aovPeriodLabel: string | null`, `aovPaidOrdersCount: number | null`, `aovManualOrdersCount: number | null`
+- `refresh()` reads these from `statsRes`
+- `MetricCard` component gains optional `note?: string` prop — renders as small italic light-grey text below `sub`
+- AOV card `sub` prop: `"{aovPeriodLabel} · {N} paid orders"` from backend; falls back to `"confirmed orders only"` when fields are null
+- AOV card `note` prop: `"includes manual/imported orders"` shown only when `aovManualOrdersCount > 0`
+
+---
+
+## Completed in Previous Session — Admin Order Actions, Activity Log & Invoice UX (2026-05-03)
+
+### Admin Order Detail — Cancel & Delete Actions
+
+**Files:** `app/admin/orders/actions.ts`, `app/admin/orders/[id]/page.tsx`, `components/admin/order-detail.tsx`
+
+Two new server actions added to `app/admin/orders/actions.ts`:
+
+- **`cancelOrder(id)`** — `PATCH /admin/orders/{id}/status` with `{ status: "cancelled" }`. Revalidates both list and detail paths.
+- **`deleteOrder(id, confirmRef)`** — `DELETE /admin/orders/{id}` with `{ confirm_ref }`. Explicit handling: 422 → ref mismatch message, 409 → paid order cannot be deleted message. Returns `{ deleted: true }` on success.
+
+`app/admin/orders/[id]/page.tsx` updated to read `admin_role` cookie server-side and pass it as `adminRole` prop to `OrderDetail`.
+
+`components/admin/order-detail.tsx` updated:
+- **Cancel Order button**: visible to `admin`, `order_manager`, `super_admin`; disabled when status is `cancelled` or `delivered`; on success updates local status state to `cancelled` so button self-disables
+- **Delete Order button**: always rendered; disabled (with tooltip) unless `super_admin`
+- **Delete confirmation modal**: input must exactly match `order.order_ref` before confirm enables; inline error display for 422/409; on success navigates to `/admin/orders`
+- New state: `cancelError`, `cancelSuccess`, `isCancelPending`, `deleteModalOpen`, `deleteRef`, `deleteError`, `isDeletePending`
+
+---
+
+### Admin Order Detail — Activity Log
+
+**Files:** `lib/admin-api.ts`, `components/admin/order-detail.tsx`
+
+New type added to `lib/admin-api.ts`:
+```typescript
+export type AdminOrderLog = {
+  id: number;
+  action: string;
+  old_value?: string | null;
+  new_value?: string | null;
+  notes?: string | null;
+  admin_user_email?: string | null;
+  ip_address?: string | null;
+  created_at: string;
+};
+```
+`logs?: AdminOrderLog[]` added to `AdminOrderFull`.
+
+New `ActivityLog` + `LogEntry` components added to `order-detail.tsx`:
+- Timeline with orange dot markers consistent with the container tracking widget
+- `formatAction()` converts snake_case action strings to Title Case
+- Old value shown as red strikethrough badge, new value as green badge
+- Admin email, IP address (monospace), notes, and timestamp per entry
+- Empty state: "No activity has been recorded for this order yet."
+- Card placed below Order Actions, above the delete modal
+
+---
+
+### Invoice Discovery & UX — B2B and B2C
+
+**Files:** `app/account/page.tsx`, `app/account/invoices/page.tsx`
+
+`app/account/page.tsx`:
+- **B2C dashboard**: added "Receipts & Invoices" card (icon: `Receipt`, links to `/account/invoices`, description: "View receipts for your purchases") — previously invoices were only visible to B2B
+- **B2B dashboard**: updated Invoices card description to "View paid invoices and billing records for your company."
+
+`app/account/invoices/page.tsx`:
+- Reads `customer.customer_type` to determine `isB2B`
+- Fixed hardcoded `"B2B"` account badge — now shows `"Personal"` for B2C customers
+- Page title: B2B → "Invoices", B2C → "Receipts & Invoices"
+- Breadcrumb label updated to match page title
+- Empty state: B2B → "No invoices yet. Paid orders will appear here after checkout." / B2C → "No receipts yet. Your paid orders will appear here."
+- When `pdf_url` is absent: shows `"PDF pending"` pill badge instead of nothing
+
+---
+
+### Stripe Order Reference Audit (no code changes)
+
+**Root cause identified:** Laravel's `POST /payments/create-session` does not return `order_ref` in its response. The order is created by the webhook (`checkout.session.completed`), not at session creation time. Frontend code is correct on both channels (URL param + sessionStorage fallback), but both are empty because the backend never supplies the value.
+
+**Backend fix required:** Create the order record at session creation time, generate `order_ref`, return it in the response body (`data.order_ref`) AND embed it in the Stripe `success_url`:
+```
+{FRONTEND_URL}/checkout/return?session_id={CHECKOUT_SESSION_ID}&order_ref=OKL-XXXXX
+```
+Frontend requires no changes once the backend supplies the field.
+
+---
+
+## Completed in Previous Session — Admin RBAC, Product Card & Bug Fixes (2026-04-19/20)
 
 ### Product Card — Full-Bleed Image
 
@@ -395,13 +664,14 @@ See prior entries for:
 | Account profile | Complete — personal info + change password |
 | Account addresses | Complete — add/edit/delete modal |
 | Account orders | Complete — list + detail + ShipmentTracker |
-| **Account quotes** | **Complete** — `/account/quotes`; status badges; empty state |
-| **Account invoices** | **Complete** — `/account/invoices`; table + PDF download |
+| **Account quotes** | **Updated** — progress tracker, normalized status, quoted CTA, note filter, admin_notes block |
+| **Account invoices** | **Updated** — PDF download via auth proxy; "PDF pending" pill; B2C receipt labels |
 | **Account company** | **Complete** — `/account/company`; editable company name + industry |
 | **Account VAT** | **Complete** — `/account/vat`; VAT status + VIES link |
 | Quote page | Complete |
 | Cart drawer | Complete |
-| Checkout page | Complete — Adyen Drop-in |
+| **Checkout page** | **Updated** — Stripe Checkout; proxy `app/api/checkout/stripe-session/route.ts` → Laravel `/api/v1/payments/create-session` |
+| **Checkout return** | **Updated** — `/checkout/return`; "Order received" copy; `order_ref` from URL param + sessionStorage fallback (awaiting backend fix to supply `order_ref`) |
 | Fuel Echo Tech page | Complete — `/fet`; green theme; ROI calculator |
 | About / Contact / News | Complete |
 | 404 / Error / Loading | Complete |
@@ -414,6 +684,14 @@ See prior entries for:
 | **Admin RBAC** | **Complete** — `lib/admin-permissions.ts`; canAccess(); route guard; nav filtering by role |
 | Admin profile | Complete — first/last/display name fields; role label from API |
 | Admin users | Complete — create without password; temp password notice; role_label display |
+| **Admin order actions** | **New** — Cancel Order (admin/order_manager/super_admin); Delete Order (super_admin only, confirm-ref modal); 422/409 error handling |
+| **Admin order activity log** | **New** — `ActivityLog` card in order detail; timeline with old→new diff, actor email, IP, notes |
+| **Account invoices (B2C)** | **Updated** — Receipts & Invoices card added to B2C dashboard; previously B2B only |
+| **Account invoices page** | **Updated** — customer-type-aware title/badge/empty state; PDF download via auth proxy |
+| **Quote form** | **Updated** — file attachment upload (PDF/CSV/XLS/XLSX, max 10 MB); multipart forwarding to Laravel |
+| **Admin quote detail** | **Updated** — attachment card, brand_preference/tyre_size rows, Convert to Order card + modal |
+| **Admin quote → order** | **New** — `QuoteConvertModal`; delivery + items + summary form; 422/409 handling; View Order link |
+| **Admin dashboard KPIs** | **Updated** — connected to real `/admin/dashboard` endpoint; AOV card shows period label + paid order count |
 | Admin products / articles / orders / quotes / brands / hero-slides / settings / supplier | Complete |
 
 ---
@@ -488,6 +766,117 @@ app/template.tsx     ← GSAP page fade + ScrollTrigger.refresh() on every route
 
 ---
 
+## Completed in Session — Stripe Checkout Fixes (2026-05-02)
+
+### Stripe Session Proxy — Body Forwarding Fix
+
+**File:** `app/api/checkout/stripe-session/route.ts`
+
+**Problem:** `request.text()` can return an empty string under certain Next.js 16 conditions, causing the proxy to forward `{}` to Laravel. Laravel validated `payment_method` as required and returned a 422 error visible to the user.
+
+**Fix:**
+- Switched from `request.text()` to `request.json()` + `JSON.stringify()` — body is explicitly parsed then re-serialised, throwing cleanly if empty/invalid
+- Hardcoded `Content-Type: application/json` on the outbound request (no longer reflects the incoming header, which could carry a charset suffix)
+
+**Diagnostic logging added (temporary):**
+```
+[stripe-session] target URL      — exact Laravel endpoint (confirms API_URL env var)
+[stripe-session] request body    — full payload forwarded
+[stripe-session] HTTP status     — Laravel response code
+[stripe-session] has checkout_url — whether data.checkout_url is a string
+[stripe-session] has order_ref   — whether data.order_ref is a string
+[stripe-session] raw response    — first 600 chars of Laravel response
+```
+
+**API URL resolution order:**
+```
+process.env.API_URL  >  process.env.NEXT_PUBLIC_API_URL  >  "http://localhost:8000/api/v1"
+```
+Ensure `NEXT_PUBLIC_API_URL=https://api.okelcor.com/api/v1` is set in all deployment environments.
+
+---
+
+### Checkout Return Page — Stripe-Only Rewrite
+
+**File:** `app/checkout/return/page.tsx`
+
+Full rewrite to remove dead Mollie code and align with Stripe Checkout + backend webhook flow.
+
+**Changes:**
+- Removed: loading / pending / failed states, Mollie status-check fetch, `amount` state, `Loader2` import
+- Two states only:
+  - `session_id` in URL → **"Order received"** card (success)
+  - No `session_id` → **"Check your email"** card (fallback / direct nav)
+- Copy: *"Your payment was submitted successfully. We'll email your confirmation once Stripe confirms the payment."* — avoids claiming payment is confirmed from URL alone (webhook is source of truth)
+- `order_ref` display: shown as a pill when present
+- All colours use CSS variables (`var(--primary)`, `var(--foreground)`, `var(--muted)`)
+
+**`order_ref` reading (reliable, two-source):**
+```typescript
+// 1. URL param — present if backend includes order_ref in Stripe success_url
+const queryOrderRef = searchParams.get("order_ref") ?? "";
+
+// 2. sessionStorage fallback — written by checkout-flow.tsx before redirect
+const [sessionRef, setSessionRef] = useState("");
+useEffect(() => {
+  const stored = sessionStorage.getItem("stripe_order_ref") ?? "";
+  if (stored) setSessionRef(stored);
+  sessionStorage.removeItem("stripe_checkout_session_id");
+  sessionStorage.removeItem("stripe_order_ref");
+}, []);
+
+const orderRef = queryOrderRef || sessionRef;
+```
+
+Key fix from previous bug: `orderRef` is derived reactively from `queryOrderRef` (not frozen in a lazy `useState` initialiser), so it updates correctly after `useSearchParams()` resolves during hydration.
+
+---
+
+### Checkout Flow — Reliable sessionStorage Writes
+
+**File:** `components/checkout/checkout-flow.tsx`
+
+**Problem:** sessionStorage was only written inside `if` guards — if the backend response omitted `order_ref`, the key was never set and the return page fallback silently had nothing to read.
+
+**Fix:** Unconditional writes with explicit variable extraction:
+```typescript
+const checkoutSession = String(checkoutData.checkout_session_id ?? "");
+const orderRef        = String(checkoutData.order_ref ?? "");
+
+sessionStorage.setItem("stripe_checkout_session_id", checkoutSession);
+sessionStorage.setItem("stripe_order_ref", orderRef);
+// → then clearCart() + window.location.href = checkoutUrl
+```
+
+Both keys are **always written before the Stripe redirect**, even if empty, so the return page always finds consistent keys in sessionStorage.
+
+**Backend response shape expected:**
+```json
+{
+  "data": {
+    "checkout_url": "https://checkout.stripe.com/...",
+    "checkout_session_id": "cs_...",
+    "order_ref": "OKL-XXXXX"
+  }
+}
+```
+
+---
+
+### Stripe Checkout — Frontend/Backend Contract (Confirmed)
+
+| Thing | Who handles it |
+|---|---|
+| Customer confirmation email | Backend (auto, on `checkout.session.completed` webhook) |
+| Admin notification email | Backend (auto, on webhook) |
+| `/checkout/return` page | Frontend ✅ |
+| `/checkout/cancel` page | Frontend ✅ |
+| Showing `order_ref` on return page | Frontend reads from URL param → sessionStorage fallback |
+
+**Important timing:** Stripe redirect fires before the webhook. Never fetch order status on the return page — the webhook may not have fired yet. Email is the source of truth.
+
+---
+
 ## Completed in Session — Domain Migration & Customer Email Blast (2026-04-22/23)
 
 ### Domain: okelcor.de → okelcor.com
@@ -528,17 +917,23 @@ Email template: dark Okelcor header, migration announcement, "Set Your Password 
 
 ### Medium Priority
 
-1. **Adyen live credentials** — Switch `NEXT_PUBLIC_ADYEN_ENVIRONMENT=live` and update client key.
+1. **Stripe `order_ref` not displayed on return page — backend fix required** — Root cause confirmed via audit: Laravel's `POST /payments/create-session` does not return `order_ref` because the order is created by the Stripe webhook, not at session creation time. Frontend code is correct. Backend must: (a) create the order record at session creation time, (b) return `order_ref` in `data.order_ref`, and (c) embed it in the Stripe `success_url` as `?order_ref=OKL-XXXXX`. No frontend changes needed once backend supplies the field.
 
-2. **Admin existing sessions after RBAC** — Users who logged in before `admin_role` cookie was introduced will see all nav items. They need to log out and back in once.
+2. **Stripe diagnostic logging** — Temporary `console.log` lines in `app/api/checkout/stripe-session/route.ts` (target URL, request body, HTTP status, has checkout_url, has order_ref). Remove once the backend confirms the response shape.
 
-3. **DNS redirect** — Configure okelcor.de → okelcor.com redirect at DNS/hosting level.
+3. **Invoice download debug logs** — Temporary `console.log` lines in `app/api/account/invoices/[id]/download/route.ts` (token present, target URL, Laravel status, error body). Remove once PDF download is confirmed working in production.
+
+4. **Admin quote attachment debug log** — Temporary `console.log` in `app/admin/quotes/[id]/page.tsx` logging all 6 attachment field values. Remove once attachment display is confirmed.
+
+5. **Admin existing sessions after RBAC** — Users who logged in before `admin_role` cookie was introduced will see all nav items. They need to log out and back in once.
+
+6. **DNS redirect** — Configure okelcor.de → okelcor.com redirect at DNS/hosting level.
 
 ### Low Priority
 
-4. **Newsletter backend** — `components/newsletter-strip.tsx` shows success UI but does not POST to any endpoint.
+7. **Newsletter backend** — `components/newsletter-strip.tsx` shows success UI but does not POST to any endpoint.
 
-5. **Unused public assets** — Old placeholder SVGs in `public/brands/` safe to delete.
+8. **Unused public assets** — Old placeholder SVGs in `public/brands/` safe to delete.
 
 ---
 

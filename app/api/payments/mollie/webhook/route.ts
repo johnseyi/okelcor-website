@@ -3,6 +3,10 @@ import { Resend } from "resend";
 import { getMollieClient } from "@/lib/mollie";
 import { SITE_URL, COMPANY_NAME, COMPANY_EMAIL, COMPANY_NOREPLY_EMAIL } from "@/lib/constants";
 
+/**
+ * LEGACY/INACTIVE: Mollie webhook handling is retained for prior payments
+ * only. Stripe Checkout is the active gateway for new checkout sessions.
+ */
 const API_URL        = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 const WEBHOOK_SECRET = process.env.MOLLIE_WEBHOOK_SECRET ?? "";
 

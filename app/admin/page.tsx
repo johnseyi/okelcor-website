@@ -4,6 +4,7 @@ import {
   AdminUnauthorizedError,
   type AdminProduct,
 } from "@/lib/admin-api";
+import DashboardErrorBoundary from "@/components/admin/dashboard/dashboard-error-boundary";
 import StatusBar      from "@/components/admin/dashboard/status-bar";
 import HeroMetrics    from "@/components/admin/dashboard/hero-metrics";
 import RevenueChart   from "@/components/admin/dashboard/revenue-chart";
@@ -33,10 +34,14 @@ export default async function AdminDashboard() {
     <div className="min-h-screen bg-[#f5f5f7] p-4 md:p-6 lg:p-8">
 
       {/* Suspicious activity banner — hidden when no alerts */}
-      <SuspiciousBanner />
+      <DashboardErrorBoundary label="Suspicious activity banner">
+        <SuspiciousBanner />
+      </DashboardErrorBoundary>
 
       {/* Live status bar */}
-      <StatusBar />
+      <DashboardErrorBoundary label="Status bar">
+        <StatusBar />
+      </DashboardErrorBoundary>
 
       {/* Page heading */}
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
@@ -51,42 +56,66 @@ export default async function AdminDashboard() {
       </div>
 
       {/* Hero metric cards */}
-      <HeroMetrics />
+      <DashboardErrorBoundary label="Hero metrics">
+        <HeroMetrics />
+      </DashboardErrorBoundary>
 
       {/* Main 3-column operational grid */}
       <div className="grid gap-5 lg:grid-cols-3">
 
         {/* ── Left column ─────────────────────────────────── */}
         <div className="space-y-5">
-          <RevenueChart />
-          <RecentOrders />
+          <DashboardErrorBoundary label="Revenue chart">
+            <RevenueChart />
+          </DashboardErrorBoundary>
+          <DashboardErrorBoundary label="Recent orders">
+            <RecentOrders />
+          </DashboardErrorBoundary>
         </div>
 
         {/* ── Middle column ───────────────────────────────── */}
         <div className="space-y-5">
-          <LiveAnalytics />
+          <DashboardErrorBoundary label="Live analytics">
+            <LiveAnalytics />
+          </DashboardErrorBoundary>
         </div>
 
         {/* ── Right column ────────────────────────────────── */}
         <div className="space-y-5">
-          <PendingQuotes />
-          <LowStock />
-          <CrispPanel />
+          <DashboardErrorBoundary label="Pending quotes">
+            <PendingQuotes />
+          </DashboardErrorBoundary>
+          <DashboardErrorBoundary label="Low stock">
+            <LowStock />
+          </DashboardErrorBoundary>
+          <DashboardErrorBoundary label="Conversations">
+            <CrispPanel />
+          </DashboardErrorBoundary>
         </div>
 
       </div>
 
       {/* Bottom row */}
       <div className="mt-5 grid gap-5 lg:grid-cols-3">
-        <GoogleAdsCard />
-        <FunnelCard />
-        <TopProducts />
+        <DashboardErrorBoundary label="Google Ads">
+          <GoogleAdsCard />
+        </DashboardErrorBoundary>
+        <DashboardErrorBoundary label="Funnel">
+          <FunnelCard />
+        </DashboardErrorBoundary>
+        <DashboardErrorBoundary label="Top products">
+          <TopProducts />
+        </DashboardErrorBoundary>
       </div>
 
       {/* Security overview + Sentry */}
       <div className="mt-5 grid gap-5 lg:grid-cols-3">
-        <SecurityAlertCard />
-        <SentryCard />
+        <DashboardErrorBoundary label="Security alerts">
+          <SecurityAlertCard />
+        </DashboardErrorBoundary>
+        <DashboardErrorBoundary label="Sentry">
+          <SentryCard />
+        </DashboardErrorBoundary>
       </div>
 
     </div>

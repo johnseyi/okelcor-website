@@ -162,6 +162,17 @@ export type AdminOrderItem = {
   subtotal: number;
 };
 
+export type AdminOrderLog = {
+  id: number;
+  action: string;
+  old_value?: string | null;
+  new_value?: string | null;
+  notes?: string | null;
+  admin_user_email?: string | null;
+  ip_address?: string | null;
+  created_at: string;
+};
+
 export type AdminOrderFull = AdminOrder & {
   phone?: string;
   company_name?: string;
@@ -172,6 +183,7 @@ export type AdminOrderFull = AdminOrder & {
   tracking_status?: string;
   eta?: string;
   items: AdminOrderItem[];
+  logs?: AdminOrderLog[];
   updated_at?: string;
 };
 
@@ -186,13 +198,28 @@ export type AdminQuote = {
   quantity?: string;
   status: "new" | "reviewed" | "quoted" | "closed" | string;
   created_at: string;
+  order_id?: number | null;
+  order_ref?: string | null;
 };
 
 export type AdminQuoteFull = AdminQuote & {
   phone?: string;
+  delivery_address?: string;
+  delivery_city?: string;
+  delivery_postal_code?: string;
   delivery_location?: string;
   notes?: string;
+  admin_notes?: string;
+  brand_preference?: string;
+  tyre_size?: string;
   updated_at?: string;
+  // Attachment — backend may use any of these field names
+  attachment_url?: string;           // full URL if backend provides one
+  attachment_path?: string;          // storage path or full URL from backend
+  attachment_name?: string;          // generic name alias
+  attachment_original_name?: string; // original filename from upload
+  attachment_mime?: string;          // MIME type e.g. "application/pdf"
+  attachment_size?: number;          // bytes
 };
 
 export type AdminHeroSlideTranslation = {

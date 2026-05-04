@@ -17,6 +17,10 @@ type Metrics = {
   sessionsToday:          number;
   avgOrderValueToday:     number;
   avgOrderValueYesterday: number;
+  conversionRate:         number;
+  aovPeriodLabel:         string | null;
+  aovPaidOrdersCount:     number | null;
+  aovManualOrdersCount:   number | null;
 };
 
 function pctDelta(a: number, b: number): number | null {
@@ -133,11 +137,12 @@ function OrdersTodayCard({
 // ── Generic metric card ───────────────────────────────────────────────────────
 
 function MetricCard({
-  label, value, sub, icon: Icon, accent, trend, format = "number",
+  label, value, sub, note, icon: Icon, accent, trend, format = "number",
 }: {
   label:   string;
   value:   number;
   sub?:    string;
+  note?:   string;
   icon:    React.ElementType;
   accent:  string;
   trend?:  { current: number; prev: number };
@@ -162,6 +167,7 @@ function MetricCard({
             : animated.toLocaleString()}
         </p>
         {sub && <p className="mt-0.5 text-[0.7rem] text-[#9ca3af]">{sub}</p>}
+        {note && <p className="mt-0.5 text-[0.68rem] italic text-[#c0c3c8]">{note}</p>}
       </div>
     </div>
   );
@@ -194,6 +200,10 @@ export default function HeroMetrics() {
       sessionsToday:          phRes?.sessionsToday             ?? 0,
       avgOrderValueToday:     statsRes?.avgOrderValueToday     ?? 0,
       avgOrderValueYesterday: statsRes?.avgOrderValueYesterday ?? 0,
+      conversionRate:         statsRes?.conversionRate         ?? 0,
+      aovPeriodLabel:         statsRes?.aovPeriodLabel         ?? null,
+      aovPaidOrdersCount:     statsRes?.aovPaidOrdersCount     ?? null,
+      aovManualOrdersCount:   statsRes?.aovManualOrdersCount   ?? null,
     });
     setL(false);
   }, []);
@@ -211,11 +221,6 @@ export default function HeroMetrics() {
       </div>
     );
   }
-
-  // Conversion rate: confirmed orders / sessions today (not all orders)
-  const convRate = m && m.sessionsToday > 0
-    ? Math.round((m.ordersConfirmedToday / m.sessionsToday) * 1000) / 10
-    : 0;
 
   return (
     <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
@@ -252,8 +257,8 @@ export default function HeroMetrics() {
 
       <MetricCard
         label="Conversion Rate"
-        value={convRate}
-        sub={m && m.sessionsToday > 0 ? `${m.ordersConfirmedToday} orders / ${m.sessionsToday} sessions` : "no session data"}
+        value={m?.conversionRate ?? 0}
+        sub={m && m.sessionsToday > 0 ? `${m.sessionsToday} sessions today` : "from order analytics"}
         format="pct"
         icon={BarChart2}
         accent="bg-amber-500"
@@ -262,7 +267,11 @@ export default function HeroMetrics() {
       <MetricCard
         label="Avg Order Value"
         value={Math.round(m?.avgOrderValueToday ?? 0)}
-        sub="confirmed orders only"
+        sub={[
+          m?.aovPeriodLabel,
+          m?.aovPaidOrdersCount != null ? `${m.aovPaidOrdersCount} paid orders` : null,
+        ].filter(Boolean).join(" · ") || "confirmed orders only"}
+        note={(m?.aovManualOrdersCount ?? 0) > 0 ? "includes manual/imported orders" : undefined}
         format="currency"
         icon={Zap}
         accent="bg-cyan-500"
