@@ -1,10 +1,11 @@
 import { redirect, notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronLeft, Truck, Package, CreditCard, Mail, ExternalLink } from "lucide-react";
+import { ChevronLeft, Truck, Package } from "lucide-react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import ShipmentTracker from "@/components/account/shipment-tracker";
+import OrderPaymentCard from "@/components/account/order-payment-card";
 import { getCustomerFromCookie } from "@/lib/get-customer";
 import { StatusBadge, formatDate, type Order, type OrderStatus } from "../page";
 
@@ -192,45 +193,14 @@ export default async function OrderDetailPage({ params }: Props) {
             </div>
           </div>
 
-          {/* ── Payment ── Stripe pending only */}
-          {order.payment_method === "stripe" && order.payment_status === "pending" && (() => {
-            const paymentUrl = order.payment_url ?? order.checkout_url ?? null;
-            return (
-              <div className="rounded-[22px] bg-[#efefef] p-6 sm:p-8">
-                <div className="mb-4 flex items-center gap-2">
-                  <CreditCard size={17} strokeWidth={1.9} className="text-[var(--primary)]" />
-                  <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--primary)]">
-                    Payment Required
-                  </p>
-                </div>
-
-                {paymentUrl ? (
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                    <p className="text-[0.88rem] leading-relaxed text-[var(--muted)]">
-                      Your order is confirmed and awaiting payment. Complete your payment securely via Stripe.
-                    </p>
-                    <a
-                      href={paymentUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex shrink-0 items-center gap-2 rounded-full bg-[var(--primary)] px-7 py-3 text-[0.9rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
-                    >
-                      <CreditCard size={16} strokeWidth={2} />
-                      Pay securely with Stripe
-                      <ExternalLink size={13} strokeWidth={2.2} />
-                    </a>
-                  </div>
-                ) : (
-                  <div className="flex items-start gap-3 rounded-[14px] border border-amber-200 bg-amber-50 px-5 py-4">
-                    <Mail size={17} strokeWidth={1.8} className="mt-0.5 shrink-0 text-amber-600" />
-                    <p className="text-[0.88rem] leading-relaxed text-amber-800">
-                      Payment link sent by email. Please check your inbox to complete payment for this order.
-                    </p>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
+          {/* ── Payment ── */}
+          {order.payment_status && (
+            <OrderPaymentCard
+              orderRef={order.ref}
+              paymentMethod={order.payment_method}
+              paymentStatus={order.payment_status}
+            />
+          )}
 
           {/* ── Status timeline ── */}
           <div className="rounded-[22px] bg-[#efefef] p-6 sm:p-8">
