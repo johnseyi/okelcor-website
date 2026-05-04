@@ -71,7 +71,11 @@ export default function RevenueChart() {
     setLoad(false);
   }, []);
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    void refresh();
+    const t = setInterval(() => void refresh(), 30_000);
+    return () => clearInterval(t);
+  }, [refresh]);
 
   return (
     <div className="overflow-hidden rounded-2xl bg-white shadow-sm">

@@ -17,6 +17,7 @@ type Metrics = {
   sessionsToday:          number;
   avgOrderValueToday:     number;
   avgOrderValueYesterday: number;
+  conversionRate:         number;
 };
 
 function pctDelta(a: number, b: number): number | null {
@@ -194,6 +195,7 @@ export default function HeroMetrics() {
       sessionsToday:          phRes?.sessionsToday             ?? 0,
       avgOrderValueToday:     statsRes?.avgOrderValueToday     ?? 0,
       avgOrderValueYesterday: statsRes?.avgOrderValueYesterday ?? 0,
+      conversionRate:         statsRes?.conversionRate         ?? 0,
     });
     setL(false);
   }, []);
@@ -211,11 +213,6 @@ export default function HeroMetrics() {
       </div>
     );
   }
-
-  // Conversion rate: confirmed orders / sessions today (not all orders)
-  const convRate = m && m.sessionsToday > 0
-    ? Math.round((m.ordersConfirmedToday / m.sessionsToday) * 1000) / 10
-    : 0;
 
   return (
     <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
@@ -252,8 +249,8 @@ export default function HeroMetrics() {
 
       <MetricCard
         label="Conversion Rate"
-        value={convRate}
-        sub={m && m.sessionsToday > 0 ? `${m.ordersConfirmedToday} orders / ${m.sessionsToday} sessions` : "no session data"}
+        value={m?.conversionRate ?? 0}
+        sub={m && m.sessionsToday > 0 ? `${m.sessionsToday} sessions today` : "from order analytics"}
         format="pct"
         icon={BarChart2}
         accent="bg-amber-500"
