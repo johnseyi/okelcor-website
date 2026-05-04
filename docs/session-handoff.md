@@ -60,7 +60,110 @@ Development environment: Windows 11, VS Code, Node.js / npm
 
 ---
 
-## Completed in Latest Session — Admin Order Actions, Activity Log & Invoice UX (2026-05-03)
+## Completed in Latest Session — Invoice Proxy, Quote UX, File Upload & Dashboard (2026-05-04)
+
+### Invoice PDF Download — Auth Proxy
+
+**Files:** `app/api/account/invoices/[id]/download/route.ts` (created), `app/account/invoices/page.tsx`
+
+Direct links to `inv.pdf_url` returned 401 because the browser cannot attach the httpOnly `customer_token` cookie as a Bearer header. A Next.js proxy route was created to bridge the gap:
+
+- Reads `customer_token` from cookies server-side
+- Forwards `GET /api/v1/invoices/{id}/download` with `Authorization: Bearer` header
+- Preserves `Content-Type` + `Content-Disposition` response headers
+- Returns binary body via `arrayBuffer()` (not `.json()`)
+- Returns 401 if cookie absent, 404/500 with JSON error if Laravel fails
+
+`app/account/invoices/page.tsx` download link `href` changed from `inv.pdf_url` to `/api/account/invoices/${inv.id}/download`. `inv.pdf_url` is still used as a boolean gate (shows "PDF pending" pill when absent).
+
+**Temporary debug logs** in the download route (token present, target URL, Laravel status, error body). Remove once confirmed working in production.
+
+---
+
+### Customer Quote Request Tracking — Full UX Overhaul
+
+**File:** `app/account/quotes/page.tsx`
+
+Complete rewrite of the quotes page. Key additions:
+
+- **`NormalizedStatus`** union: `"received" | "reviewed" | "quoted" | "closed"`
+- **`normalizeStatus()`** maps backend variants: `new/pending → received`, `reviewing/reviewed → reviewed`, `quoted/approved → quoted`, `closed/rejected → closed`
+- **`ProgressTracker`** component: 4 orange dots connected by lines; future steps dimmed; labels below each step
+- **Note blocklist + `isMeaningfulNote()`** filters out test/placeholder notes (`"test"`, `"n/a"`, `"."`, etc.)
+- **`admin_notes?: string`** field on `QuoteRequest` for future Okelcor team responses
+- **Quoted CTA block**: green callout + orange pill button → `/contact?quote_ref=...` shown only when `normalized === "quoted"`
+- **"Your message" label** on customer notes section; separate orange-tinted `admin_notes` block labelled "Okelcor response"
+- **Dynamic account type label**: `isB2B ? "B2B" : "Personal"` (removed hardcoded "B2B")
+
+`app/account/page.tsx`: Added "Quote Requests" `DashCard` to B2C dashboard (previously only in B2B).
+
+---
+
+### Quote Form — File Attachment Upload
+
+**Files:** `components/quote/quote-form.tsx`, `app/api/customer/quote-requests/route.ts`
+
+`components/quote/quote-form.tsx`:
+- Accepted formats: `.pdf`, `.csv`, `.xls`, `.xlsx` (max 10 MB)
+- `attachedFile: File | null` state; hidden `<input type="file">` via `useRef`
+- UI: click-to-browse area when no file; filename + size + × remove button when file attached; inline validation errors for type/size
+- `handleSubmit()`: if `attachedFile` → builds `FormData` with all text fields + `attachment` file, posts without `Content-Type` (browser sets boundary); else → existing JSON path
+- `handleReset()` clears file state + resets native input element
+
+`app/api/customer/quote-requests/route.ts`:
+- Detects `multipart/form-data` via `content-type` request header
+- Multipart path: `request.formData()` → extracts all text fields + `attachment_name` for email; forwards `FormData` directly to Laravel (no manual `Content-Type`)
+- Email template includes `Attachment` row when `attachment_name` is present
+- JSON path unchanged
+
+---
+
+### Admin Quote Detail — Attachment Display Fix
+
+**Files:** `lib/admin-api.ts`, `components/admin/quote-detail.tsx`, `app/admin/quotes/[id]/page.tsx`
+
+**Problem:** Backend sends `attachment_path` + `attachment_original_name` but the type only had `attachment_url` + `attachment_name`, so the attachment card never rendered.
+
+**Fix:**
+- `AdminQuoteFull` in `lib/admin-api.ts` now has all 6 variants: `attachment_url`, `attachment_path`, `attachment_name`, `attachment_original_name`, `attachment_mime`, `attachment_size`
+- `components/admin/quote-detail.tsx`: IIFE resolves `attachmentUrl = quote.attachment_url ?? quote.attachment_path ?? null` and `attachmentName = quote.attachment_original_name ?? quote.attachment_name ?? null`; render guard is `!!(attachmentUrl || attachmentName)`
+- Attachment card placed **above** the Notes section
+- Shows `formatBytes(size) · mime` subtitle; orange Download button (opens in new tab) when URL available; "Download unavailable" text otherwise
+- `formatBytes()` helper: B / KB / MB
+
+**Temporary debug log** in `app/admin/quotes/[id]/page.tsx` logs all 6 attachment field values to server console. Remove once confirmed.
+
+---
+
+### Admin Dashboard — Connected to Real Laravel Endpoint
+
+**File:** `app/api/admin/dashboard/stats/route.ts`
+
+Previously all KPI cards showed computed fallback values. The route now calls `GET /api/v1/admin/dashboard` in the same `Promise.all` as orders/quotes/products.
+
+- Response handling: `db = dashboardRes?.data ?? dashboardRes ?? {}` (handles both wrapped and flat responses)
+- 9 fields extracted from `db` with `null` fallbacks: `revenue_today`, `orders_today_paid`, `new_customers_today`, `conversion_rate`, `average_order_value`, `aov_period_label`, `aov_paid_orders_count`, `aov_stripe_orders_count`, `aov_manual_orders_count`
+- Chart: prefers `revenue_last_7_days` array from API; handles `revenue`/`confirmed`/`amount` keys; parses ISO dates with `new Date(y, m-1, d)` constructor (avoids UTC→local shift); falls back to computed from orders
+- Return object: API values take precedence, computed values are fallback
+- `aovPeriodLabel`, `aovPaidOrdersCount`, `aovStripeOrdersCount`, `aovManualOrdersCount` exposed in response
+
+`components/admin/dashboard/revenue-chart.tsx`: Added 30s `setInterval` auto-refresh (previously fired only once on mount).
+
+---
+
+### Admin Dashboard — AOV Card Backend Labels
+
+**File:** `components/admin/dashboard/hero-metrics.tsx`
+
+- `Metrics` type gains 3 new nullable fields: `aovPeriodLabel: string | null`, `aovPaidOrdersCount: number | null`, `aovManualOrdersCount: number | null`
+- `refresh()` reads these from `statsRes`
+- `MetricCard` component gains optional `note?: string` prop — renders as small italic light-grey text below `sub`
+- AOV card `sub` prop: `"{aovPeriodLabel} · {N} paid orders"` from backend; falls back to `"confirmed orders only"` when fields are null
+- AOV card `note` prop: `"includes manual/imported orders"` shown only when `aovManualOrdersCount > 0`
+
+---
+
+## Completed in Previous Session — Admin Order Actions, Activity Log & Invoice UX (2026-05-03)
 
 ### Admin Order Detail — Cancel & Delete Actions
 
@@ -475,8 +578,8 @@ See prior entries for:
 | Account profile | Complete — personal info + change password |
 | Account addresses | Complete — add/edit/delete modal |
 | Account orders | Complete — list + detail + ShipmentTracker |
-| **Account quotes** | **Complete** — `/account/quotes`; status badges; empty state |
-| **Account invoices** | **Complete** — `/account/invoices`; table + PDF download |
+| **Account quotes** | **Updated** — progress tracker, normalized status, quoted CTA, note filter, admin_notes block |
+| **Account invoices** | **Updated** — PDF download via auth proxy; "PDF pending" pill; B2C receipt labels |
 | **Account company** | **Complete** — `/account/company`; editable company name + industry |
 | **Account VAT** | **Complete** — `/account/vat`; VAT status + VIES link |
 | Quote page | Complete |
@@ -498,7 +601,10 @@ See prior entries for:
 | **Admin order actions** | **New** — Cancel Order (admin/order_manager/super_admin); Delete Order (super_admin only, confirm-ref modal); 422/409 error handling |
 | **Admin order activity log** | **New** — `ActivityLog` card in order detail; timeline with old→new diff, actor email, IP, notes |
 | **Account invoices (B2C)** | **Updated** — Receipts & Invoices card added to B2C dashboard; previously B2B only |
-| **Account invoices page** | **Updated** — customer-type-aware title/badge/empty state; PDF pending pill |
+| **Account invoices page** | **Updated** — customer-type-aware title/badge/empty state; PDF download via auth proxy |
+| **Quote form** | **Updated** — file attachment upload (PDF/CSV/XLS/XLSX, max 10 MB); multipart forwarding to Laravel |
+| **Admin quote detail** | **Updated** — attachment card above notes; resolves all 6 backend field name variants |
+| **Admin dashboard KPIs** | **Updated** — connected to real `/admin/dashboard` endpoint; AOV card shows period label + paid order count |
 | Admin products / articles / orders / quotes / brands / hero-slides / settings / supplier | Complete |
 
 ---
@@ -728,15 +834,19 @@ Email template: dark Okelcor header, migration announcement, "Set Your Password 
 
 2. **Stripe diagnostic logging** — Temporary `console.log` lines in `app/api/checkout/stripe-session/route.ts` (target URL, request body, HTTP status, has checkout_url, has order_ref). Remove once the backend confirms the response shape.
 
-3. **Admin existing sessions after RBAC** — Users who logged in before `admin_role` cookie was introduced will see all nav items. They need to log out and back in once.
+3. **Invoice download debug logs** — Temporary `console.log` lines in `app/api/account/invoices/[id]/download/route.ts` (token present, target URL, Laravel status, error body). Remove once PDF download is confirmed working in production.
 
-4. **DNS redirect** — Configure okelcor.de → okelcor.com redirect at DNS/hosting level.
+4. **Admin quote attachment debug log** — Temporary `console.log` in `app/admin/quotes/[id]/page.tsx` logging all 6 attachment field values. Remove once attachment display is confirmed.
+
+5. **Admin existing sessions after RBAC** — Users who logged in before `admin_role` cookie was introduced will see all nav items. They need to log out and back in once.
+
+6. **DNS redirect** — Configure okelcor.de → okelcor.com redirect at DNS/hosting level.
 
 ### Low Priority
 
-5. **Newsletter backend** — `components/newsletter-strip.tsx` shows success UI but does not POST to any endpoint.
+7. **Newsletter backend** — `components/newsletter-strip.tsx` shows success UI but does not POST to any endpoint.
 
-6. **Unused public assets** — Old placeholder SVGs in `public/brands/` safe to delete.
+8. **Unused public assets** — Old placeholder SVGs in `public/brands/` safe to delete.
 
 ---
 
