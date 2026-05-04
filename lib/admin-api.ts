@@ -204,6 +204,9 @@ export type AdminQuote = {
 
 export type AdminQuoteFull = AdminQuote & {
   phone?: string;
+  delivery_address?: string;
+  delivery_city?: string;
+  delivery_postal_code?: string;
   delivery_location?: string;
   notes?: string;
   admin_notes?: string;

@@ -21,6 +21,9 @@ type FormData = {
   tyreSize: string;
   quantity: string;
   budgetRange: string;
+  deliveryAddress: string;
+  deliveryCity: string;
+  deliveryPostalCode: string;
   deliveryLocation: string;
   deliveryTimeline: string;
   notes: string;
@@ -112,8 +115,9 @@ export default function QuoteForm() {
     fullName: "", companyName: "", email: "", phone: "",
     country: "", businessType: "",
     tyreCategory: "", brandPreference: "", tyreSize: "",
-    quantity: "", budgetRange: "", deliveryLocation: "",
-    deliveryTimeline: "", notes: "",
+    quantity: "", budgetRange: "",
+    deliveryAddress: "", deliveryCity: "", deliveryPostalCode: "",
+    deliveryLocation: "", deliveryTimeline: "", notes: "",
   });
   const [vatNumber, setVatNumber] = useState("");
   const [errors, setErrors] = useState<FormErrors>({});
@@ -207,10 +211,13 @@ export default function QuoteForm() {
         fd.append("tyre_category",      form.tyreCategory);
         fd.append("brand_preference",   form.brandPreference);
         fd.append("tyre_size",          form.tyreSize);
-        fd.append("quantity",           form.quantity);
-        fd.append("budget_range",       form.budgetRange);
-        fd.append("delivery_location",  form.deliveryLocation);
-        fd.append("delivery_timeline",  form.deliveryTimeline);
+        fd.append("quantity",             form.quantity);
+        fd.append("budget_range",         form.budgetRange);
+        fd.append("delivery_address",     form.deliveryAddress);
+        fd.append("delivery_city",        form.deliveryCity);
+        fd.append("delivery_postal_code", form.deliveryPostalCode);
+        fd.append("delivery_location",    form.deliveryLocation);
+        fd.append("delivery_timeline",    form.deliveryTimeline);
         fd.append("notes",              form.notes);
         if (vatNumber.trim()) fd.append("vat_number", vatNumber.trim());
         fd.append("attachment", attachedFile);
@@ -229,10 +236,13 @@ export default function QuoteForm() {
             tyre_category:     form.tyreCategory,
             brand_preference:  form.brandPreference,
             tyre_size:         form.tyreSize,
-            quantity:          form.quantity,
-            budget_range:      form.budgetRange,
-            delivery_location: form.deliveryLocation,
-            delivery_timeline: form.deliveryTimeline,
+            quantity:             form.quantity,
+            budget_range:         form.budgetRange,
+            delivery_address:     form.deliveryAddress,
+            delivery_city:        form.deliveryCity,
+            delivery_postal_code: form.deliveryPostalCode,
+            delivery_location:    form.deliveryLocation,
+            delivery_timeline:    form.deliveryTimeline,
             notes:             form.notes,
             vat_number:        vatNumber.trim() || undefined,
           }),
@@ -267,8 +277,9 @@ export default function QuoteForm() {
       fullName: "", companyName: "", email: "", phone: "",
       country: "", businessType: "",
       tyreCategory: "", brandPreference: "", tyreSize: "",
-      quantity: "", budgetRange: "", deliveryLocation: "",
-      deliveryTimeline: "", notes: "",
+      quantity: "", budgetRange: "",
+      deliveryAddress: "", deliveryCity: "", deliveryPostalCode: "",
+      deliveryLocation: "", deliveryTimeline: "", notes: "",
     });
     setErrors({});
   };
@@ -464,20 +475,60 @@ export default function QuoteForm() {
             </select>
           </Field>
 
-          <Field label={t.quote.form.labelDelivery} htmlFor="quote-deliveryLocation" required error={errors.deliveryLocation}>
-            <div id="field-deliveryLocation" className="col-span-full">
+          {/* ── Delivery Details ── */}
+          <SectionLabel>{t.quote.form.sectionDelivery}</SectionLabel>
+
+          <div className="col-span-full">
+            <Field label={t.quote.form.labelDeliveryAddress} htmlFor="quote-deliveryAddress">
               <input
-                id="quote-deliveryLocation"
+                id="quote-deliveryAddress"
                 type="text"
-                placeholder={t.quote.form.placeholderDelivery}
-                value={form.deliveryLocation}
-                onChange={set("deliveryLocation")}
-                aria-describedby={errors.deliveryLocation ? "quote-deliveryLocation-error" : undefined}
-                aria-invalid={!!errors.deliveryLocation}
-                className={ic("deliveryLocation")}
+                placeholder={t.quote.form.placeholderDeliveryAddress}
+                value={form.deliveryAddress}
+                onChange={set("deliveryAddress")}
+                className={ic("deliveryAddress")}
               />
-            </div>
+            </Field>
+          </div>
+
+          <Field label={t.quote.form.labelDeliveryCity} htmlFor="quote-deliveryCity">
+            <input
+              id="quote-deliveryCity"
+              type="text"
+              placeholder={t.quote.form.placeholderDeliveryCity}
+              value={form.deliveryCity}
+              onChange={set("deliveryCity")}
+              className={ic("deliveryCity")}
+            />
           </Field>
+
+          <Field label={t.quote.form.labelDeliveryPostalCode} htmlFor="quote-deliveryPostalCode">
+            <input
+              id="quote-deliveryPostalCode"
+              type="text"
+              placeholder={t.quote.form.placeholderDeliveryPostalCode}
+              value={form.deliveryPostalCode}
+              onChange={set("deliveryPostalCode")}
+              className={ic("deliveryPostalCode")}
+            />
+          </Field>
+
+          <div className="col-span-full">
+            <div id="field-deliveryLocation">
+              <Field label={t.quote.form.labelDelivery} htmlFor="quote-deliveryLocation" required error={errors.deliveryLocation}>
+                <input
+                  id="quote-deliveryLocation"
+                  type="text"
+                  placeholder={t.quote.form.placeholderDelivery}
+                  value={form.deliveryLocation}
+                  onChange={set("deliveryLocation")}
+                  aria-describedby={errors.deliveryLocation ? "quote-deliveryLocation-error" : undefined}
+                  aria-invalid={!!errors.deliveryLocation}
+                  className={ic("deliveryLocation")}
+                />
+              </Field>
+            </div>
+          </div>
 
           <Field label={t.quote.form.labelNotes} htmlFor="quote-notes" required error={errors.notes}>
             <div id="field-notes" className="col-span-full">

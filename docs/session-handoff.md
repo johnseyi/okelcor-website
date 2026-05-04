@@ -60,7 +60,49 @@ Development environment: Windows 11, VS Code, Node.js / npm
 
 ---
 
-## Completed in Latest Session — Admin Quote → Order Conversion UI (2026-05-04)
+## Completed in Latest Session — Quote Form Delivery Address Fields (2026-05-04)
+
+### Customer Quote Form — Structured Delivery Address
+
+**Files:** `components/quote/quote-form.tsx`, `app/api/customer/quote-requests/route.ts`, `lib/translations.ts`, `lib/admin-api.ts`, `components/admin/quote-detail.tsx`, `components/admin/quote-convert-modal.tsx`
+
+Added 3 structured address fields to the customer quote form, submitted to the backend, shown in admin, and used to prefill the Convert to Order modal.
+
+#### Quote form (`components/quote/quote-form.tsx`)
+- `FormData` gains `deliveryAddress`, `deliveryCity`, `deliveryPostalCode`
+- New **"Delivery Details"** section (`sectionDelivery`) added between the timeline/budget fields and notes:
+  - **Street / Delivery Address** — full-width, optional
+  - **City** — half-width, optional
+  - **Postal Code** — half-width, optional
+  - **Preferred delivery location / port** — full-width, required (renamed from "Preferred Delivery Location"; placeholder now `"e.g. Hamburg Port, Lagos, Dubai"`)
+- Both multipart (`FormData`) and JSON submit paths include `delivery_address`, `delivery_city`, `delivery_postal_code`
+- `handleReset` clears the 3 new fields
+
+#### Email notification (`app/api/customer/quote-requests/route.ts`)
+- Logistics section email rows now include: Delivery Address, City, Postal Code, Delivery Location / Port (rows are empty/hidden automatically when not provided via the `row()` helper)
+
+#### Admin types (`lib/admin-api.ts`)
+- `AdminQuoteFull` gains `delivery_address?: string`, `delivery_city?: string`, `delivery_postal_code?: string`
+
+#### Admin quote detail (`components/admin/quote-detail.tsx`)
+- Request Details card now shows Delivery Address, City, Postal Code, Location / Port rows (only visible when populated)
+
+#### Convert to Order modal (`components/admin/quote-convert-modal.tsx`)
+- Delivery form prefills from quote:
+  - `address` ← `quote.delivery_address ?? ""`
+  - `city` ← `quote.delivery_city ?? ""`
+  - `postal_code` ← `quote.delivery_postal_code ?? ""`
+  - `country` ← `quote.country ?? ""` (unchanged)
+  - `phone` ← `quote.phone ?? ""` (unchanged)
+- Admin can edit all fields in the modal before converting
+
+#### Translations (`lib/translations.ts`)
+- Type definition gains: `sectionDelivery`, `labelDeliveryAddress`, `labelDeliveryCity`, `labelDeliveryPostalCode`, `placeholderDeliveryAddress`, `placeholderDeliveryCity`, `placeholderDeliveryPostalCode`
+- All 4 locales (EN/DE/FR/ES) updated with the new keys; `labelDelivery` and `placeholderDelivery` updated to reflect the renamed field
+
+---
+
+## Completed in Previous Session — Admin Quote → Order Conversion UI (2026-05-04)
 
 ### Admin Quote Detail — Convert to Order
 

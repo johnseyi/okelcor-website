@@ -106,11 +106,12 @@ export type Translations = {
     hero: { eyebrow: string; title: string; subtitle: string };
     form: {
       eyebrow: string; heading: string; requiredNote: string;
-      sectionBusiness: string; sectionProduct: string;
+      sectionBusiness: string; sectionProduct: string; sectionDelivery: string;
       labelFullName: string; labelCompany: string; labelEmail: string; labelPhone: string;
       labelCountry: string; labelBusiness: string;
       labelTyreCategory: string; labelBrand: string; labelTyreSize: string;
       labelQuantity: string; labelBudget: string; labelTimeline: string;
+      labelDeliveryAddress: string; labelDeliveryCity: string; labelDeliveryPostalCode: string;
       labelDelivery: string; labelNotes: string;
       labelUpload: string; uploadComingSoon: string; uploadHint: string;
       placeholderFullName: string; placeholderCompany: string;
@@ -118,6 +119,7 @@ export type Translations = {
       placeholderCountry: string; placeholderBusiness: string; placeholderCategory: string;
       placeholderBrand: string; placeholderSize: string; placeholderQuantity: string;
       placeholderBudget: string; placeholderTimeline: string;
+      placeholderDeliveryAddress: string; placeholderDeliveryCity: string; placeholderDeliveryPostalCode: string;
       placeholderDelivery: string; placeholderNotes: string;
       businessTypes: string[]; tyreCategories: string[]; budgetRanges: string[]; timelines: string[];
       submitting: string; submit: string; submitNote: string;
@@ -394,11 +396,13 @@ const en: Translations = {
       requiredNote: "Fields marked * are required.",
       sectionBusiness: "Business / Customer Information",
       sectionProduct: "Product Request Information",
+      sectionDelivery: "Delivery Details",
       labelFullName: "Full Name", labelCompany: "Company Name", labelEmail: "Email Address", labelPhone: "Phone Number",
       labelCountry: "Country / Region", labelBusiness: "Business Type",
       labelTyreCategory: "Tyre Category", labelBrand: "Brand Preference", labelTyreSize: "Tyre Size / Specification",
       labelQuantity: "Quantity Needed", labelBudget: "Budget Range", labelTimeline: "Required Delivery Timeline",
-      labelDelivery: "Preferred Delivery Location", labelNotes: "Additional Notes / Inquiry",
+      labelDeliveryAddress: "Street / Delivery Address", labelDeliveryCity: "City", labelDeliveryPostalCode: "Postal Code",
+      labelDelivery: "Preferred delivery location / port", labelNotes: "Additional Notes / Inquiry",
       labelUpload: "Upload Product List / Specification Sheet",
       uploadComingSoon: "optional \u2014 coming soon",
       uploadHint: "Drag & drop or click to upload \u2014 PDF, XLS, CSV accepted",
@@ -409,7 +413,8 @@ const en: Translations = {
       placeholderSize: "e.g. 205/55R16 91H or 295/80R22.5",
       placeholderQuantity: "e.g. 500 units, 2 containers",
       placeholderBudget: "Select range", placeholderTimeline: "Select timeline",
-      placeholderDelivery: "e.g. Hamburg Port, Lagos, Dubai \u2014 include port or city",
+      placeholderDeliveryAddress: "Street address", placeholderDeliveryCity: "City", placeholderDeliveryPostalCode: "Postal / ZIP code",
+      placeholderDelivery: "e.g. Hamburg Port, Lagos, Dubai",
       placeholderNotes: "Describe your requirements in detail \u2014 tyre specs, intended use, volume, any other relevant information\u2026",
       businessTypes: ["Wholesaler", "Distributor", "Retailer", "Fleet Operator", "Individual Buyer", "Other"],
       tyreCategories: ["PCR Tyres", "TBR Tyres", "Used Tyres", "Mixed Request"],
@@ -807,11 +812,13 @@ const de: Translations = {
       requiredNote: "Mit * markierte Felder sind Pflichtfelder.",
       sectionBusiness: "Gesch\u00e4fts- / Kundeninformationen",
       sectionProduct: "Produktanfrageinformationen",
+      sectionDelivery: "Lieferdetails",
       labelFullName: "Vollst\u00e4ndiger Name", labelCompany: "Firmenname", labelEmail: "E-Mail-Adresse", labelPhone: "Telefonnummer",
       labelCountry: "Land / Region", labelBusiness: "Unternehmenstyp",
       labelTyreCategory: "Reifenkategorie", labelBrand: "Markenpräferenz", labelTyreSize: "Reifengr\u00f6\u00dfe / Spezifikation",
       labelQuantity: "Ben\u00f6tigte Menge", labelBudget: "Budgetrahmen", labelTimeline: "Gew\u00fcnschter Liefertermin",
-      labelDelivery: "Bevorzugter Lieferort", labelNotes: "Zus\u00e4tzliche Anmerkungen / Anfrage",
+      labelDeliveryAddress: "Straße / Lieferadresse", labelDeliveryCity: "Stadt", labelDeliveryPostalCode: "Postleitzahl",
+      labelDelivery: "Bevorzugter Lieferort / Hafen", labelNotes: "Zus\u00e4tzliche Anmerkungen / Anfrage",
       labelUpload: "Produktliste / Spezifikationsblatt hochladen",
       uploadComingSoon: "optional \u2014 demn\u00e4chst verf\u00fcgbar",
       uploadHint: "Ziehen & ablegen oder klicken \u2014 PDF, XLS, CSV akzeptiert",
@@ -822,7 +829,8 @@ const de: Translations = {
       placeholderSize: "z.B. 205/55R16 91H oder 295/80R22.5",
       placeholderQuantity: "z.B. 500 St\u00fcck, 2 Container",
       placeholderBudget: "Bereich ausw\u00e4hlen", placeholderTimeline: "Zeitplan ausw\u00e4hlen",
-      placeholderDelivery: "z.B. Hamburger Hafen, Lagos, Dubai \u2014 Hafen oder Stadt angeben",
+      placeholderDeliveryAddress: "Stra\u00dfe und Hausnummer", placeholderDeliveryCity: "Stadt", placeholderDeliveryPostalCode: "Postleitzahl",
+      placeholderDelivery: "z.B. Hamburger Hafen, Lagos, Dubai",
       placeholderNotes: "Beschreiben Sie Ihren Bedarf im Detail \u2014 Reifenspezifikationen, Verwendungszweck, Menge und weitere relevante Informationen\u2026",
       businessTypes: ["Gro\u00dfh\u00e4ndler", "H\u00e4ndler", "Einzelh\u00e4ndler", "Flottenunternehmen", "Privatk\u00e4ufer", "Sonstiges"],
       tyreCategories: ["PKW-Reifen", "LKW-Reifen", "Gebrauchtreifen", "Gemischte Anfrage"],
@@ -1220,11 +1228,13 @@ const fr: Translations = {
       requiredNote: "Les champs marqu\u00e9s * sont obligatoires.",
       sectionBusiness: "Informations entreprise / client",
       sectionProduct: "Informations sur la demande de produit",
+      sectionDelivery: "Détails de livraison",
       labelFullName: "Nom complet", labelCompany: "Nom de l'entreprise", labelEmail: "Adresse e-mail", labelPhone: "Num\u00e9ro de t\u00e9l\u00e9phone",
       labelCountry: "Pays / R\u00e9gion", labelBusiness: "Type d'entreprise",
       labelTyreCategory: "Cat\u00e9gorie de pneus", labelBrand: "Pr\u00e9f\u00e9rence de marque", labelTyreSize: "Taille / Sp\u00e9cification des pneus",
       labelQuantity: "Quantit\u00e9 n\u00e9cessaire", labelBudget: "Fourchette budg\u00e9taire", labelTimeline: "D\u00e9lai de livraison requis",
-      labelDelivery: "Lieu de livraison pr\u00e9f\u00e9r\u00e9", labelNotes: "Notes suppl\u00e9mentaires / Demande",
+      labelDeliveryAddress: "Adresse de livraison", labelDeliveryCity: "Ville", labelDeliveryPostalCode: "Code postal",
+      labelDelivery: "Lieu / port de livraison pr\u00e9f\u00e9r\u00e9", labelNotes: "Notes suppl\u00e9mentaires / Demande",
       labelUpload: "T\u00e9l\u00e9charger la liste de produits / fiche technique",
       uploadComingSoon: "optionnel \u2014 bient\u00f4t disponible",
       uploadHint: "Glisser-d\u00e9poser ou cliquer pour t\u00e9l\u00e9charger \u2014 PDF, XLS, CSV accept\u00e9s",
@@ -1235,7 +1245,8 @@ const fr: Translations = {
       placeholderSize: "ex. 205/55R16 91H ou 295/80R22.5",
       placeholderQuantity: "ex. 500 unit\u00e9s, 2 conteneurs",
       placeholderBudget: "S\u00e9lectionner la fourchette", placeholderTimeline: "S\u00e9lectionner le d\u00e9lai",
-      placeholderDelivery: "ex. Port de Marseille, Lagos, Duba\u00ef \u2014 indiquer le port ou la ville",
+      placeholderDeliveryAddress: "Adresse", placeholderDeliveryCity: "Ville", placeholderDeliveryPostalCode: "Code postal",
+      placeholderDelivery: "ex. Port de Marseille, Lagos, Duba\u00ef",
       placeholderNotes: "D\u00e9crivez vos besoins en d\u00e9tail \u2014 sp\u00e9cifications des pneus, utilisation pr\u00e9vue, volume et toute autre information pertinente\u2026",
       businessTypes: ["Grossiste", "Distributeur", "D\u00e9taillant", "Gestionnaire de flotte", "Acheteur particulier", "Autre"],
       tyreCategories: ["Pneus PCR", "Pneus PL", "Pneus usag\u00e9s", "Demande mixte"],
@@ -1633,11 +1644,13 @@ const es: Translations = {
       requiredNote: "Los campos marcados con * son obligatorios.",
       sectionBusiness: "Información del negocio / cliente",
       sectionProduct: "Información del producto solicitado",
+      sectionDelivery: "Detalles de entrega",
       labelFullName: "Nombre completo", labelCompany: "Nombre de empresa", labelEmail: "Correo electrónico", labelPhone: "Número de teléfono",
       labelCountry: "País / Región", labelBusiness: "Tipo de negocio",
       labelTyreCategory: "Categoría de neumático", labelBrand: "Preferencia de marca", labelTyreSize: "Tamaño / Especificación del neumático",
       labelQuantity: "Cantidad requerida", labelBudget: "Rango de presupuesto", labelTimeline: "Plazo de entrega deseado",
-      labelDelivery: "Lugar de entrega preferido", labelNotes: "Notas adicionales / Consulta",
+      labelDeliveryAddress: "Dirección de entrega", labelDeliveryCity: "Ciudad", labelDeliveryPostalCode: "Código postal",
+      labelDelivery: "Lugar / puerto de entrega preferido", labelNotes: "Notas adicionales / Consulta",
       labelUpload: "Subir lista de productos / hoja de especificaciones",
       uploadComingSoon: "opcional — próximamente disponible",
       uploadHint: "Arrastrar y soltar o hacer clic — se aceptan PDF, XLS, CSV",
@@ -1648,7 +1661,8 @@ const es: Translations = {
       placeholderSize: "p.ej. 205/55R16 91H o 295/80R22.5",
       placeholderQuantity: "p.ej. 500 unidades, 2 contenedores",
       placeholderBudget: "Seleccionar rango", placeholderTimeline: "Seleccionar plazo",
-      placeholderDelivery: "p.ej. Puerto de Valencia, Lagos, Dubái — indicar puerto o ciudad",
+      placeholderDeliveryAddress: "Dirección", placeholderDeliveryCity: "Ciudad", placeholderDeliveryPostalCode: "Código postal",
+      placeholderDelivery: "p.ej. Puerto de Valencia, Lagos, Dubái",
       placeholderNotes: "Describa su necesidad en detalle — especificaciones del neumático, uso previsto, cantidad y cualquier otra información relevante…",
       businessTypes: ["Mayorista", "Distribuidor", "Minorista", "Empresa de flota", "Comprador particular", "Otro"],
       tyreCategories: ["Neumáticos PCR", "Neumáticos TBR", "Neumáticos usados", "Consulta mixta"],

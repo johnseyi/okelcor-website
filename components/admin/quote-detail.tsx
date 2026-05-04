@@ -247,7 +247,10 @@ export default function QuoteDetail({ quote }: { quote: AdminQuoteFull }) {
               <InfoRow label="Brand Preference"  value={quote.brand_preference} />
               <InfoRow label="Tyre Size"         value={quote.tyre_size} />
               <InfoRow label="Quantity"          value={quote.quantity} />
-              <InfoRow label="Delivery Location" value={quote.delivery_location} />
+              <InfoRow label="Delivery Address"  value={quote.delivery_address} />
+              <InfoRow label="City"              value={quote.delivery_city} />
+              <InfoRow label="Postal Code"       value={quote.delivery_postal_code} />
+              <InfoRow label="Location / Port"   value={quote.delivery_location} />
               <InfoRow label="Submitted On"      value={shortDate(quote.created_at)} />
               <InfoRow label="Last Updated"      value={shortDate(quote.updated_at)} />
             </div>

@@ -98,11 +98,11 @@ export default function QuoteConvertModal({ quote, onClose, onSuccess }: Props) 
   const [error, setError] = useState<string | null>(null);
 
   const [delivery, setDelivery] = useState<DeliveryForm>({
-    address:     "",
-    city:        "",
-    postal_code: "",
-    country:     quote.country ?? "",
-    phone:       quote.phone ?? "",
+    address:     quote.delivery_address     ?? "",
+    city:        quote.delivery_city        ?? "",
+    postal_code: quote.delivery_postal_code ?? "",
+    country:     quote.country              ?? "",
+    phone:       quote.phone                ?? "",
   });
 
   const [items, setItems] = useState<ItemRow[]>([buildInitialItem(quote)]);

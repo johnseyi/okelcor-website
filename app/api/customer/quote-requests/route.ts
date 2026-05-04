@@ -62,7 +62,10 @@ function buildNotificationHtml(b: Record<string, any>, refNumber: string): strin
       ${row("Quantity", b.quantity)}
       ${row("Budget Range", b.budget_range)}
       ${section("Logistics")}
-      ${row("Delivery Location", b.delivery_location)}
+      ${row("Delivery Address", b.delivery_address)}
+      ${row("City", b.delivery_city)}
+      ${row("Postal Code", b.delivery_postal_code)}
+      ${row("Delivery Location / Port", b.delivery_location)}
       ${row("Delivery Timeline", b.delivery_timeline)}
       ${section("Notes")}
       <tr><td colspan="2" style="padding:8px 16px;font-size:14px;color:#5c5e62;line-height:1.7;white-space:pre-wrap;">${esc(b.notes)}</td></tr>
