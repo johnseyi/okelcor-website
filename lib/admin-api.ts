@@ -205,9 +205,13 @@ export type AdminQuoteFull = AdminQuote & {
   delivery_location?: string;
   notes?: string;
   updated_at?: string;
-  attachment_url?: string;
-  attachment_name?: string;
-  attachment_size?: number; // bytes
+  // Attachment — backend may use any of these field names
+  attachment_url?: string;           // full URL if backend provides one
+  attachment_path?: string;          // storage path or full URL from backend
+  attachment_name?: string;          // generic name alias
+  attachment_original_name?: string; // original filename from upload
+  attachment_mime?: string;          // MIME type e.g. "application/pdf"
+  attachment_size?: number;          // bytes
 };
 
 export type AdminHeroSlideTranslation = {

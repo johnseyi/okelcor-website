@@ -34,6 +34,15 @@ export default async function QuoteDetailPage({ params }: Props) {
       revalidate: false,
     });
     quote = res.data ?? null;
+    console.log("[quote-detail] raw response keys:", Object.keys(res.data ?? {}));
+    console.log("[quote-detail] attachment fields:", JSON.stringify({
+      attachment_url:           (res.data as Record<string, unknown>)?.attachment_url,
+      attachment_path:          (res.data as Record<string, unknown>)?.attachment_path,
+      attachment_name:          (res.data as Record<string, unknown>)?.attachment_name,
+      attachment_original_name: (res.data as Record<string, unknown>)?.attachment_original_name,
+      attachment_mime:          (res.data as Record<string, unknown>)?.attachment_mime,
+      attachment_size:          (res.data as Record<string, unknown>)?.attachment_size,
+    }));
   } catch (e) {
     if (e instanceof AdminUnauthorizedError) redirect("/admin/login");
     // Any other error (404, 500, network) — fall through with quote = null
