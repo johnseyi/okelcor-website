@@ -60,7 +60,107 @@ Development environment: Windows 11, VS Code, Node.js / npm
 
 ---
 
-## Completed in Latest Session — Quote Email Handoff & Crisp Tier Regression (2026-05-04)
+## Completed in Latest Session — Order Payment UX & Checkout VAT Preview (2026-05-04)
+
+### Customer Order Detail — Dynamic Payment Section
+
+**Files:** `app/api/account/orders/[ref]/checkout/route.ts` (new), `components/account/order-payment-card.tsx` (new), `app/account/orders/[ref]/page.tsx`
+
+Replaced the static `payment_url` link and hardcoded "Payment link sent by email" fallback with a fully dynamic client component backed by a new proxy route.
+
+#### Proxy route (`app/api/account/orders/[ref]/checkout/route.ts`)
+- `POST /api/account/orders/{ref}/checkout` reads `customer_token` cookie, forwards to `POST /api/v1/auth/orders/{ref}/checkout` with Bearer auth
+- Returns `{ data: { checkout_url, checkout_session_id, order_ref } }` from Laravel unchanged
+
+#### `OrderPaymentCard` client component (`components/account/order-payment-card.tsx`)
+Renders based on `payment_status` + `payment_method`:
+
+| State | UI |
+|---|---|
+| `paid` | Green "Payment Complete" block |
+| `pending` + `stripe` | "Payment Required" + **"Pay securely with Stripe"** button → calls proxy → stores `stripe_order_ref` in sessionStorage → `window.location.href = checkout_url` |
+| `pending` + `bank_transfer` | "Payment by Bank Transfer — Our team will share payment instructions." |
+| `pending` + other/unknown | Amber clock — "Awaiting payment instructions from Okelcor." |
+| `payment_status` absent | Card not rendered |
+
+Inline errors: 401 → session expired; 409 → not awaiting payment; 422 → not Stripe order; network → retry prompt.
+
+#### Order detail page (`app/account/orders/[ref]/page.tsx`)
+- Removed: IIFE payment block, `CreditCard`, `Mail`, `ExternalLink` imports
+- Added: `<OrderPaymentCard orderRef={order.ref} paymentMethod={...} paymentStatus={...} />` rendered when `order.payment_status` is defined
+
+---
+
+### Checkout Order Summary — Tax Label Fix
+
+**Files:** `lib/translations.ts`, `components/checkout/order-summary.tsx`
+
+Removed the misleading "Tax calculated on invoice" copy (incorrect since Stripe now calculates VAT before charge). Updated all 4 locales (EN/DE/FR/ES):
+
+| Key | Before | After (EN) |
+|---|---|---|
+| `subtotal` | "Subtotal" | "Subtotal (net)" |
+| `tax` | "Tax" | "VAT" |
+| `taxNote` | "Calculated on invoice" | "VAT calculated securely before payment" |
+| `taxDisclaimer` | "Excl. applicable taxes · Final amount confirmed on order" | "Final gross amount — confirmed at Stripe Checkout" |
+
+Tax row in `order-summary.tsx` changed from `SummaryRow` (right-aligned, unsuited for text values) to a two-line stacked muted block.
+
+---
+
+### Checkout — Live VAT Preview from Backend
+
+**Files:** `app/api/checkout/tax-preview/route.ts` (new), `components/checkout/order-summary.tsx`, `components/checkout/checkout-flow.tsx`, `components/vat-field.tsx`
+
+#### Proxy route (`app/api/checkout/tax-preview/route.ts`)
+- `POST /api/checkout/tax-preview` forwards to `POST /api/v1/payments/tax-preview`; attaches `customer_token` Bearer if present
+
+#### Backend response shape
+```json
+{
+  "data": {
+    "subtotal_net": 29.40,
+    "delivery_cost": 0.00,
+    "tax_rate": 19.00,
+    "tax_amount": 5.59,
+    "tax_treatment": "standard",
+    "is_reverse_charge": false,
+    "total": 34.99,
+    "note": null
+  }
+}
+```
+
+#### `VatField` (`components/vat-field.tsx`)
+Added `onValidationChange?: (valid: boolean) => void` prop:
+- Fires `true` when VIES validation returns valid
+- Fires `false` on invalid, unavailable, and whenever the user edits the field (resetting validity)
+
+#### `CheckoutFlow` (`components/checkout/checkout-flow.tsx`)
+- Added `vatValid: boolean` state (initially `false`), driven by `VatField.onValidationChange`
+- Passes 4 new props to `OrderSummary`: `country`, `vatNumber`, `vatValid`, `customerType`
+
+#### `OrderSummary` (`components/checkout/order-summary.tsx`)
+Full rewrite of the totals section:
+- `vatNumber` tracked via `useRef` (synced every render) — not a `useEffect` dependency, so keystrokes do not trigger API calls
+- `useEffect` triggers on: `items`, `deliveryCost`, `fetAddon`, `country`, `vatValid`, `customerType`
+- 400ms debounce + `AbortController` cancel on dep change
+
+**VAT row display:**
+
+| Preview state | Display |
+|---|---|
+| `taxLoading` | `Loader2` spinner + "Calculating VAT…"; Total shows `—` |
+| `tax_treatment === "standard"` | `VAT (19%): €5.59`; Total = `taxPreview.total` (gross) |
+| `is_reverse_charge === true` | `VAT reverse charge (0%): €0.00` + optional `note` |
+| `tax_treatment === "exempt"` | `VAT exempt (0%): €0.00` + optional `note` |
+| Error / no country | Italic fallback "VAT will be confirmed at Stripe Checkout." + `taxDisclaimer` |
+
+When preview is active: subtotal and total rows use backend values (`subtotal_net`, `total`). Disclaimer row hidden.
+
+---
+
+## Completed in Previous Session — Quote Email Handoff & Crisp Tier Regression (2026-05-04)
 
 ### Quote Requests Proxy — Resend Block Removed
 
@@ -68,15 +168,9 @@ Development environment: Windows 11, VS Code, Node.js / npm
 
 Backend now sends **both** the admin notification email and the customer auto-reply on every successful `POST /api/v1/quote-requests`. The frontend Resend call was removed to prevent duplicate emails.
 
-**What was removed:**
-- `import { Resend } from "resend"` and `const resend = new Resend(...)` instance
-- `const FROM_EMAIL = ...` constant
-- `esc()`, `row()`, `section()`, `buildNotificationHtml()` HTML email helpers
-- `getSiteSettings()` call (was used only to resolve the notification email address)
-- Entire `if (backendStatus >= 200 && backendStatus < 300 && process.env.RESEND_API_KEY)` send block
-- `else if (!process.env.RESEND_API_KEY)` console.warn
+**What was removed:** `Resend` import + instance, `FROM_EMAIL`, `esc()`/`row()`/`section()`/`buildNotificationHtml()` helpers, `getSiteSettings()` call, entire Resend send block.
 
-**What remains:** The route is now a clean proxy — receives POST (JSON or multipart), forwards to `POST /api/v1/quote-requests`, returns the Laravel response unchanged. No email logic in the frontend.
+**What remains:** Clean proxy — receives POST (JSON or multipart), forwards to `POST /api/v1/quote-requests`, returns Laravel response unchanged.
 
 ---
 
@@ -84,16 +178,11 @@ Backend now sends **both** the admin notification email and the customer auto-re
 
 **File:** `app/api/admin/crisp/route.ts`
 
-**Root cause identified:** The `feat: add dashboard error boundaries and Crisp rate-limit resilience` commit (dev branch) changed `X-Crisp-Tier` from `"website"` to `"plugin"` inside `crispFetch()`. When dev was merged into main, this change carried over and caused the Crisp conversations endpoint to return 404.
-
-**Fix history this session:**
-1. Changed `plugin` → `website` (commit `75d611c`) → pushed to main → **restored working state**
-2. User provided credentials and confirmed tier should be `"plugin"` → changed back to `plugin`, simplified env vars to `CRISP_IDENTIFIER`/`CRISP_KEY` (commit `1306ba0`) → pushed to main → **broke again**
-3. Reverted last merge on main (commit `94fa571`) → main restored to `website` tier + `CRISP_API_IDENTIFIER ?? CRISP_IDENTIFIER` fallback chain
+**Root cause:** A prior commit changed `X-Crisp-Tier` from `"website"` to `"plugin"`. When merged to main this caused the Crisp conversations endpoint to return 404.
 
 **Current state:**
 - **main** — `X-Crisp-Tier: "website"`, env var reading: `CRISP_API_IDENTIFIER ?? CRISP_IDENTIFIER` + `CRISP_API_KEY ?? CRISP_KEY` → **working**
-- **dev** — `X-Crisp-Tier: "plugin"`, env var reading: `CRISP_IDENTIFIER` + `CRISP_KEY` only → **not pushed to main**
+- **dev** — `X-Crisp-Tier: "plugin"`, env vars: `CRISP_IDENTIFIER` + `CRISP_KEY` only → **not pushed to main**
 
 **Credentials (confirmed):**
 ```
@@ -103,7 +192,7 @@ NEXT_PUBLIC_CRISP_WEBSITE_ID=137b074d-e431-4e79-8c69-8484dcf89fbf
 ```
 Authorization: `Basic BASE64(CRISP_IDENTIFIER:CRISP_KEY)`
 
-**⚠️ Unresolved:** User states the correct tier is `"plugin"` but using it on main caused 404. The two triggers need to be tested in isolation on the production environment to confirm which tier the Crisp account actually requires. Do NOT merge the dev version of this file to main until this is confirmed.
+**⚠️ Unresolved:** User states the correct tier is `"plugin"` but using it on main caused 404. Must test both tiers in isolation on the live Crisp account. Do NOT merge dev version to main until confirmed.
 
 ---
 
@@ -732,13 +821,14 @@ See prior entries for:
 | Account profile | Complete — personal info + change password |
 | Account addresses | Complete — add/edit/delete modal |
 | **Account orders** | **Updated** — Pay Now CTA for pending Stripe orders; payment_url → button; no URL → amber email notice |
+| **Account order detail** | **Updated** — `OrderPaymentCard` client component; dynamic payment section via proxy `/api/account/orders/{ref}/checkout`; paid / stripe / bank_transfer / unknown states |
 | **Account quotes** | **Updated** — progress tracker, normalized status, quoted CTA, note filter, admin_notes block |
 | **Account invoices** | **Updated** — PDF download via auth proxy; "PDF pending" pill; B2C receipt labels |
 | **Account company** | **Complete** — `/account/company`; editable company name + industry |
 | **Account VAT** | **Complete** — `/account/vat`; VAT status + VIES link |
 | Quote page | Complete |
 | Cart drawer | Complete |
-| **Checkout page** | **Updated** — Stripe Checkout; proxy `app/api/checkout/stripe-session/route.ts` → Laravel `/api/v1/payments/create-session` |
+| **Checkout page** | **Updated** — Stripe Checkout; proxy `app/api/checkout/stripe-session/route.ts` → Laravel `/api/v1/payments/create-session`; live VAT preview via `app/api/checkout/tax-preview/route.ts`; `OrderSummary` shows exact VAT treatment (standard/reverse charge/exempt) before redirect |
 | **Checkout return** | **Updated** — `/checkout/return`; "Order received" copy; `order_ref` from URL param + sessionStorage fallback (awaiting backend fix to supply `order_ref`) |
 | Fuel Echo Tech page | Complete — `/fet`; green theme; ROI calculator |
 | About / Contact / News | Complete |
@@ -987,23 +1077,23 @@ Email template: dark Okelcor header, migration announcement, "Set Your Password 
 
 1. **Crisp live chat `X-Crisp-Tier` unresolved** — Main currently uses `"website"` tier (working). User confirmed credentials require `"plugin"` tier, but switching to `plugin` on main caused 404. Must test in isolation on the production Crisp account before merging dev version. Dev branch has `plugin` + simplified env vars (`CRISP_IDENTIFIER`/`CRISP_KEY` only). Do not merge until confirmed. See session notes above for full history.
 
-3. **Stripe `order_ref` not displayed on return page — backend fix required** — Root cause confirmed via audit: Laravel's `POST /payments/create-session` does not return `order_ref` because the order is created by the Stripe webhook, not at session creation time. Frontend code is correct. Backend must: (a) create the order record at session creation time, (b) return `order_ref` in `data.order_ref`, and (c) embed it in the Stripe `success_url` as `?order_ref=OKL-XXXXX`. No frontend changes needed once backend supplies the field.
+2. **Stripe `order_ref` not displayed on return page — backend fix required** — Root cause confirmed via audit: Laravel's `POST /payments/create-session` does not return `order_ref` because the order is created by the Stripe webhook, not at session creation time. Frontend code is correct. Backend must: (a) create the order record at session creation time, (b) return `order_ref` in `data.order_ref`, and (c) embed it in the Stripe `success_url` as `?order_ref=OKL-XXXXX`. No frontend changes needed once backend supplies the field.
 
-4. **Stripe diagnostic logging** — Temporary `console.log` lines in `app/api/checkout/stripe-session/route.ts` (target URL, request body, HTTP status, has checkout_url, has order_ref). Remove once the backend confirms the response shape.
+3. **Stripe diagnostic logging** — Temporary `console.log` lines in `app/api/checkout/stripe-session/route.ts` (target URL, request body, HTTP status, has checkout_url, has order_ref). Remove once the backend confirms the response shape.
 
-5. **Invoice download debug logs** — Temporary `console.log` lines in `app/api/account/invoices/[id]/download/route.ts` (token present, target URL, Laravel status, error body). Remove once PDF download is confirmed working in production.
+4. **Invoice download debug logs** — Temporary `console.log` lines in `app/api/account/invoices/[id]/download/route.ts` (token present, target URL, Laravel status, error body). Remove once PDF download is confirmed working in production.
 
-6. **Admin quote attachment debug log** — Temporary `console.log` in `app/admin/quotes/[id]/page.tsx` logging all 6 attachment field values. Remove once attachment display is confirmed.
+5. **Admin quote attachment debug log** — Temporary `console.log` in `app/admin/quotes/[id]/page.tsx` logging all 6 attachment field values. Remove once attachment display is confirmed.
 
-7. **Admin existing sessions after RBAC** — Users who logged in before `admin_role` cookie was introduced will see all nav items. They need to log out and back in once.
+6. **Admin existing sessions after RBAC** — Users who logged in before `admin_role` cookie was introduced will see all nav items. They need to log out and back in once.
 
-8. **DNS redirect** — Configure okelcor.de → okelcor.com redirect at DNS/hosting level.
+7. **DNS redirect** — Configure okelcor.de → okelcor.com redirect at DNS/hosting level.
 
 ### Low Priority
 
-9. **Newsletter backend** — `components/newsletter-strip.tsx` shows success UI but does not POST to any endpoint.
+8. **Newsletter backend** — `components/newsletter-strip.tsx` shows success UI but does not POST to any endpoint.
 
-10. **Unused public assets** — Old placeholder SVGs in `public/brands/` safe to delete.
+9. **Unused public assets** — Old placeholder SVGs in `public/brands/` safe to delete.
 
 ---
 
