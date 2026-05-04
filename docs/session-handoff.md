@@ -25,7 +25,7 @@ The backend is a Laravel API at `https://api.okelcor.de/api/v1` — fully live.
 * Tailwind CSS v4
 * GSAP 3.14 + @gsap/react 2.1 (sole animation library — Framer Motion fully removed)
 * **Custom cookie-based customer auth** — `customer_token` httpOnly cookie, proxied Laravel API (NextAuth fully removed)
-* Resend (email API — contact, quote, and checkout order notification routes)
+* Resend (email API — contact and checkout order notification routes; **no longer used for quote requests** — backend owns those emails)
 * `tailwind-merge`, `clsx`, `eslint-plugin-jsx-a11y`, `prettier`
 
 Development environment: Windows 11, VS Code, Node.js / npm
@@ -60,7 +60,75 @@ Development environment: Windows 11, VS Code, Node.js / npm
 
 ---
 
-## Completed in Latest Session — Quote Form Delivery Address Fields (2026-05-04)
+## Completed in Latest Session — Quote Email Handoff & Crisp Tier Regression (2026-05-04)
+
+### Quote Requests Proxy — Resend Block Removed
+
+**File:** `app/api/customer/quote-requests/route.ts`
+
+Backend now sends **both** the admin notification email and the customer auto-reply on every successful `POST /api/v1/quote-requests`. The frontend Resend call was removed to prevent duplicate emails.
+
+**What was removed:**
+- `import { Resend } from "resend"` and `const resend = new Resend(...)` instance
+- `const FROM_EMAIL = ...` constant
+- `esc()`, `row()`, `section()`, `buildNotificationHtml()` HTML email helpers
+- `getSiteSettings()` call (was used only to resolve the notification email address)
+- Entire `if (backendStatus >= 200 && backendStatus < 300 && process.env.RESEND_API_KEY)` send block
+- `else if (!process.env.RESEND_API_KEY)` console.warn
+
+**What remains:** The route is now a clean proxy — receives POST (JSON or multipart), forwards to `POST /api/v1/quote-requests`, returns the Laravel response unchanged. No email logic in the frontend.
+
+---
+
+### Crisp Live Chat — Tier Regression Investigation
+
+**File:** `app/api/admin/crisp/route.ts`
+
+**Root cause identified:** The `feat: add dashboard error boundaries and Crisp rate-limit resilience` commit (dev branch) changed `X-Crisp-Tier` from `"website"` to `"plugin"` inside `crispFetch()`. When dev was merged into main, this change carried over and caused the Crisp conversations endpoint to return 404.
+
+**Fix history this session:**
+1. Changed `plugin` → `website` (commit `75d611c`) → pushed to main → **restored working state**
+2. User provided credentials and confirmed tier should be `"plugin"` → changed back to `plugin`, simplified env vars to `CRISP_IDENTIFIER`/`CRISP_KEY` (commit `1306ba0`) → pushed to main → **broke again**
+3. Reverted last merge on main (commit `94fa571`) → main restored to `website` tier + `CRISP_API_IDENTIFIER ?? CRISP_IDENTIFIER` fallback chain
+
+**Current state:**
+- **main** — `X-Crisp-Tier: "website"`, env var reading: `CRISP_API_IDENTIFIER ?? CRISP_IDENTIFIER` + `CRISP_API_KEY ?? CRISP_KEY` → **working**
+- **dev** — `X-Crisp-Tier: "plugin"`, env var reading: `CRISP_IDENTIFIER` + `CRISP_KEY` only → **not pushed to main**
+
+**Credentials (confirmed):**
+```
+CRISP_IDENTIFIER=bee0fee1-b3b0-416b-ad23-403a1c764114
+CRISP_KEY=1ee43f026109e1a745a13e68525a005d59cb660cc066b55d661c619389e06da6
+NEXT_PUBLIC_CRISP_WEBSITE_ID=137b074d-e431-4e79-8c69-8484dcf89fbf
+```
+Authorization: `Basic BASE64(CRISP_IDENTIFIER:CRISP_KEY)`
+
+**⚠️ Unresolved:** User states the correct tier is `"plugin"` but using it on main caused 404. The two triggers need to be tested in isolation on the production environment to confirm which tier the Crisp account actually requires. Do NOT merge the dev version of this file to main until this is confirmed.
+
+---
+
+## Completed in Previous Session — Pay Now CTA for Pending Stripe Orders (2026-05-04)
+
+### Account Orders — Pay Now Button
+
+**Files:** `app/account/orders/page.tsx`, `app/account/orders/[ref]/page.tsx`
+
+Added a Pay Now CTA for orders where `payment_method === "stripe"` AND `payment_status === "pending"`.
+
+#### Order list (`app/account/orders/page.tsx`)
+- `Order` type gains: `payment_method?: string`, `payment_status?: string`, `payment_url?: string | null`, `checkout_url?: string | null`
+- Amber **"Payment due"** badge shown in the status column alongside the order status
+- CTA column: when payment is pending + URL available → orange **"Pay Now"** external link; when no URL → standard **"Track Order"** button; applies to both desktop table and mobile card layout
+
+#### Order detail (`app/account/orders/[ref]/page.tsx`)
+Payment card inserted between order header and status timeline:
+- `payment_method === "stripe"` AND `payment_status === "pending"` → card renders
+- If `payment_url ?? checkout_url` is present: orange **"Pay securely with Stripe"** button (external link, `target="_blank"`)
+- If no URL: amber notice — *"Payment link sent by email — check your inbox"*
+
+---
+
+## Completed in Previous Session — Quote Form Delivery Address Fields (2026-05-04)
 
 ### Customer Quote Form — Structured Delivery Address
 
@@ -663,7 +731,7 @@ See prior entries for:
 | Account dashboard | Complete — `/account`; B2C / B2B conditional |
 | Account profile | Complete — personal info + change password |
 | Account addresses | Complete — add/edit/delete modal |
-| Account orders | Complete — list + detail + ShipmentTracker |
+| **Account orders** | **Updated** — Pay Now CTA for pending Stripe orders; payment_url → button; no URL → amber email notice |
 | **Account quotes** | **Updated** — progress tracker, normalized status, quoted CTA, note filter, admin_notes block |
 | **Account invoices** | **Updated** — PDF download via auth proxy; "PDF pending" pill; B2C receipt labels |
 | **Account company** | **Complete** — `/account/company`; editable company name + industry |
@@ -917,23 +985,25 @@ Email template: dark Okelcor header, migration announcement, "Set Your Password 
 
 ### Medium Priority
 
-1. **Stripe `order_ref` not displayed on return page — backend fix required** — Root cause confirmed via audit: Laravel's `POST /payments/create-session` does not return `order_ref` because the order is created by the Stripe webhook, not at session creation time. Frontend code is correct. Backend must: (a) create the order record at session creation time, (b) return `order_ref` in `data.order_ref`, and (c) embed it in the Stripe `success_url` as `?order_ref=OKL-XXXXX`. No frontend changes needed once backend supplies the field.
+1. **Crisp live chat `X-Crisp-Tier` unresolved** — Main currently uses `"website"` tier (working). User confirmed credentials require `"plugin"` tier, but switching to `plugin` on main caused 404. Must test in isolation on the production Crisp account before merging dev version. Dev branch has `plugin` + simplified env vars (`CRISP_IDENTIFIER`/`CRISP_KEY` only). Do not merge until confirmed. See session notes above for full history.
 
-2. **Stripe diagnostic logging** — Temporary `console.log` lines in `app/api/checkout/stripe-session/route.ts` (target URL, request body, HTTP status, has checkout_url, has order_ref). Remove once the backend confirms the response shape.
+3. **Stripe `order_ref` not displayed on return page — backend fix required** — Root cause confirmed via audit: Laravel's `POST /payments/create-session` does not return `order_ref` because the order is created by the Stripe webhook, not at session creation time. Frontend code is correct. Backend must: (a) create the order record at session creation time, (b) return `order_ref` in `data.order_ref`, and (c) embed it in the Stripe `success_url` as `?order_ref=OKL-XXXXX`. No frontend changes needed once backend supplies the field.
 
-3. **Invoice download debug logs** — Temporary `console.log` lines in `app/api/account/invoices/[id]/download/route.ts` (token present, target URL, Laravel status, error body). Remove once PDF download is confirmed working in production.
+4. **Stripe diagnostic logging** — Temporary `console.log` lines in `app/api/checkout/stripe-session/route.ts` (target URL, request body, HTTP status, has checkout_url, has order_ref). Remove once the backend confirms the response shape.
 
-4. **Admin quote attachment debug log** — Temporary `console.log` in `app/admin/quotes/[id]/page.tsx` logging all 6 attachment field values. Remove once attachment display is confirmed.
+5. **Invoice download debug logs** — Temporary `console.log` lines in `app/api/account/invoices/[id]/download/route.ts` (token present, target URL, Laravel status, error body). Remove once PDF download is confirmed working in production.
 
-5. **Admin existing sessions after RBAC** — Users who logged in before `admin_role` cookie was introduced will see all nav items. They need to log out and back in once.
+6. **Admin quote attachment debug log** — Temporary `console.log` in `app/admin/quotes/[id]/page.tsx` logging all 6 attachment field values. Remove once attachment display is confirmed.
 
-6. **DNS redirect** — Configure okelcor.de → okelcor.com redirect at DNS/hosting level.
+7. **Admin existing sessions after RBAC** — Users who logged in before `admin_role` cookie was introduced will see all nav items. They need to log out and back in once.
+
+8. **DNS redirect** — Configure okelcor.de → okelcor.com redirect at DNS/hosting level.
 
 ### Low Priority
 
-7. **Newsletter backend** — `components/newsletter-strip.tsx` shows success UI but does not POST to any endpoint.
+9. **Newsletter backend** — `components/newsletter-strip.tsx` shows success UI but does not POST to any endpoint.
 
-8. **Unused public assets** — Old placeholder SVGs in `public/brands/` safe to delete.
+10. **Unused public assets** — Old placeholder SVGs in `public/brands/` safe to delete.
 
 ---
 
