@@ -18,8 +18,11 @@ import { NextRequest, NextResponse } from "next/server";
 const CRISP_BASE = "https://api.crisp.chat/v1";
 const WEBSITE_ID = process.env.NEXT_PUBLIC_CRISP_WEBSITE_ID ?? "";
 
-const IDENTIFIER = process.env.CRISP_IDENTIFIER ?? "";
-const KEY        = process.env.CRISP_KEY ?? "";
+// Support both naming conventions for backwards compatibility
+const IDENTIFIER =
+  process.env.CRISP_API_IDENTIFIER ?? process.env.CRISP_IDENTIFIER ?? "";
+const KEY =
+  process.env.CRISP_API_KEY ?? process.env.CRISP_KEY ?? "";
 
 // ── In-memory cache (best-effort; shared within a warm serverless instance) ──
 
@@ -49,7 +52,7 @@ async function crispFetch(path: string, options?: RequestInit) {
       "Content-Type": "application/json",
       Accept: "application/json",
       Authorization: crispAuth(),
-      "X-Crisp-Tier": "plugin",
+      "X-Crisp-Tier": "website",
       ...(options?.headers ?? {}),
     },
     cache: "no-store",
