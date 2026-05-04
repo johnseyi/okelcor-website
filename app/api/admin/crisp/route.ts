@@ -52,7 +52,7 @@ async function crispFetch(path: string, options?: RequestInit) {
       "Content-Type": "application/json",
       Accept: "application/json",
       Authorization: crispAuth(),
-      "X-Crisp-Tier": "plugin",
+      "X-Crisp-Tier": "website",
       ...(options?.headers ?? {}),
     },
     cache: "no-store",
