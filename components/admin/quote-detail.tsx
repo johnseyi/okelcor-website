@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, AlertCircle, ChevronDown } from "lucide-react";
+import { CheckCircle2, AlertCircle, ChevronDown, Paperclip, Download } from "lucide-react";
 import { updateQuoteStatus } from "@/app/admin/quotes/actions";
 
 // Defined here (not imported from "use server" file) so this array is
@@ -36,6 +36,12 @@ function shortDate(iso?: string): string {
       hour: "2-digit", minute: "2-digit",
     }).format(new Date(iso));
   } catch { return iso; }
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function InfoRow({ label, value }: { label: string; value?: string | null }) {
@@ -174,6 +180,48 @@ export default function QuoteDetail({ quote }: { quote: AdminQuoteFull }) {
           <p className="whitespace-pre-wrap text-[0.875rem] leading-relaxed text-[#1a1a1a]">
             {quote.notes}
           </p>
+        </div>
+      )}
+
+      {/* ── Attachment ── */}
+      {quote.attachment_url ? (
+        <div className="rounded-2xl bg-white p-6 shadow-sm">
+          <p className="mb-4 text-[0.7rem] font-bold uppercase tracking-[0.15em] text-[#E85C1A]">
+            Attached Specification Sheet
+          </p>
+          <div className="flex items-center justify-between rounded-xl border border-black/[0.07] bg-[#f8f8f8] px-4 py-3.5">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm">
+                <Paperclip size={15} strokeWidth={1.8} className="text-[#5c5e62]" />
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-[0.875rem] font-semibold text-[#1a1a1a]">
+                  {quote.attachment_name ?? "Specification sheet"}
+                </p>
+                {quote.attachment_size != null && (
+                  <p className="text-[0.72rem] text-[#5c5e62]">
+                    {formatBytes(quote.attachment_size)}
+                  </p>
+                )}
+              </div>
+            </div>
+            <a
+              href={quote.attachment_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-4 flex shrink-0 items-center gap-1.5 rounded-full bg-[#E85C1A] px-4 py-2 text-[0.8rem] font-semibold text-white transition hover:bg-[#d14f14]"
+            >
+              <Download size={13} strokeWidth={2} />
+              Download
+            </a>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-2xl bg-white p-6 shadow-sm">
+          <p className="mb-2 text-[0.7rem] font-bold uppercase tracking-[0.15em] text-[#E85C1A]">
+            Specification Sheet
+          </p>
+          <p className="text-[0.83rem] text-[#5c5e62]">No attachment provided.</p>
         </div>
       )}
 

@@ -205,6 +205,9 @@ export type AdminQuoteFull = AdminQuote & {
   delivery_location?: string;
   notes?: string;
   updated_at?: string;
+  attachment_url?: string;
+  attachment_name?: string;
+  attachment_size?: number; // bytes
 };
 
 export type AdminHeroSlideTranslation = {

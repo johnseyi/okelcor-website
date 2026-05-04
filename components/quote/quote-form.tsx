@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Paperclip, CheckCircle2 } from "lucide-react";
+import { useState, useRef } from "react";
+import { Paperclip, CheckCircle2, X } from "lucide-react";
 import { useLanguage } from "@/context/language-context";
 import { trackQuoteSubmit } from "@/lib/analytics";
 import VatField from "@/components/vat-field";
@@ -46,6 +46,17 @@ const COUNTRIES = [
   "United Arab Emirates", "Saudi Arabia", "Nigeria", "South Africa", "Kenya",
   "Uganda", "Tanzania", "Singapore", "China", "India", "Japan", "Australia",
 ];
+
+// ─── File upload helpers ──────────────────────────────────────────────────────
+
+const ACCEPTED_EXTENSIONS = ["pdf", "csv", "xls", "xlsx"];
+const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 // ─── Shared input styles ──────────────────────────────────────────────────────
 
@@ -110,6 +121,9 @@ export default function QuoteForm() {
   const [submitted, setSubmitted] = useState(false);
   const [refNumber, setRefNumber] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -135,6 +149,32 @@ export default function QuoteForm() {
     return errs;
   };
 
+  // ── File handlers ────────────────────────────────────────────────────────
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    setFileError(null);
+    if (!file) { setAttachedFile(null); return; }
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+    if (!ACCEPTED_EXTENSIONS.includes(ext)) {
+      setFileError("Only PDF, CSV, XLS, and XLSX files are accepted.");
+      e.target.value = "";
+      return;
+    }
+    if (file.size > MAX_FILE_BYTES) {
+      setFileError("File must be smaller than 10 MB.");
+      e.target.value = "";
+      return;
+    }
+    setAttachedFile(file);
+  };
+
+  const removeFile = () => {
+    setAttachedFile(null);
+    setFileError(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   // ── Submit ───────────────────────────────────────────────────────────────
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -153,28 +193,51 @@ export default function QuoteForm() {
     setSubmitError(null);
 
     try {
-      // Proxy reads the httpOnly customer_token cookie and forwards it as Bearer
-      const res = await fetch("/api/customer/quote-requests", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          full_name:         form.fullName,
-          company_name:      form.companyName,
-          email:             form.email,
-          phone:             form.phone,
-          country:           form.country,
-          business_type:     form.businessType,
-          tyre_category:     form.tyreCategory,
-          brand_preference:  form.brandPreference,
-          tyre_size:         form.tyreSize,
-          quantity:          form.quantity,
-          budget_range:      form.budgetRange,
-          delivery_location: form.deliveryLocation,
-          delivery_timeline: form.deliveryTimeline,
-          notes:             form.notes,
-          vat_number:        vatNumber.trim() || undefined,
-        }),
-      });
+      let res: Response;
+
+      if (attachedFile) {
+        // Multipart — proxy detects content-type and forwards as FormData to Laravel
+        const fd = new FormData();
+        fd.append("full_name",          form.fullName);
+        fd.append("company_name",       form.companyName);
+        fd.append("email",              form.email);
+        fd.append("phone",              form.phone);
+        fd.append("country",            form.country);
+        fd.append("business_type",      form.businessType);
+        fd.append("tyre_category",      form.tyreCategory);
+        fd.append("brand_preference",   form.brandPreference);
+        fd.append("tyre_size",          form.tyreSize);
+        fd.append("quantity",           form.quantity);
+        fd.append("budget_range",       form.budgetRange);
+        fd.append("delivery_location",  form.deliveryLocation);
+        fd.append("delivery_timeline",  form.deliveryTimeline);
+        fd.append("notes",              form.notes);
+        if (vatNumber.trim()) fd.append("vat_number", vatNumber.trim());
+        fd.append("attachment", attachedFile);
+        res = await fetch("/api/customer/quote-requests", { method: "POST", body: fd });
+      } else {
+        res = await fetch("/api/customer/quote-requests", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            full_name:         form.fullName,
+            company_name:      form.companyName,
+            email:             form.email,
+            phone:             form.phone,
+            country:           form.country,
+            business_type:     form.businessType,
+            tyre_category:     form.tyreCategory,
+            brand_preference:  form.brandPreference,
+            tyre_size:         form.tyreSize,
+            quantity:          form.quantity,
+            budget_range:      form.budgetRange,
+            delivery_location: form.deliveryLocation,
+            delivery_timeline: form.deliveryTimeline,
+            notes:             form.notes,
+            vat_number:        vatNumber.trim() || undefined,
+          }),
+        });
+      }
 
       const json = await res.json();
 
@@ -197,6 +260,9 @@ export default function QuoteForm() {
   const handleReset = () => {
     setSubmitted(false);
     setVatNumber("");
+    setAttachedFile(null);
+    setFileError(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
     setForm({
       fullName: "", companyName: "", email: "", phone: "",
       country: "", businessType: "",
@@ -428,18 +494,65 @@ export default function QuoteForm() {
             </div>
           </Field>
 
-          {/* ── File upload placeholder ── */}
+          {/* ── File upload ── */}
           <div className="col-span-full">
             <label className="mb-1.5 block text-[0.82rem] font-semibold text-[var(--foreground)]">
               {t.quote.form.labelUpload}
-              <span className="ml-2 text-[0.75rem] font-normal text-[var(--muted)]">({t.quote.form.uploadComingSoon})</span>
-            </label>
-            <div className="flex cursor-not-allowed items-center gap-3 rounded-[12px] border border-dashed border-black/[0.12] bg-white/60 px-4 py-4 opacity-50">
-              <Paperclip size={16} className="shrink-0 text-[var(--muted)]" />
-              <span className="text-[0.88rem] text-[var(--muted)]">
-                {t.quote.form.uploadHint}
+              <span className="ml-1.5 text-[0.75rem] font-normal text-[var(--muted)]">
+                PDF, CSV, XLS or XLSX · Max 10 MB
               </span>
-            </div>
+            </label>
+
+            {/* Hidden native input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.csv,.xls,.xlsx"
+              className="sr-only"
+              onChange={handleFileChange}
+              aria-label="Attach specification sheet"
+            />
+
+            {attachedFile ? (
+              /* File selected — show name + size + remove */
+              <div className="flex items-center justify-between rounded-[12px] border border-black/[0.10] bg-white px-4 py-3.5">
+                <div className="flex min-w-0 items-center gap-3">
+                  <Paperclip size={15} strokeWidth={1.8} className="shrink-0 text-[var(--primary)]" />
+                  <div className="min-w-0">
+                    <p className="truncate text-[0.88rem] font-semibold text-[var(--foreground)]">
+                      {attachedFile.name}
+                    </p>
+                    <p className="text-[0.75rem] text-[var(--muted)]">
+                      {formatFileSize(attachedFile.size)}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={removeFile}
+                  className="ml-3 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-black/[0.08] text-[var(--muted)] transition hover:border-red-200 hover:bg-red-50 hover:text-red-500"
+                  aria-label="Remove attached file"
+                >
+                  <X size={13} strokeWidth={2.5} />
+                </button>
+              </div>
+            ) : (
+              /* No file — click-to-browse area */
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex w-full items-center gap-3 rounded-[12px] border border-dashed border-black/[0.12] bg-white/60 px-4 py-4 text-left transition hover:border-[var(--primary)]/40 hover:bg-white"
+              >
+                <Paperclip size={16} strokeWidth={1.8} className="shrink-0 text-[var(--muted)]" />
+                <span className="text-[0.88rem] text-[var(--muted)]">
+                  {t.quote.form.uploadHint}
+                </span>
+              </button>
+            )}
+
+            {fileError && (
+              <p role="alert" className="mt-1 text-[0.75rem] text-red-500">{fileError}</p>
+            )}
           </div>
 
         </div>
