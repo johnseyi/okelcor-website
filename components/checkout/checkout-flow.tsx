@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, ChevronRight, Lock, ShieldCheck } from "lucide-react";
 import { useCart } from "@/context/cart-context";
@@ -201,6 +201,16 @@ export default function CheckoutFlow() {
   const [fetAdded, setFetAdded]         = useState(false);
   const [fetQty, setFetQty]             = useState(1);
   const [fetDismissed, setFetDismissed] = useState(false);
+
+  // Stable object reference — recreated only when fetAdded/fetQty actually change.
+  // Without useMemo, every CheckoutFlow render creates a new object, causing
+  // OrderSummary's useEffect to cancel and restart its fetch continuously.
+  const fetAddonProp = useMemo(
+    () => fetAdded
+      ? { name: FET_PRODUCT.product_name, unitPrice: FET_PRODUCT.unit_price, qty: fetQty }
+      : null,
+    [fetAdded, fetQty],
+  );
 
   if (items.length === 0) return <EmptyCartState />;
 
@@ -462,11 +472,7 @@ export default function CheckoutFlow() {
         <div className="lg:sticky lg:top-[96px]">
           <OrderSummary
             deliveryCost={DELIVERY_COST}
-            fetAddon={fetAdded ? {
-              name:      FET_PRODUCT.product_name,
-              unitPrice: FET_PRODUCT.unit_price,
-              qty:       fetQty,
-            } : null}
+            fetAddon={fetAddonProp}
             country={delivery.country}
             vatNumber={vatNumber}
             vatValid={vatValid}
