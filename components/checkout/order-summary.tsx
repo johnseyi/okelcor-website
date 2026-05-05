@@ -93,6 +93,9 @@ export default function OrderSummary({
   const [taxError, setTaxError] = useState(false);
 
   useEffect(() => {
+    // DEBUG: log every invocation before the guard (remove after fix confirmed)
+    console.log("[tax-preview] effect invoked → country:", JSON.stringify(country), "| vatValid:", vatValid, "| customerType:", customerType, "| items:", items.length);
+
     if (!country) {
       setTaxPreview(null);
       setTaxLoading(false);
@@ -123,18 +126,12 @@ export default function OrderSummary({
       customer_type: customerType,
     };
 
-    // DEBUG: confirm trigger state (remove after fix confirmed)
-    console.log("[tax-preview] triggered →", {
-      country,
-      vatValid,
-      vatNumber: vatValid ? vatNumberRef.current : "(not sent)",
-      customerType,
-      itemCount: items.length,
-    });
+    // DEBUG: confirm country + vatValid reaching the effect (remove after fix confirmed)
+    console.log("[tax-preview] guard passed → scheduling fetch in 400ms | payload:", JSON.stringify(payload));
 
     const timer = setTimeout(async () => {
-      // DEBUG: log exact payload (remove after fix confirmed)
-      console.log("[tax-preview] payload →", JSON.stringify(payload));
+      // DEBUG: confirm timer fired, not cancelled by cleanup (remove after fix confirmed)
+      console.log("[tax-preview] timer fired → starting fetch for country:", country);
 
       try {
         const res = await fetch("/api/checkout/tax-preview", {
@@ -147,22 +144,44 @@ export default function OrderSummary({
         // DEBUG: response status (remove after fix confirmed)
         console.log("[tax-preview] response status →", res.status);
 
-        if (!res.ok) throw new Error("preview_failed");
+        if (!res.ok) throw new Error(`preview_failed_${res.status}`);
 
         const json = await res.json();
 
-        // DEBUG: response data (remove after fix confirmed)
-        console.log("[tax-preview] response data →", json);
+        // DEBUG: full response (remove after fix confirmed)
+        console.log("[tax-preview] response body →", json);
 
-        const data: TaxPreview | null = json?.data ?? null;
-        if (!data || typeof data.total !== "number") throw new Error("invalid_response");
+        const raw = json?.data;
+        if (!raw) throw new Error("no_data_in_response");
+
+        // Normalize all numeric fields — Laravel serialises decimal columns as
+        // strings ("19.00") which would fail a typeof === "number" check.
+        const data: TaxPreview = {
+          subtotal_net:    Number(raw.subtotal_net),
+          delivery_cost:   Number(raw.delivery_cost),
+          tax_rate:        Number(raw.tax_rate),
+          tax_amount:      Number(raw.tax_amount),
+          is_reverse_charge: Boolean(raw.is_reverse_charge),
+          tax_treatment:   String(raw.tax_treatment ?? "standard"),
+          total:           Number(raw.total),
+          note:            raw.note ?? null,
+        };
+
+        if (isNaN(data.total)) throw new Error("invalid_total");
+
+        // DEBUG: normalized data (remove after fix confirmed)
+        console.log("[tax-preview] normalized →", data);
 
         setTaxPreview(data);
         setTaxError(false);
       } catch (err) {
-        if ((err as Error).name === "AbortError") return;
-        // DEBUG: catch reason (remove after fix confirmed)
-        console.log("[tax-preview] error →", (err as Error).message);
+        if ((err as Error).name === "AbortError") {
+          // DEBUG: explicit abort log (remove after fix confirmed)
+          console.log("[tax-preview] AbortError — fetch cancelled mid-flight (deps changed)");
+          return;
+        }
+        // DEBUG: other errors (remove after fix confirmed)
+        console.log("[tax-preview] catch →", (err as Error).message);
         setTaxPreview(null);
         setTaxError(true);
       } finally {
@@ -171,11 +190,12 @@ export default function OrderSummary({
     }, 400);
 
     return () => {
+      // DEBUG: log cleanup to confirm which dep change caused the cancel (remove after fix confirmed)
+      console.log("[tax-preview] cleanup → cancelling timer/abort for country:", country, "vatValid:", vatValid);
       clearTimeout(timer);
       controller.abort();
     };
-  // vatNumber intentionally excluded: only vatValid triggers the call (per spec).
-  // vatNumberRef.current is synced on every render and read inside the timer.
+  // vatNumber intentionally excluded — vatNumberRef.current is synced on every render.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, deliveryCost, fetAddon, country, vatValid, customerType]);
 
