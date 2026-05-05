@@ -175,6 +175,7 @@ export default function CheckoutFlow() {
   const showVatField         = customer?.customer_type === "b2b";
   const c                    = t.checkout;
   const deliveryRef          = useRef<HTMLDivElement>(null);
+  const vatSectionRef        = useRef<HTMLDivElement>(null);
 
   const [delivery, setDelivery] = useState<DeliveryData>({
     name: "", email: "", address: "", city: "", postalCode: "", country: "", phone: "",
@@ -182,6 +183,7 @@ export default function CheckoutFlow() {
   const [deliveryErrors, setDeliveryErrors] = useState<DeliveryErrors>({});
   const [vatNumber, setVatNumber]           = useState("");
   const [vatValid, setVatValid]             = useState(false);
+  const [vatError, setVatError]             = useState<string | null>(null);
 
   // Prefill delivery form from customer profile once loaded.
   // Only fills empty fields so user edits are never overwritten.
@@ -262,6 +264,12 @@ export default function CheckoutFlow() {
   const handleSubmit = async () => {
     if (!validateDelivery()) {
       deliveryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+
+    if (showVatField && !vatValid) {
+      setVatError("Please validate your VAT number before proceeding to payment.");
+      vatSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
 
@@ -376,13 +384,21 @@ export default function CheckoutFlow() {
 
           {/* VAT — b2b only */}
           {showVatField && (
-            <SectionCard title="Business Details">
-              <VatField
-                value={vatNumber}
-                onChange={setVatNumber}
-                onValidationChange={setVatValid}
-              />
-            </SectionCard>
+            <div ref={vatSectionRef}>
+              <SectionCard title="Business Details">
+                <VatField
+                  value={vatNumber}
+                  onChange={setVatNumber}
+                  onValidationChange={(valid) => {
+                    setVatValid(valid);
+                    if (valid) setVatError(null);
+                  }}
+                />
+                {vatError && (
+                  <p role="alert" className="mt-2 text-[0.75rem] text-red-500">{vatError}</p>
+                )}
+              </SectionCard>
+            </div>
           )}
 
           {/* Delivery method */}

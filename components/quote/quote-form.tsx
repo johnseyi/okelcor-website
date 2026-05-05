@@ -120,6 +120,8 @@ export default function QuoteForm() {
     deliveryLocation: "", deliveryTimeline: "", notes: "",
   });
   const [vatNumber, setVatNumber] = useState("");
+  const [vatValid, setVatValid] = useState(false);
+  const [vatError, setVatError] = useState<string | null>(null);
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -193,6 +195,13 @@ export default function QuoteForm() {
       }
       return;
     }
+
+    if (showVatField && !vatValid) {
+      setVatError("Please validate your VAT number before submitting.");
+      document.getElementById("field-vatNumber")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+
     setSubmitting(true);
     setSubmitError(null);
 
@@ -270,6 +279,8 @@ export default function QuoteForm() {
   const handleReset = () => {
     setSubmitted(false);
     setVatNumber("");
+    setVatValid(false);
+    setVatError(null);
     setAttachedFile(null);
     setFileError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -407,8 +418,18 @@ export default function QuoteForm() {
           </Field>
 
           {showVatField && (
-            <div className="col-span-full">
-              <VatField value={vatNumber} onChange={setVatNumber} />
+            <div className="col-span-full" id="field-vatNumber">
+              <VatField
+                value={vatNumber}
+                onChange={setVatNumber}
+                onValidationChange={(valid) => {
+                  setVatValid(valid);
+                  if (valid) setVatError(null);
+                }}
+              />
+              {vatError && (
+                <p role="alert" className="mt-1.5 text-[0.75rem] text-red-500">{vatError}</p>
+              )}
             </div>
           )}
 
