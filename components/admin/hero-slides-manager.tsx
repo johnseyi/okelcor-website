@@ -59,8 +59,9 @@ function hasTransContent(t: TransFields): boolean {
 
 function initTranslations(initial?: AdminHeroSlide): Record<TransLocale, TransFields> {
   const base: Record<TransLocale, TransFields> = { de: { ...EMPTY_TRANS }, fr: { ...EMPTY_TRANS }, es: { ...EMPTY_TRANS } };
-  if (!initial?.translations) return base;
-  for (const t of initial.translations) {
+  const translations = initial?.translations;
+  if (!Array.isArray(translations)) return base;
+  for (const t of translations) {
     if (t.locale === "de" || t.locale === "fr" || t.locale === "es") {
       base[t.locale] = {
         title: t.title ?? "",
