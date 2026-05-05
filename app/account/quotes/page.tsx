@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type NormalizedStatus = "received" | "reviewed" | "quoted" | "closed";
+type NormalizedStatus = "received" | "reviewed" | "quoted" | "converted" | "closed";
 
 type QuoteRequest = {
   id: number;
@@ -26,7 +26,8 @@ type QuoteRequest = {
   product_details: string;
   quantity: number;
   notes?: string;
-  admin_notes?: string; // future: Okelcor team response
+  admin_notes?: string;
+  order_ref?: string | null;
 };
 
 // ─── Note Helpers ─────────────────────────────────────────────────────────────
@@ -55,8 +56,9 @@ function normalizeStatus(raw: string): NormalizedStatus {
   const s = (raw ?? "").toLowerCase();
   if (s === "new" || s === "pending")          return "received";
   if (s === "reviewing" || s === "reviewed")   return "reviewed";
-  if (s === "quoted" || s === "approved")      return "quoted";
-  if (s === "closed" || s === "rejected")      return "closed";
+  if (s === "quoted" || s === "approved")                return "quoted";
+  if (s === "converted" || s === "order_created")        return "converted";
+  if (s === "closed" || s === "rejected")                return "closed";
   return "received";
 }
 
@@ -64,21 +66,23 @@ const STEPS: { key: NormalizedStatus; label: string }[] = [
   { key: "received", label: "Request received" },
   { key: "reviewed", label: "Under review" },
   { key: "quoted",   label: "Quote prepared" },
-  { key: "closed",   label: "Closed" },
+  { key: "closed",   label: "Complete" },
 ];
 
 const STEP_INDEX: Record<NormalizedStatus, number> = {
-  received: 0,
-  reviewed: 1,
-  quoted:   2,
-  closed:   3,
+  received:  0,
+  reviewed:  1,
+  quoted:    2,
+  converted: 3,
+  closed:    3,
 };
 
 const STATUS_BADGE: Record<NormalizedStatus, { label: string; cls: string }> = {
   received: { label: "Request received", cls: "bg-amber-50 text-amber-700 border-amber-200" },
   reviewed: { label: "Under review",     cls: "bg-blue-50 text-blue-700 border-blue-200" },
-  quoted:   { label: "Quote prepared",   cls: "bg-green-50 text-green-700 border-green-200" },
-  closed:   { label: "Closed",           cls: "bg-gray-100 text-gray-500 border-gray-200" },
+  quoted:    { label: "Quote prepared",  cls: "bg-green-50 text-green-700 border-green-200" },
+  converted: { label: "Order created",  cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  closed:    { label: "Closed",         cls: "bg-gray-100 text-gray-500 border-gray-200" },
 };
 
 // ─── Progress Tracker ─────────────────────────────────────────────────────────
@@ -251,8 +255,8 @@ export default async function QuotesPage() {
                   {/* Progress tracker */}
                   <ProgressTracker status={normalized} />
 
-                  {/* Quoted CTA */}
-                  {normalized === "quoted" && (
+                  {/* Quoted CTA — only when no linked order exists yet */}
+                  {normalized === "quoted" && !q.order_ref && (
                     <div className="mt-4 rounded-[10px] border border-green-100 bg-green-50/60 px-4 py-3.5">
                       <p className="text-[0.82rem] font-semibold text-green-800">
                         Your quote is ready.
@@ -302,6 +306,30 @@ export default async function QuotesPage() {
                       </div>
                     </div>
                   )}
+
+                  {/* Order created badge */}
+                  {q.order_ref && (
+                    <div className="mt-3 flex items-center gap-2 rounded-[10px] border border-emerald-100 bg-emerald-50 px-4 py-2.5">
+                      <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+                      <span className="text-[0.78rem] font-semibold text-emerald-800">Order created</span>
+                      <Link
+                        href={`/account/orders/${q.order_ref}`}
+                        className="ml-1 text-[0.78rem] font-semibold text-emerald-700 underline transition hover:text-emerald-900"
+                      >
+                        {q.order_ref}
+                      </Link>
+                    </div>
+                  )}
+
+                  {/* View details */}
+                  <div className="mt-4 flex justify-end border-t border-black/[0.05] pt-3">
+                    <Link
+                      href={`/account/quotes/${q.ref || q.id}`}
+                      className="inline-flex items-center gap-1.5 text-[0.82rem] font-semibold text-[var(--primary)] transition hover:text-[var(--primary-hover)]"
+                    >
+                      View Details <ArrowRight size={13} strokeWidth={2.5} />
+                    </Link>
+                  </div>
                 </div>
               );
             })}
