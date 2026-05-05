@@ -180,6 +180,12 @@ export default function OrderSummary({
 
   return (
     <div className="overflow-hidden rounded-[22px] bg-[#efefef]">
+      {/* Dev-only diagnostic bar — not visible in production (remove after confirmed) */}
+      {process.env.NODE_ENV === "development" && (
+        <div className="border-b border-amber-300 bg-amber-50 px-4 py-2 text-[0.68rem] font-mono text-amber-800">
+          [TAX-PREVIEW] country={JSON.stringify(country)} | loading={String(taxLoading)} | error={String(taxError)} | preview={taxPreview ? `${taxPreview.tax_rate}% / €${taxPreview.tax_amount}` : "null"}
+        </div>
+      )}
       {/* Header */}
       <div className="border-b border-black/[0.07] px-6 py-4">
         <p className="text-[1rem] font-extrabold text-[var(--foreground)]">

@@ -17,8 +17,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
+  const targetUrl = `${API_URL}/payments/tax-preview`;
+  console.log("[tax-preview] target →", targetUrl);
+
   try {
-    const res = await fetch(`${API_URL}/payments/tax-preview`, {
+    const res = await fetch(targetUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -29,13 +32,15 @@ export async function POST(request: NextRequest) {
       cache: "no-store",
     });
     const text = await res.text();
+    console.log("[tax-preview] backend status →", res.status, "| response →", text.slice(0, 300));
     return new NextResponse(text, {
       status: res.status,
       headers: {
         "Content-Type": res.headers.get("content-type") ?? "application/json",
       },
     });
-  } catch {
+  } catch (err) {
+    console.log("[tax-preview] fetch error →", (err as Error).message);
     return NextResponse.json({ error: "Could not reach tax service." }, { status: 502 });
   }
 }
