@@ -27,7 +27,12 @@ type QuoteRequest = {
   quantity: number;
   notes?: string;
   admin_notes?: string;
+  order_id?: number | null;
   order_ref?: string | null;
+  order_status?: string | null;
+  order_total?: number | null;
+  payment_method?: string | null;
+  payment_status?: string | null;
 };
 
 // ─── Note Helpers ─────────────────────────────────────────────────────────────

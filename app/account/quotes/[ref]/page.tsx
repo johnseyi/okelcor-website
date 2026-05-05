@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   ChevronLeft, ChevronRight, MessageSquare,
-  Package, CheckCircle2, ArrowRight,
+  Package, CheckCircle2, ArrowRight, Paperclip,
 } from "lucide-react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
@@ -46,6 +46,8 @@ type QuoteDetail = {
   // notes
   notes?: string;
   admin_notes?: string;
+  // attachment
+  attachment_url?: string | null;
   // pricing
   quoted_price?: number | null;
   // linked order
@@ -58,6 +60,8 @@ type QuoteDetail = {
   order_subtotal_net?: number | null;
   order_tax_rate?: number | null;
   order_tax_amount?: number | null;
+  order_tax_treatment?: string | null;
+  order_is_reverse_charge?: boolean | null;
   order_delivery_cost?: number | null;
   order_total?: number | null;
   order_items?: OrderItem[];
@@ -330,6 +334,31 @@ export default async function QuoteDetailPage({ params }: Props) {
             </div>
           </div>
 
+          {/* ── Attachment ── */}
+          {quote.attachment_url && (
+            <div className="flex items-center gap-3 rounded-[22px] border border-black/[0.06] bg-white px-6 py-4">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f5f5f5]">
+                <Paperclip size={16} strokeWidth={1.8} className="text-[var(--muted)]" />
+              </div>
+              <div className="flex-1">
+                <p className="text-[0.65rem] font-bold uppercase tracking-wider text-[var(--muted)]">
+                  Attached document
+                </p>
+                <p className="mt-0.5 text-[0.85rem] font-semibold text-[var(--foreground)]">
+                  {quote.attachment_url.split("/").pop() ?? "attachment"}
+                </p>
+              </div>
+              <a
+                href={quote.attachment_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-black/[0.08] bg-[#f5f5f5] px-4 py-2 text-[0.82rem] font-semibold text-[var(--foreground)] transition hover:bg-[#ebebeb]"
+              >
+                Download <ArrowRight size={13} strokeWidth={2.2} />
+              </a>
+            </div>
+          )}
+
           {/* ── Customer message ── */}
           {isMeaningfulNote(quote.notes) && (
             <div className="flex gap-3 rounded-[22px] border border-black/[0.05] bg-white px-6 py-5">
@@ -517,13 +546,17 @@ export default async function QuoteDetailPage({ params }: Props) {
                               </td>
                             </tr>
                           )}
-                          {quote.order_tax_amount != null && (
+                          {(quote.order_tax_amount != null || quote.order_is_reverse_charge) && (
                             <tr>
                               <td colSpan={4} className="px-6 py-2 text-right text-[0.82rem] text-[var(--muted)]">
-                                VAT{quote.order_tax_rate ? ` (${quote.order_tax_rate}%)` : ""}
+                                {quote.order_is_reverse_charge
+                                  ? "VAT (Reverse Charge)"
+                                  : `VAT${quote.order_tax_rate ? ` (${quote.order_tax_rate}%)` : ""}`}
                               </td>
                               <td className="px-6 py-2 text-right text-[0.88rem] text-[var(--foreground)]">
-                                €{Number(quote.order_tax_amount).toFixed(2)}
+                                {quote.order_is_reverse_charge
+                                  ? "€0.00"
+                                  : `€${Number(quote.order_tax_amount).toFixed(2)}`}
                               </td>
                             </tr>
                           )}
@@ -588,13 +621,17 @@ export default async function QuoteDetailPage({ params }: Props) {
                             </p>
                           </div>
                         )}
-                        {quote.order_tax_amount != null && (
+                        {(quote.order_tax_amount != null || quote.order_is_reverse_charge) && (
                           <div className="flex items-center justify-between px-5 py-3">
                             <p className="text-[0.82rem] text-[var(--muted)]">
-                              VAT{quote.order_tax_rate ? ` (${quote.order_tax_rate}%)` : ""}
+                              {quote.order_is_reverse_charge
+                                ? "VAT (Reverse Charge)"
+                                : `VAT${quote.order_tax_rate ? ` (${quote.order_tax_rate}%)` : ""}`}
                             </p>
                             <p className="text-[0.88rem] text-[var(--foreground)]">
-                              €{Number(quote.order_tax_amount).toFixed(2)}
+                              {quote.order_is_reverse_charge
+                                ? "€0.00"
+                                : `€${Number(quote.order_tax_amount).toFixed(2)}`}
                             </p>
                           </div>
                         )}
@@ -623,7 +660,9 @@ export default async function QuoteDetailPage({ params }: Props) {
                       <p className="mt-1 text-[0.82rem] text-[var(--muted)]">
                         {[
                           quote.order_subtotal_net != null && `Net €${Number(quote.order_subtotal_net).toFixed(2)}`,
-                          quote.order_tax_amount != null && `VAT €${Number(quote.order_tax_amount).toFixed(2)}`,
+                          quote.order_is_reverse_charge
+                            ? "VAT (Reverse Charge)"
+                            : quote.order_tax_amount != null && `VAT €${Number(quote.order_tax_amount).toFixed(2)}`,
                           quote.order_delivery_cost != null &&
                             (Number(quote.order_delivery_cost) === 0
                               ? "Free delivery"
