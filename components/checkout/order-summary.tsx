@@ -108,12 +108,11 @@ export default function OrderSummary({
     const payload = {
       items: [
         ...items.map((i) => ({
-          product_id: i.product.id,
-          unit_price: i.product.price,
+          price:    i.product.price,
           quantity: i.quantity,
         })),
         ...(fetAddon
-          ? [{ unit_price: fetAddon.unitPrice, quantity: fetAddon.qty }]
+          ? [{ price: fetAddon.unitPrice, quantity: fetAddon.qty }]
           : []),
       ],
       delivery_cost: deliveryCost,
@@ -157,6 +156,9 @@ export default function OrderSummary({
         setTaxError(false);
       } catch (err) {
         if ((err as Error).name === "AbortError") return;
+        if (process.env.NODE_ENV === "development") {
+          console.error("[tax-preview] failed →", (err as Error).message);
+        }
         setTaxPreview(null);
         setTaxError(true);
       } finally {
