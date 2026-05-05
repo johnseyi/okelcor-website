@@ -93,9 +93,6 @@ export default function OrderSummary({
   const [taxError, setTaxError] = useState(false);
 
   useEffect(() => {
-    // DEBUG: log every invocation before the guard (remove after fix confirmed)
-    console.log("[tax-preview] effect invoked → country:", JSON.stringify(country), "| vatValid:", vatValid, "| customerType:", customerType, "| items:", items.length);
-
     if (!country) {
       setTaxPreview(null);
       setTaxLoading(false);
@@ -126,13 +123,7 @@ export default function OrderSummary({
       customer_type: customerType,
     };
 
-    // DEBUG: confirm country + vatValid reaching the effect (remove after fix confirmed)
-    console.log("[tax-preview] guard passed → scheduling fetch in 400ms | payload:", JSON.stringify(payload));
-
     const timer = setTimeout(async () => {
-      // DEBUG: confirm timer fired, not cancelled by cleanup (remove after fix confirmed)
-      console.log("[tax-preview] timer fired → starting fetch for country:", country);
-
       try {
         const res = await fetch("/api/checkout/tax-preview", {
           method: "POST",
@@ -141,47 +132,31 @@ export default function OrderSummary({
           signal: controller.signal,
         });
 
-        // DEBUG: response status (remove after fix confirmed)
-        console.log("[tax-preview] response status →", res.status);
-
         if (!res.ok) throw new Error(`preview_failed_${res.status}`);
 
         const json = await res.json();
-
-        // DEBUG: full response (remove after fix confirmed)
-        console.log("[tax-preview] response body →", json);
-
         const raw = json?.data;
         if (!raw) throw new Error("no_data_in_response");
 
         // Normalize all numeric fields — Laravel serialises decimal columns as
         // strings ("19.00") which would fail a typeof === "number" check.
         const data: TaxPreview = {
-          subtotal_net:    Number(raw.subtotal_net),
-          delivery_cost:   Number(raw.delivery_cost),
-          tax_rate:        Number(raw.tax_rate),
-          tax_amount:      Number(raw.tax_amount),
+          subtotal_net:      Number(raw.subtotal_net),
+          delivery_cost:     Number(raw.delivery_cost),
+          tax_rate:          Number(raw.tax_rate),
+          tax_amount:        Number(raw.tax_amount),
           is_reverse_charge: Boolean(raw.is_reverse_charge),
-          tax_treatment:   String(raw.tax_treatment ?? "standard"),
-          total:           Number(raw.total),
-          note:            raw.note ?? null,
+          tax_treatment:     String(raw.tax_treatment ?? "standard"),
+          total:             Number(raw.total),
+          note:              raw.note ?? null,
         };
 
         if (isNaN(data.total)) throw new Error("invalid_total");
 
-        // DEBUG: normalized data (remove after fix confirmed)
-        console.log("[tax-preview] normalized →", data);
-
         setTaxPreview(data);
         setTaxError(false);
       } catch (err) {
-        if ((err as Error).name === "AbortError") {
-          // DEBUG: explicit abort log (remove after fix confirmed)
-          console.log("[tax-preview] AbortError — fetch cancelled mid-flight (deps changed)");
-          return;
-        }
-        // DEBUG: other errors (remove after fix confirmed)
-        console.log("[tax-preview] catch →", (err as Error).message);
+        if ((err as Error).name === "AbortError") return;
         setTaxPreview(null);
         setTaxError(true);
       } finally {
@@ -190,8 +165,6 @@ export default function OrderSummary({
     }, 400);
 
     return () => {
-      // DEBUG: log cleanup to confirm which dep change caused the cancel (remove after fix confirmed)
-      console.log("[tax-preview] cleanup → cancelling timer/abort for country:", country, "vatValid:", vatValid);
       clearTimeout(timer);
       controller.abort();
     };
