@@ -123,7 +123,19 @@ export default function OrderSummary({
       customer_type: customerType,
     };
 
+    // DEBUG: confirm trigger state (remove after fix confirmed)
+    console.log("[tax-preview] triggered →", {
+      country,
+      vatValid,
+      vatNumber: vatValid ? vatNumberRef.current : "(not sent)",
+      customerType,
+      itemCount: items.length,
+    });
+
     const timer = setTimeout(async () => {
+      // DEBUG: log exact payload (remove after fix confirmed)
+      console.log("[tax-preview] payload →", JSON.stringify(payload));
+
       try {
         const res = await fetch("/api/checkout/tax-preview", {
           method: "POST",
@@ -132,9 +144,16 @@ export default function OrderSummary({
           signal: controller.signal,
         });
 
+        // DEBUG: response status (remove after fix confirmed)
+        console.log("[tax-preview] response status →", res.status);
+
         if (!res.ok) throw new Error("preview_failed");
 
         const json = await res.json();
+
+        // DEBUG: response data (remove after fix confirmed)
+        console.log("[tax-preview] response data →", json);
+
         const data: TaxPreview | null = json?.data ?? null;
         if (!data || typeof data.total !== "number") throw new Error("invalid_response");
 
@@ -142,6 +161,8 @@ export default function OrderSummary({
         setTaxError(false);
       } catch (err) {
         if ((err as Error).name === "AbortError") return;
+        // DEBUG: catch reason (remove after fix confirmed)
+        console.log("[tax-preview] error →", (err as Error).message);
         setTaxPreview(null);
         setTaxError(true);
       } finally {
