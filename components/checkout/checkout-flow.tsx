@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, ChevronRight, Lock, ShieldCheck } from "lucide-react";
 import { useCart } from "@/context/cart-context";
@@ -182,6 +182,20 @@ export default function CheckoutFlow() {
   const [deliveryErrors, setDeliveryErrors] = useState<DeliveryErrors>({});
   const [vatNumber, setVatNumber]           = useState("");
   const [vatValid, setVatValid]             = useState(false);
+
+  // Prefill delivery form from customer profile once loaded.
+  // Only fills empty fields so user edits are never overwritten.
+  useEffect(() => {
+    if (!customer) return;
+    setDelivery((prev) => ({
+      ...prev,
+      name:    prev.name    || `${customer.first_name ?? ""} ${customer.last_name ?? ""}`.trim(),
+      email:   prev.email   || customer.email  || "",
+      country: prev.country || customer.country || "",
+      phone:   prev.phone   || customer.phone   || "",
+    }));
+  }, [customer]);
+
   const [submitting, setSubmitting]         = useState(false);
   const [submitError, setSubmitError]       = useState<string | null>(null);
   const [fetAdded, setFetAdded]         = useState(false);
