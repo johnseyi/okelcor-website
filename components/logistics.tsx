@@ -21,7 +21,7 @@ export default function Logistics() {
               className="object-cover transition-transform duration-700 hover:scale-105"
               sizes="(max-width: 768px) 100vw, 57vw"
             />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/12 to-black/55" />
+            <div className="absolute inset-0 bg-linear-to-b from-black/10 via-black/12 to-black/55" />
 
             <div className="absolute bottom-0 left-0 right-0 z-10 p-5 sm:p-8 md:p-10">
               <p className="text-lg font-medium text-white/90">
@@ -64,7 +64,7 @@ export default function Logistics() {
                 className="object-cover transition-transform duration-700 hover:scale-105"
                 sizes="(max-width: 768px) 100vw, 43vw"
               />
-              <div className="absolute inset-0 bg-gradient-to-b from-black/8 to-black/45" />
+              <div className="absolute inset-0 bg-linear-to-b from-black/8 to-black/45" />
 
               <div className="absolute bottom-0 left-0 right-0 z-10 p-8">
                 <p className="text-base text-white/85">{t.logistics.flexibleSourcing}</p>

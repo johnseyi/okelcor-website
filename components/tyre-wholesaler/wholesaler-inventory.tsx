@@ -37,7 +37,7 @@ export default function WholesalerInventory() {
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                 />
                 {/* Readability overlay — stronger gradient so text stays legible */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/55 to-black/25 transition-colors duration-300 group-hover:from-black/90 group-hover:via-black/60" />
+                <div className="absolute inset-0 bg-linear-to-t from-black/85 via-black/55 to-black/25 transition-colors duration-300 group-hover:from-black/90 group-hover:via-black/60" />
                 <div className="absolute inset-0 flex flex-col justify-end p-6">
                   <h3 className="text-[1.3rem] font-extrabold text-white">{cat.title}</h3>
                   <p className="mt-2 text-[0.82rem] leading-6 text-white/85">{cat.description}</p>

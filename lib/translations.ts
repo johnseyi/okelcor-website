@@ -326,6 +326,30 @@ export type Translations = {
     ];
     cta: string;
   };
+  /** EU tyre label — Regulation (EU) 2020/740. */
+  tyreLabel: {
+    title: string;
+    regulation: string;
+    fuelEfficiency: string;
+    wetGrip: string;
+    noise: string;
+    snowGrip: string;
+    iceGrip: string;
+    snowDesc: string;
+    iceDesc: string;
+    bestClass: string;
+    eprel: string;
+    classLabel: string;
+  };
+  /** Decoded tyre service description (load index / speed symbol). */
+  tyreSpecs: {
+    loadIndex: string;
+    speedRating: string;
+    maxLoad: string;
+    maxSpeed: string;
+    perTyre: string;
+    dualFitment: string;
+  };
 };
 
 // ─── English ──────────────────────────────────────────────────────────────────
@@ -853,6 +877,28 @@ const en: Translations = {
       { title: "Track Your Shipment", desc: "Follow your shipment from dispatch to delivery with carrier tracking and real-time status updates." },
     ],
     cta: "Request a Quote",
+  },
+  tyreLabel: {
+    title: "EU Tyre Label",
+    regulation: "Regulation (EU) 2020/740",
+    fuelEfficiency: "Fuel efficiency",
+    wetGrip: "Wet grip",
+    noise: "External noise",
+    snowGrip: "Snow grip",
+    iceGrip: "Ice grip",
+    snowDesc: "3PMSF certified — accepted for winter use in regulated markets",
+    iceDesc: "Tested for grip on icy roads",
+    bestClass: "A = best",
+    eprel: "View EPREL registration",
+    classLabel: "Class",
+  },
+  tyreSpecs: {
+    loadIndex: "Load index",
+    speedRating: "Speed rating",
+    maxLoad: "Max load",
+    maxSpeed: "Max speed",
+    perTyre: "per tyre",
+    dualFitment: "dual fitment",
   },
 };
 
@@ -1382,6 +1428,28 @@ const de: Translations = {
     ],
     cta: "Angebot anfragen",
   },
+  tyreLabel: {
+    title: "EU-Reifenlabel",
+    regulation: "Verordnung (EU) 2020/740",
+    fuelEfficiency: "Kraftstoffeffizienz",
+    wetGrip: "Nasshaftung",
+    noise: "Externes Rollgeräusch",
+    snowGrip: "Schneegriff",
+    iceGrip: "Eisgriff",
+    snowDesc: "3PMSF-zertifiziert — für den Wintereinsatz in regulierten Märkten zugelassen",
+    iceDesc: "Geprüft auf Haftung bei Eisglätte",
+    bestClass: "A = am besten",
+    eprel: "EPREL-Registrierung ansehen",
+    classLabel: "Klasse",
+  },
+  tyreSpecs: {
+    loadIndex: "Tragfähigkeitsindex",
+    speedRating: "Geschwindigkeitsindex",
+    maxLoad: "Max. Last",
+    maxSpeed: "Höchstgeschwindigkeit",
+    perTyre: "pro Reifen",
+    dualFitment: "Zwillingsbereifung",
+  },
 };
 
 // ─── French ───────────────────────────────────────────────────────────────────
@@ -1910,6 +1978,28 @@ const fr: Translations = {
     ],
     cta: "Demander un devis",
   },
+  tyreLabel: {
+    title: "Étiquette pneumatique UE",
+    regulation: "Règlement (UE) 2020/740",
+    fuelEfficiency: "Efficacité énergétique",
+    wetGrip: "Adhérence sur sol mouillé",
+    noise: "Bruit de roulement externe",
+    snowGrip: "Adhérence sur neige",
+    iceGrip: "Adhérence sur glace",
+    snowDesc: "Certifié 3PMSF — accepté pour l'usage hivernal dans les marchés réglementés",
+    iceDesc: "Testé pour l'adhérence sur routes verglacées",
+    bestClass: "A = optimal",
+    eprel: "Voir l'enregistrement EPREL",
+    classLabel: "Classe",
+  },
+  tyreSpecs: {
+    loadIndex: "Indice de charge",
+    speedRating: "Indice de vitesse",
+    maxLoad: "Charge max.",
+    maxSpeed: "Vitesse max.",
+    perTyre: "par pneu",
+    dualFitment: "montage jumelé",
+  },
 };
 
 // ─── Spanish ──────────────────────────────────────────────────────────────────
@@ -2407,6 +2497,28 @@ const es: Translations = {
       { title: "Siga su envío", desc: "Siga su envío desde el despacho hasta la entrega con seguimiento del transportista y actualizaciones en tiempo real." },
     ],
     cta: "Solicitar cotización",
+  },
+  tyreLabel: {
+    title: "Etiqueta europea del neumático",
+    regulation: "Reglamento (UE) 2020/740",
+    fuelEfficiency: "Eficiencia energética",
+    wetGrip: "Agarre en mojado",
+    noise: "Ruido de rodadura externo",
+    snowGrip: "Agarre en nieve",
+    iceGrip: "Agarre en hielo",
+    snowDesc: "Certificado 3PMSF — aceptado para uso invernal en mercados regulados",
+    iceDesc: "Probado para agarre en carreteras heladas",
+    bestClass: "A = óptimo",
+    eprel: "Ver registro EPREL",
+    classLabel: "Clase",
+  },
+  tyreSpecs: {
+    loadIndex: "Índice de carga",
+    speedRating: "Índice de velocidad",
+    maxLoad: "Carga máx.",
+    maxSpeed: "Velocidad máx.",
+    perTyre: "por neumático",
+    dualFitment: "montaje gemelo",
   },
 };
 

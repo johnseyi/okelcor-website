@@ -1,8 +1,8 @@
 # Okelcor Website — Progress Tracker
 
-**Last updated:** 2026-07-18  
+**Last updated:** 2026-07-29  
 **Branch:** `main`  
-**Build status:** TypeScript 0 errors · ESLint clean · Production build passes
+**Build status:** TypeScript 0 errors · Production build passes · ESLint **11 errors / 45 warnings — all pre-existing** (mostly `react-hooks/set-state-in-effect` on the fetch-on-mount pattern in `navbar.tsx`, `cart-context.tsx`, `language-context.tsx`, `product-form.tsx`, `two-factor-status.tsx`, `crisp-notifier.tsx`, `use-admin-permissions.ts`, `checkout/return`). The "ESLint clean" claim above this line was inaccurate as of 2026-07-29 — corrected rather than left standing.
 
 ---
 
@@ -143,8 +143,11 @@
 | Bulk Email Campaigns — compose & send | `a731c86` | `/admin/marketing/campaigns` · TipTap HTML composer · debounced recipient-count preview · company/country/status/search filters · send |
 | Bulk Email Campaigns — history & progress | `a731c86` | Paginated history table · 3-second poller while status is `queued`/`sending` · progress bar · body-preview modal |
 | RBAC — `marketing` section | `a731c86` | `super_admin`, `admin`, `order_manager`; `marketing.manage` permission |
+| Market segmentation — contacts + campaigns | `0948daa` | Market filter/picker (`components/admin/market-select.tsx`) auto-discovered via `GET /admin/marketing-contacts/markets` — not hardcoded — used as tabs-with-counts on the contacts list and the primary audience filter on the campaign composer; new manual add/edit contact modal (no CSV needed for a single lead); import now requires and sends a market. **Fixed a live bug in the same pass:** the CSV-import proxy never sent `market` to the backend, which had just made it required server-side — every import was 422ing until this landed |
 
 > **CSV import status:** Frontend normalisation ships (`dc57662`). Import still returns `skipped_no_email: 188` — root cause is a column-name mismatch between the normalised CSV and what the Laravel importer expects. Backend team has been notified with full reproduction details; awaiting the exact expected header name.
+
+> **Market normalisation gap (backend, not papered over here):** the backend slugifies (lowercase) a market value supplied directly (manual add/edit, the import selector), but **not** a market value embedded inside an imported CSV's own market/region/segment column — confirmed via an existing backend test. Filter queries (`BulkEmailService::recipientQuery`) don't normalise either. A CSV-embedded `"Asia"` and a manually-entered `"asia"` will show up as separate, non-matching markets. Flagged back to backend; frontend intentionally shows whatever `/markets` returns at face value rather than guessing a client-side fix for a server-side data-integrity issue.
 
 ---
 
@@ -171,6 +174,10 @@
 | Signed Proposal return | 2026-07-03 | Same paper-trail pattern, one stage earlier: Proposal PDF also has a Date/Signature/Stamp block. `QuoteAcceptanceActions` (`/account/quotes/[ref]`) gets an "Upload signed copy instead" file picker next to Accept/Decline → `POST /api/account/quotes/{ref}/proposal/signed-copy` (new proxy); **this is itself an acceptance** — 201 sets local status to `accepted`, same as clicking Accept (no separate state to handle). 422/410 (no active proposal / expired) surfaced as inline errors. Admin: `AdminQuoteFull.proposal_signed_copy_download_url` + a "Signed" badge and download row in the accepted-state block of `ProposalCard` |
 | Payment-gated documents — expanded | 2026-07-03 | Packing List, Delivery Note, and Shipment Documents now follow the same full-payment gate as the Commercial Invoice (hidden from `trade_documents` until `balance_paid`/`shipment_released`/`paid`). Server-side only — confirmed no client-side logic assumed pre-payment visibility, so no FE change needed |
 | Order currency (EUR/USD) | 2026-07-17 | A manually-entered order had been paid in USD; the whole order model implicitly assumed EUR (hardcoded `€` everywhere, no `currency` field). Added `AdminOrder.currency`, a Currency dropdown (EUR/USD) in the order edit tab's "Order Status & Shipment" panel saved through the existing `PATCH /admin/orders/{id}/status` call, and switched order total/items/orders-table/Payment Milestones amounts to a shared `formatMoney()` (`lib/currency.ts`) keyed off the order's currency. Relabel only, no FX conversion. ⏳ Backend: add `currency` column + accept/return it — `docs/BACKEND_NOTE_order_currency.md` |
+| **FIX** — Payment milestone routes were 404ing in production | `6b82e3a` | Frontend was calling `orders/{id}/payments/mark-*` — a path confirmed to not exist anywhere on the backend (no legacy route registered). All five payment-milestone action buttons (deposit paid, balance due, balance paid, release shipment, resend email) were non-functional. Corrected to the real backend routes, `orders/{id}/payment-milestones/{deposit-paid,balance-due,balance-paid,release-shipment,resend-email}`, in both the 5 Next.js proxy routes (moved, not just edited — Next.js ties URL to folder structure) and `payment-milestones-card.tsx` |
+| Mark Balance Paid — also gated on `deposit_paid` | `6b82e3a` | Previously only showed at `balance_due`. Backend's `markBalancePaid` explicitly accepts the transition directly from `deposit_paid` too — lets an order manager record "customer already paid in full" without a forced intermediate step |
+| "Processing" order status | `6b82e3a` | Added to the order edit dropdown (already a valid, already-used backend value). Caught and fixed a second, separately-duplicated `OrderStatus` type (`app/admin/orders/actions.ts`) that would have silently rejected it even after the dropdown was fixed |
+| Trade document upload — "File as" type selector | `6b82e3a` | New dropdown (order_confirmation / proforma / commercial_invoice / packing_list / delivery_note / shipment_document), defaults to `shipment_document` so existing uploads are unaffected — lets an order manager file an externally-produced document (e.g. from an accountant) as its real type instead of always landing in the generic bucket |
 | Order line-item editing (correcting wrong figures) | 2026-07-15 | Fixes "no way to fix a wrong price/quantity/product name on a manual order" — previously only the delivery fee was correctable. **Unlocked orders** (`financials_locked` false, `source !== "ebay"`): inline Edit/Delete per row + "Add Item" on the Order Items table → `POST/PATCH/DELETE /admin/orders/{id}/items[/{itemId}]`, `reason` required and shown as a visible field on every mutation (writes to the order audit log), disabled Delete when only one item remains (`cannot_delete_last_item`). **Locked orders**: existing Request Financial Revision modal (DOC-5, `a5651f3`) extended with per-item correction rows, a repeatable "New Items" section, and remove checkboxes → `changes.items`/`changes.new_items`/`changes.remove_item_ids` alongside the existing `delivery_fee`; client-side guard mirrors `revision_would_empty_order` before submit. eBay orders (`source === "ebay"`) get neither path — banner only, matching the backend's 403 `ebay_order_not_editable` enforcement. All mutations `router.refresh()` to pull corrected totals |
 | Historical order backfill (admin) | 2026-07-14 | For customers Okelcor already had a relationship with before being onboarded to the system. New `POST /admin/orders` (`orders.update`) — "Add Historical Order" button on the customer detail page's Order History card (`components/admin/add-historical-order-modal.tsx`) opens a 2-step flow: **step 1** order details (ref optional, order date, shipping details, status incl. `processing`, payment status `pending/paid/failed/refunded`, explicit payment-stage picker — `paid` alone defaults server-side to `balance_paid`, so mid-flight orders must set `deposit_paid`/`balance_due` themselves —, carrier/carrier type/tracking number/container number, admin notes, itemized line items or flat total); **step 2** repeatable document-upload rows (type label incl. free-text "Other", notes, file — reuses the existing `POST /admin/orders/{id}/trade-documents/upload` proxy, one call per file) so real invoices/BOLs get attached in the same flow rather than regenerated — per backend, "Generate…" endpoints must never be used for historical orders. 409 `document_generation_blocked_payment_stage` and the payment-gated visibility rule (uploads accepted but hidden from the customer's portal until fully paid) surfaced inline. "Skip for now" / "Done" both proceed to the new order's detail page, where Documents (`TradeDocumentsCard`) and Shipment tracking (Logistics tab, `ShipmentEventManager` + Track Shipment) already existed — no new UI needed there. Customer portal visibility needed no changes — orders match a customer purely by e-mail, already live. **Open item:** `/account/orders` (list page) fetches `GET {API}/orders?email=` directly in a Server Component rather than the `GET /auth/orders` bearer-scoped route the backend note names — pre-dates the API-proxy convention, confirmed working today, left unchanged pending a decision (see chat) |
 
@@ -548,15 +555,6 @@ POST /api/v1/admin/orders/{id}/acceptance/send
 POST /api/v1/auth/orders/{ref}/reject-order-confirmation    body: { reason? }
 ```
 
-### DOC-7/8 Payment Milestones
-
-```
-POST /api/v1/admin/orders/{id}/payments/mark-deposit-paid
-POST /api/v1/admin/orders/{id}/payments/mark-balance-paid
-POST /api/v1/admin/orders/{id}/payments/release-shipment
-POST /api/v1/admin/orders/{id}/payments/resend-milestone-email   body: { stage }
-```
-
 ### EB-1 eBay OAuth
 
 ```
@@ -649,14 +647,48 @@ patterns to `/admin` and its 16 components in `components/admin/dashboard/`.
 
 ---
 
+### ✅ Tailwind v4 Token Foundation + Tyre-Industry Storefront Pass (2026-07-29)
+
+Audit finding that drove this: Tailwind **v4.2.2** was installed but the codebase
+was written entirely in v3 idiom — **zero** `@theme`, `@utility`, `@custom-variant`,
+container queries, `bg-linear-*`, `mask-*`, `text-shadow-*` or 3D transforms, and
+~1,000 arbitrary hex literals in client code (`[#5c5e62]`×81, `[#f5f5f5]`×124).
+The design system existed only as prose in `DESIGN_SYSTEM.md`, so nothing enforced it.
+
+| Feature | Notes |
+|---|---|
+| `@theme` token layer (`app/globals.css`) | Brand/ink/surface/hairline/FET/EU-grade colours, `--radius-panel` (22px per DESIGN_SYSTEM §9), shadow scale, the type scale, `--ease-premium`, and `--container-card-*` container-query breakpoints — all now real utilities (`bg-brand`, `text-ink-muted`, `border-hairline`, `rounded-panel`, `ease-premium`, `@card-md:`). **Purely additive**: the original `:root` block is retained verbatim so every existing `var(--primary)` reference still resolves and nothing rendering today changed. Verified by compiling the sheet standalone and grepping the output — every new utility emits |
+| Design rules encoded as tokens | CLAUDE.md's "never apply Okelcor orange to FET UI" is now structural: orange is `brand-*`, FET green is `fet-*`. Mixing them is visible in the class name instead of invisible in a hex literal |
+| `@custom-variant motion` + `@utility panel` / `panel-float` | Opt-in `motion:` variant (applies only when the visitor has *not* requested reduced motion); `panel`/`panel-float` replace the `rounded-2xl border border-black/[0.06] bg-white` triplet repeated across dozens of components |
+| Brand-drift fix (10 public files) | `#E85C1A` had leaked into `not-found`, `global-error`, `imprint`, `checkout/cancel`, the public document verify/accept pages, proposal acceptance and the custom cursor. **Correction to an earlier read:** `#E85C1A` is the *admin panel's* deliberate accent (~100 files, left untouched) — the drift was public-facing pages picking it up. Those 10 now use `brand`/`brand-hover` |
+| Container queries on `ProductCard` | The card renders in the shop grid, related-products rail, compare modal and specials list at four different widths; it sized off the **viewport**. Now `@container` + `@card-md:` — correct in every context, no breakpoint guessing |
+| v4 syntax modernisation | 28 × `bg-gradient-to-*` → `bg-linear-to-*`; `global-reach` marquee's hand-rolled `[mask-image:linear-gradient(…)]` → `mask-x-from-93% mask-x-to-100%` |
+| **EU Tyre Label — Regulation (EU) 2020/740** | Was **entirely absent** (zero `fuel_efficiency`/`wet_grip`/`rolling_noise` anywhere) despite being legally mandatory for tyres on the EU market and the trade's most recognised trust artifact. New `lib/eu-tyre-label.ts` + `components/shop/eu-tyre-label.tsx`: compact grade pills on the card/compare table, full graded A→E ladder panel on the detail page (regulated colour ramp, noise dB + class bars, 3PMSF/ice pictograms, EPREL deep link). Defensive enum narrowing; reads either a nested `eu_label` object or flat columns. **Renders nothing when the backend supplies nothing** — pages are byte-identical to before until fields land. Contract: `docs/BACKEND_NOTE_eu_tyre_label.md` |
+| Service-description decoding (**no backend needed**) | `lib/tyre-specs.ts` — ISO/ETRTO load-index→kg and speed-symbol→km/h tables, incl. dual-fitment (`154/150 K`). `"91V"` rendered as a raw string everywhere; now surfaces "615 kg / 240 km/h" on the card, detail page and compare table, derived from the `spec` field that already existed |
+| Locale-correct pricing | The storefront hardcoded `€{n.toFixed(2)}` — wrong notation in 3 of the 4 shipped locales. New `lib/price.ts` + `hooks/use-price.ts` (Intl-based): `€1,234.56` (en) · `1.234,56 €` (de) · `1 234,56 €` (fr/es), honouring an optional per-product `currency`. Applied across product card, detail page, related products, compare modal, search modal, cart drawer, checkout summary, specials list and the shop price filters. **Formatting only — no FX conversion**, deliberately: quoting a converted number with no rate source or timestamp would be misleading on a B2B quote |
+| `Product` type extended | Optional `currency`, `eu_label`, `dot_code`, `tread_depth_mm` — the last two typed and ready but not yet rendered (still the gap in `BACKEND_NOTE_premium_ux.md`) |
+| i18n | New `tyreLabel` + `tyreSpecs` blocks, type-enforced across EN/DE/FR/ES |
+
+**Not done (scope):** the admin product form has no inputs for the seven EU-label
+fields yet — mechanical, needed once the columns exist. Container-load calculator
+and interactive lead-time map were explicitly out of the agreed scope.
+
+---
+
 ## Upcoming / Backlog
 
 | Item | Priority | Notes |
 |---|---|---|
+| **Rotate + scrub leaked Crisp credentials** | High (security) | Found while investigating live chat: `docs/session-handoff.md` has what look like real, plaintext `CRISP_IDENTIFIER`/`CRISP_KEY`/`NEXT_PUBLIC_CRISP_WEBSITE_ID` values committed (debug output from a past `X-Crisp-Tier` header issue). Rotate in the Crisp dashboard and scrub from git history. Not yet confirmed done |
+| Market normalisation gap | Medium | See callout under Admin Panel — Marketing — CSV-embedded market values bypass the slugify step manual entries get; filter queries don't normalise either |
 | Marketing CSV import fix | High | Backend to clarify expected email column header name |
 | Media Library backend activation | High | 3 endpoints confirmed built; two bugs fixed — ready to test |
 | CRM-7 backend activation | High | 12 endpoints pending |
 | CRM-8 backend activation | High | 14 endpoints + approve must flip `onboarding_status`/`is_active` & send approval email (see CRM-8 contract block) |
 | CRM-3B notifications backend activation | High | `admin_notifications` table + service + 6 endpoints + `my-work` + triggers + dedupe + `due-followups` scheduler (see CRM-3B contract block) |
+| **EU tyre label backend fields** | High | 7 optional fields on the product payload — see `docs/BACKEND_NOTE_eu_tyre_label.md`. Frontend is live and degrades silently; legally the most significant catalogue gap |
+| Admin product form — EU label inputs | Medium | Seven fields in `components/admin/product-form.tsx`, once the columns exist |
+| Product `currency` field | Medium | Catalogue-side equivalent of the admin order currency already shipped |
+| Pre-existing ESLint errors (11) | Medium | `react-hooks/set-state-in-effect` on the fetch-on-mount pattern; same targeted-disable convention already used in `cart-context.tsx` would clear them |
 | Customer proposal view (account portal) | Medium | Show proposal status on account quotes |
 | Proposal PDF document (AN number) | Medium | Backend to generate; frontend to display |

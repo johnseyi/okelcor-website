@@ -18,7 +18,7 @@ export default function NotFound() {
               style={{ height: "22px", width: "auto" }}
               className="object-contain"
             />
-            <span className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.22em] text-[#E85C1A]">
+            <span className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.22em] text-brand">
               Growing Together
             </span>
           </Link>

@@ -18,6 +18,7 @@ import {
   Sun,
 } from "lucide-react";
 import { useCart } from "@/context/cart-context";
+import { usePrice } from "@/hooks/use-price";
 import type { Product } from "./data";
 
 type CustomerType = "b2b" | "b2c" | "guest";
@@ -104,6 +105,8 @@ function SpecialRow({
   customerType: CustomerType;
 }) {
   const { addItem, openCart } = useCart();
+  // Aliased — `price` is already the resolved numeric amount in this scope.
+  const { price: fmt }      = usePrice();
   const [qty, setQty]       = useState(1);
   const [added, setAdded]   = useState(false);
 
@@ -163,8 +166,8 @@ function SpecialRow({
 
         {/* Price — show exactly as returned by API; no client-side discount calculation */}
         <div className="w-[88px] shrink-0 text-right">
-          <p className="text-[0.95rem] font-extrabold text-[#171a20]">
-            €{price.toFixed(2)}
+          <p className="text-[0.95rem] font-extrabold tabular-nums text-ink">
+            {fmt(price, { currency: product.currency })}
           </p>
         </div>
 
@@ -237,7 +240,7 @@ function SpecialRow({
             </div>
           </div>
           <div className="shrink-0 text-right">
-            <p className="text-[1rem] font-extrabold text-[#171a20]">€{price.toFixed(2)}</p>
+            <p className="text-[1rem] font-extrabold tabular-nums text-ink">{fmt(price, { currency: product.currency })}</p>
           </div>
         </div>
 

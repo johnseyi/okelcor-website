@@ -12,6 +12,7 @@ import { useLanguage } from "@/context/language-context";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import { getProductImageUrl } from "@/lib/utils";
 import { trackTyreSpecSelected } from "@/lib/analytics";
+import { usePrice } from "@/hooks/use-price";
 
 // ── API ───────────────────────────────────────────────────────────────────────
 
@@ -102,6 +103,7 @@ type Props = {
 
 export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed, initialFilters, source = "shop" }: Props) {
   const { locale, t } = useLanguage();
+  const { price } = usePrice();
   const { customer } = useCustomerAuth();
   const customerType: "b2b" | "b2c" | "guest" =
     customer?.customer_type === "b2b" ? "b2b" : customer ? "b2c" : "guest";
@@ -493,13 +495,13 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed, 
             {/* Min price */}
             <select value={priceMin} onChange={(e) => setPriceMin(e.target.value)} className={sel}>
               <option value="">Min price</option>
-              {PRICES.map((p) => <option key={p} value={p}>€{p}</option>)}
+              {PRICES.map((p) => <option key={p} value={p}>{price(p, { compact: true })}</option>)}
             </select>
 
             {/* Max price */}
             <select value={priceMax} onChange={(e) => setPriceMax(e.target.value)} className={sel}>
               <option value="">Max price</option>
-              {PRICES.map((p) => <option key={p} value={p}>€{p}</option>)}
+              {PRICES.map((p) => <option key={p} value={p}>{price(p, { compact: true })}</option>)}
             </select>
 
             {/* Brand */}

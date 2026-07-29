@@ -51,7 +51,7 @@ export default function Footer() {
   return (
     <footer className="w-full bg-[#f5f5f5]">
       {/* Premium accent hairline */}
-      <div aria-hidden="true" className="h-px w-full bg-gradient-to-r from-transparent via-[var(--primary)]/40 to-transparent" />
+      <div aria-hidden="true" className="h-px w-full bg-linear-to-r from-transparent via-[var(--primary)]/40 to-transparent" />
       <FadeUp><NewsletterStrip /></FadeUp>
       <div className="tesla-shell">
 

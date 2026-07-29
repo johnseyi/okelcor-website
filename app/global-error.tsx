@@ -18,7 +18,7 @@ export default function GlobalError({
     <html>
       <body className="flex min-h-screen flex-col items-center justify-center bg-[#f5f5f7] p-6 font-sans">
         <div className="max-w-md rounded-2xl bg-white p-8 text-center shadow-sm">
-          <p className="text-[0.72rem] font-bold uppercase tracking-[0.18em] text-[#E85C1A]">
+          <p className="text-[0.72rem] font-bold uppercase tracking-[0.18em] text-brand">
             Unexpected Error
           </p>
           <h1 className="mt-2 text-xl font-extrabold text-[#1a1a1a]">
@@ -35,7 +35,7 @@ export default function GlobalError({
           <button
             type="button"
             onClick={reset}
-            className="mt-6 rounded-xl bg-[#E85C1A] px-5 py-2.5 text-[0.875rem] font-semibold text-white transition hover:bg-[#d04d15]"
+            className="mt-6 rounded-xl bg-brand px-5 py-2.5 text-[0.875rem] font-semibold text-white transition hover:bg-brand-hover"
           >
             Try again
           </button>

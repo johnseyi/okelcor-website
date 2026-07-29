@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 };
 
 const SECTION_CLS = "mb-8";
-const H2_CLS = "mb-4 mt-8 text-[0.72rem] font-bold uppercase tracking-[0.18em] text-[#E85C1A]";
+const H2_CLS = "mb-4 mt-8 text-[0.72rem] font-bold uppercase tracking-[0.18em] text-brand";
 const P_CLS = "text-[0.95rem] leading-7 text-[var(--muted)]";
 
 function InfoRow({ label, value }: { label: string; value: string }) {
@@ -107,7 +107,7 @@ export default function ImprintPage() {
                   href="https://ec.europa.eu/consumers/odr"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#E85C1A] underline underline-offset-2 hover:opacity-80"
+                  className="text-brand underline underline-offset-2 hover:opacity-80"
                 >
                   https://ec.europa.eu/consumers/odr
                 </a>

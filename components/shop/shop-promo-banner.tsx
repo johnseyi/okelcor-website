@@ -53,7 +53,7 @@ export default function ShopPromoBanner({
   };
 
   return (
-    <div className="mb-6 overflow-hidden rounded-2xl border border-[#f4511e]/20 bg-gradient-to-r from-[#fff8f6] to-white shadow-sm">
+    <div className="mb-6 overflow-hidden rounded-2xl border border-[#f4511e]/20 bg-linear-to-r from-[#fff8f6] to-white shadow-sm">
       <div className="relative flex h-[96px] items-center sm:h-[108px]">
 
         {/* Left image */}
@@ -66,7 +66,7 @@ export default function ShopPromoBanner({
               className="object-cover"
               unoptimized
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent to-[#fff8f6]/60" />
+            <div className="absolute inset-0 bg-linear-to-r from-transparent to-[#fff8f6]/60" />
           </div>
         )}
 

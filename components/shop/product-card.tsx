@@ -1,13 +1,17 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeftRight, CheckCircle2, ChevronDown, ArrowRight } from "lucide-react";
+import { ArrowLeftRight, CheckCircle2, ChevronDown, ArrowRight, Gauge, Weight } from "lucide-react";
 import type { Product } from "./data";
 export type { Product } from "./data";
 import { useLanguage } from "@/context/language-context";
+import { usePrice } from "@/hooks/use-price";
 import { useDepthTilt } from "@/hooks/useDepthTilt";
 import { useCompare } from "@/context/compare-context";
+import { readEuLabel } from "@/lib/eu-tyre-label";
+import { parseServiceDescription } from "@/lib/tyre-specs";
+import { EuLabelChips } from "./eu-tyre-label";
 
 const PLACEHOLDER = "/images/tyre-placeholder.svg";
 
@@ -55,6 +59,7 @@ export default function ProductCard({
   activeCampaign?: ActiveCampaign | null;
 }) {
   const { t } = useLanguage();
+  const { price } = usePrice();
   const cardRef = useDepthTilt<HTMLDivElement>({ maxRotate: 4, maxShift: 6, scale: 1.008 });
   const { toggle, isComparing, isFull } = useCompare();
   const [showSpecs, setShowSpecs] = useState(false);
@@ -63,13 +68,20 @@ export default function ProductCard({
   const { displayPrice, badge, showGuestNudge } = resolvePrice(product, customerType);
   const comparing = isComparing(product.id);
 
+  // Both degrade to null when the backend has not supplied the data.
+  const euLabel = readEuLabel(product as unknown as Record<string, unknown>);
+  const service = parseServiceDescription(product.spec);
+
   return (
+    // `@container` — every size decision below is made against the card's own
+    // width, so this component is correct in the 4-up shop grid, the narrower
+    // related-products rail and the compare modal without any viewport query.
     <div
       ref={cardRef}
-      className="group flex flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm transition-shadow duration-200 hover:shadow-md"
+      className="group @container flex flex-col overflow-hidden rounded-xl border border-hairline bg-card shadow-sm transition-shadow duration-200 hover:shadow-md"
     >
       {/* Image area — full tyre visible, no cropping */}
-      <div className="relative flex h-44 items-center justify-center bg-white p-4 sm:h-52">
+      <div className="relative flex h-40 items-center justify-center bg-card p-4 @card-md:h-52">
         <img
           src={imageUrl}
           alt={`${product.brand} ${product.name}`}
@@ -83,18 +95,18 @@ export default function ProductCard({
           </span>
         )}
         {activeCampaign && product.brand.trim().toLowerCase() === activeCampaign.brand_name.trim().toLowerCase() && (
-          <span className="absolute right-2 top-2 rounded-full bg-[#f4511e] px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-white shadow">
+          <span className="absolute right-2 top-2 rounded-full bg-brand px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-white shadow">
             {activeCampaign.discount_pct}% OFF
           </span>
         )}
       </div>
 
       {/* Content */}
-      <div className="flex flex-1 flex-col border-t border-gray-100 p-4 pt-7">
+      <div className="flex flex-1 flex-col border-t border-hairline p-4 pt-7">
         {/* Floating primary CTA — straddles the image/content boundary */}
         <Link
           href={`/shop/${product.id}`}
-          className="relative z-10 -mt-11 mb-3 flex h-[42px] w-full items-center justify-center gap-1.5 rounded-full bg-[var(--primary)] text-[0.83rem] font-bold text-white shadow-[0_10px_24px_rgba(244,81,30,0.32)] transition hover:bg-[var(--primary-hover)] hover:shadow-[0_12px_28px_rgba(244,81,30,0.4)]"
+          className="relative z-10 -mt-11 mb-3 flex h-[42px] w-full items-center justify-center gap-1.5 rounded-full bg-brand text-[0.83rem] font-bold text-white shadow-[0_10px_24px_rgba(244,81,30,0.32)] transition hover:bg-brand-hover hover:shadow-[0_12px_28px_rgba(244,81,30,0.4)]"
         >
           {t.shop.card.viewDetails}
           <ArrowRight size={14} strokeWidth={2.4} />
@@ -102,30 +114,35 @@ export default function ProductCard({
 
         {/* Brand + type badge */}
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--primary)]">
+          <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand">
             {product.brand}
           </p>
-          <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[10px] font-semibold text-gray-500">
+          <span className="rounded-full bg-surface px-2.5 py-0.5 text-[10px] font-semibold text-ink-muted">
             {product.type}
           </span>
         </div>
 
         {/* Product name — max 2 lines */}
-        <h3 className="mt-1.5 line-clamp-2 text-[0.95rem] font-bold leading-snug text-[var(--foreground)]">
+        <h3 className="mt-1.5 line-clamp-2 text-[0.95rem] font-bold leading-snug text-ink">
           {product.name}
         </h3>
 
         {/* Size & spec */}
-        <p className="mt-1 text-[0.8rem] text-gray-400">
+        <p className="mt-1 text-[0.8rem] text-ink-faint">
           {product.size}{product.spec ? ` · ${product.spec}` : ""}
         </p>
+
+        {/* EU tyre label grades — the trust artifact buyers actually look for.
+            Renders only when the product carries label data. */}
+        <EuLabelChips label={euLabel} className="mt-2" />
 
         {/* Show specs disclosure + compare toggle */}
         <div className="mt-1.5 flex items-center justify-between gap-2">
           <button
             type="button"
             onClick={() => setShowSpecs((v) => !v)}
-            className="flex items-center gap-1 text-[0.72rem] font-semibold text-gray-500 transition hover:text-[var(--foreground)]"
+            aria-expanded={showSpecs}
+            className="flex items-center gap-1 text-[0.72rem] font-semibold text-ink-muted transition hover:text-ink"
           >
             {t.shop.card.showSpecs}
             <ChevronDown size={12} strokeWidth={2.4} className={`transition-transform ${showSpecs ? "rotate-180" : ""}`} />
@@ -137,8 +154,8 @@ export default function ProductCard({
             title={isFull && !comparing ? "Compare list full (max 4)" : undefined}
             className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-[0.72rem] font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${
               comparing
-                ? "border-[var(--primary)] bg-[var(--primary)] text-white"
-                : "border-gray-200 bg-white text-gray-500 hover:border-[var(--primary)]/40 hover:text-[var(--primary)]"
+                ? "border-brand bg-brand text-white"
+                : "border-hairline-strong bg-card text-ink-muted hover:border-brand/40 hover:text-brand"
             }`}
           >
             <ArrowLeftRight size={11} strokeWidth={2.4} />
@@ -146,17 +163,26 @@ export default function ProductCard({
           </button>
         </div>
         {showSpecs && (
-          <div className="mt-2 divide-y divide-gray-100 rounded-lg border border-gray-100 bg-gray-50/60 px-3 text-[0.76rem]">
+          <div className="mt-2 divide-y divide-hairline rounded-lg border border-hairline bg-page/60 px-3 text-[0.76rem]">
             {[
               [t.shop.accordion.season, product.season],
               [t.shop.accordion.tyreType, product.type],
+              // Decoded from the existing `spec` string — no backend change.
+              service?.loadKg
+                ? [t.tyreSpecs.maxLoad, `${service.loadKg} kg (${service.loadIndex})`]
+                : null,
+              service?.speedKmh
+                ? [t.tyreSpecs.maxSpeed, `${service.speedKmh} km/h (${service.speedSymbol})`]
+                : null,
               ["SKU", product.sku],
-            ].filter(([, v]) => !!v).map(([label, value]) => (
-              <div key={label} className="flex items-center justify-between py-1.5">
-                <span className="text-gray-500">{label}</span>
-                <span className="font-semibold text-[var(--foreground)]">{value}</span>
-              </div>
-            ))}
+            ]
+              .filter((row): row is [string, string] => !!row && !!row[1])
+              .map(([label, value]) => (
+                <div key={label} className="flex items-center justify-between gap-3 py-1.5">
+                  <span className="text-ink-muted">{label}</span>
+                  <span className="text-right font-semibold text-ink">{value}</span>
+                </div>
+              ))}
           </div>
         )}
 
@@ -172,19 +198,38 @@ export default function ProductCard({
               Retail Price
             </span>
           )}
-          <p className="text-[1.25rem] font-extrabold tracking-tight text-[var(--foreground)]">
-            €{displayPrice.toFixed(2)}
+          <p className="text-[1.25rem] font-extrabold tabular-nums tracking-tight text-ink">
+            {price(displayPrice, { currency: product.currency })}
           </p>
+
+          {/* Load / speed at a glance — only when the spec decoded cleanly */}
+          {(service?.loadKg || service?.speedKmh) && (
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[0.7rem] font-medium text-ink-muted">
+              {service.loadKg && (
+                <span className="inline-flex items-center gap-1">
+                  <Weight size={11} strokeWidth={2.2} aria-hidden="true" />
+                  <span className="tabular-nums">{service.loadKg} kg</span>
+                </span>
+              )}
+              {service.speedKmh && (
+                <span className="inline-flex items-center gap-1">
+                  <Gauge size={11} strokeWidth={2.2} aria-hidden="true" />
+                  <span className="tabular-nums">{service.speedKmh} km/h</span>
+                </span>
+              )}
+            </div>
+          )}
+
           {product.in_stock !== false && (
             <p className="mt-0.5 flex items-center gap-1 text-[0.72rem] font-semibold text-emerald-600">
               <CheckCircle2 size={12} strokeWidth={2.2} /> {t.shop.card.inStock}
             </p>
           )}
-          <p className="text-[0.72rem] text-gray-400">{t.shop.card.shipping}</p>
+          <p className="text-[0.72rem] text-ink-faint">{t.shop.card.shipping}</p>
           {showGuestNudge && (
             <Link
               href="/account/login"
-              className="mt-0.5 block text-[0.7rem] font-medium text-[var(--primary)] hover:underline"
+              className="mt-0.5 block text-[0.7rem] font-medium text-brand hover:underline"
             >
               Sign in for wholesale pricing →
             </Link>
@@ -194,7 +239,7 @@ export default function ProductCard({
         {/* Secondary action — primary CTA already floats above */}
         <Link
           href="/tyre-supply-quotation"
-          className="mt-4 flex h-[38px] items-center justify-center rounded-full border border-gray-200 bg-white text-[0.8rem] font-semibold text-[var(--foreground)] transition hover:border-gray-300 hover:bg-gray-50"
+          className="mt-4 flex h-[38px] items-center justify-center rounded-full border border-hairline-strong bg-card text-[0.8rem] font-semibold text-ink transition hover:border-ink/20 hover:bg-page"
         >
           {t.shop.card.quote}
         </Link>

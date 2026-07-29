@@ -20,7 +20,7 @@ export default function CheckoutCancelPage() {
         <div className="mt-6 flex flex-col gap-2.5 sm:flex-row">
           <Link
             href="/checkout"
-            className="flex h-[46px] flex-1 items-center justify-center rounded-full bg-[#E85C1A] text-[0.9rem] font-semibold text-white transition hover:bg-[#d4511a]"
+            className="flex h-[46px] flex-1 items-center justify-center rounded-full bg-brand text-[0.9rem] font-semibold text-white transition hover:bg-brand-hover"
           >
             Return to Checkout
           </Link>
