@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeftRight, CheckCircle2, ChevronDown, ArrowRight, Gauge, Weight } from "lucide-react";
+import { ArrowLeftRight, ChevronDown, ArrowRight, Gauge, Weight } from "lucide-react";
 import type { Product } from "./data";
 export type { Product } from "./data";
 import { useLanguage } from "@/context/language-context";
@@ -12,6 +12,8 @@ import { useCompare } from "@/context/compare-context";
 import { readEuLabel } from "@/lib/eu-tyre-label";
 import { parseServiceDescription } from "@/lib/tyre-specs";
 import { EuLabelChips } from "./eu-tyre-label";
+import { StockLine } from "./stock-badge";
+import { stockBand } from "@/lib/stock";
 
 const PLACEHOLDER = "/images/tyre-placeholder.svg";
 
@@ -71,6 +73,9 @@ export default function ProductCard({
   // Both degrade to null when the backend has not supplied the data.
   const euLabel = readEuLabel(product as unknown as Record<string, unknown>);
   const service = parseServiceDescription(product.spec);
+  // Band-derived, so a product reporting `stock: 0` is treated as out even if
+  // the boolean flag was never set.
+  const isOut = stockBand(product) === "out";
 
   return (
     // `@container` — every size decision below is made against the card's own
@@ -87,11 +92,11 @@ export default function ProductCard({
           alt={`${product.brand} ${product.name}`}
           loading={priority ? "eager" : "lazy"}
           onError={(e) => { e.currentTarget.src = PLACEHOLDER; }}
-          className={`h-full w-full object-contain transition-transform duration-500 group-hover:scale-[1.04] ${product.in_stock === false ? "opacity-50" : ""}`}
+          className={`h-full w-full object-contain transition-transform duration-500 group-hover:scale-[1.04] ${isOut ? "opacity-50" : ""}`}
         />
-        {product.in_stock === false && (
+        {isOut && (
           <span className="absolute left-2 top-2 rounded-full bg-red-600 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow">
-            Out of Stock
+            {t.stock.outOfStock}
           </span>
         )}
         {activeCampaign && product.brand.trim().toLowerCase() === activeCampaign.brand_name.trim().toLowerCase() && (
@@ -220,11 +225,10 @@ export default function ProductCard({
             </div>
           )}
 
-          {product.in_stock !== false && (
-            <p className="mt-0.5 flex items-center gap-1 text-[0.72rem] font-semibold text-emerald-600">
-              <CheckCircle2 size={12} strokeWidth={2.2} /> {t.shop.card.inStock}
-            </p>
-          )}
+          {/* Banded availability + order-manager-approved dispatch estimate.
+              Never a literal count — see lib/stock.ts. */}
+          <StockLine product={product} className="mt-0.5" />
+
           <p className="text-[0.72rem] text-ink-faint">{t.shop.card.shipping}</p>
           {showGuestNudge && (
             <Link

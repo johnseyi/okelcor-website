@@ -115,6 +115,37 @@ export function tyreClassFromType(type?: string | null): TyreClass | undefined {
 }
 
 /**
+ * DOT date code → manufacture week and year.
+ *
+ * Since 2000 the last four digits of the DOT stamp are WWYY: "2419" is week 24
+ * of 2019. Buyers of used and aged stock read this before anything else, so it
+ * is worth spelling out rather than printing the raw code.
+ *
+ * Accepts either the bare 4-digit date code or a full DOT string with the
+ * date code at the end. Returns null for pre-2000 3-digit codes — those are
+ * ambiguous by decade and guessing would be worse than showing the raw stamp.
+ */
+export type DotDate = { week: number; year: number };
+
+export function parseDotCode(dot?: string | null): DotDate | null {
+  if (!dot) return null;
+  const digits = dot.replace(/\s+/g, "");
+  const m = /(\d{4})$/.exec(digits);
+  if (!m) return null;
+
+  const week = Number(m[1].slice(0, 2));
+  const yy = Number(m[1].slice(2));
+  if (!Number.isFinite(week) || week < 1 || week > 53) return null;
+
+  // WWYY has no century. Treat a year that would still be in the future as
+  // belonging to the previous century rather than inventing a future tyre.
+  const currentYY = new Date().getFullYear() % 100;
+  const year = yy > currentYY ? 1900 + yy : 2000 + yy;
+
+  return { week, year };
+}
+
+/**
  * Rim diameter in inches, parsed from a size designation ("315/80 R22.5").
  * Used by the container-load estimator to bucket tyres by physical size.
  */

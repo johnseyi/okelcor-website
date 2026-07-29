@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Minus, Plus, ShoppingCart, Check, CheckCircle2, ShieldCheck, BadgeCheck, SearchCheck, Gauge, Weight } from "lucide-react";
+import { Minus, Plus, ShoppingCart, Check, ShieldCheck, BadgeCheck, SearchCheck, Gauge, Weight } from "lucide-react";
 import type { Product } from "./data";
 import { useCart } from "@/context/cart-context";
 import { useLanguage } from "@/context/language-context";
@@ -11,6 +11,8 @@ import { usePrice } from "@/hooks/use-price";
 import { readEuLabel } from "@/lib/eu-tyre-label";
 import { parseServiceDescription } from "@/lib/tyre-specs";
 import { EuTyreLabelPanel } from "./eu-tyre-label";
+import { StockPill } from "./stock-badge";
+import TyrePassport from "./tyre-passport";
 
 export default function ProductInfo({ product }: { product: Product }) {
   const { t } = useLanguage();
@@ -106,18 +108,10 @@ export default function ProductInfo({ product }: { product: Product }) {
         SKU: <span className="font-medium text-[var(--foreground)]">{product.sku}</span>
       </p>
 
-      {/* Stock status */}
-      {inStock ? (
-        <span className="mt-3 inline-flex w-fit items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-[0.78rem] font-bold text-emerald-700">
-          <CheckCircle2 size={14} strokeWidth={2.2} />
-          {t.shop.info.inStock}
-        </span>
-      ) : (
-        <span className="mt-3 inline-flex w-fit items-center gap-1.5 rounded-full bg-red-100 px-3 py-1 text-[0.78rem] font-bold text-red-600">
-          <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-          Out of Stock
-        </span>
-      )}
+      {/* Stock status — banded (In stock / Low stock / Out of stock) plus the
+          order-manager-approved dispatch estimate when one is set. The raw
+          `stock` count is deliberately not printed; see lib/stock.ts. */}
+      <StockPill product={product} className="mt-3" />
 
       {/* Price */}
       <div className="mt-5 border-t border-black/[0.07] pt-5">
@@ -225,6 +219,10 @@ export default function ProductInfo({ product }: { product: Product }) {
           {t.shop.trust.inspected}
         </span>
       </div>
+
+      {/* Tyre Passport — per-batch condition record for used stock. Null
+          until ops captures an inspection, in which case nothing renders. */}
+      <TyrePassport product={product} className="mt-5" />
 
       {/* EU tyre label — Regulation (EU) 2020/740. Renders only when the
           product carries label data; otherwise this block is absent entirely. */}
