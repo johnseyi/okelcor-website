@@ -1,5 +1,128 @@
 @import "tailwindcss";
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   OKELCOR DESIGN TOKENS — Tailwind v4 `@theme`
+   ───────────────────────────────────────────────────────────────────────────
+   Everything declared here becomes a real Tailwind utility, so the design
+   system is enforceable instead of advisory:
+
+     --color-brand      →  bg-brand  text-brand  border-brand  ring-brand/20
+     --radius-panel     →  rounded-panel
+     --shadow-soft      →  shadow-soft
+     --text-display-lg  →  text-display-lg
+     --container-card   →  @card:  (container-query variant)
+
+   Two rules from CLAUDE.md are encoded as tokens rather than left to memory:
+
+     1. Okelcor orange is `brand-*`. FET's green system is `fet-*`. They are
+        separate namespaces, so applying orange to FET UI is now a visible
+        mistake in the class name, not an invisible one in a hex literal.
+     2. `#f4511e` is the single brand orange. `#E85C1A` — which had drifted
+        into the error, imprint, document-verify and proposal pages — is gone.
+
+   The `:root` block below is retained verbatim so every existing
+   `var(--primary)` / `var(--foreground)` reference keeps working. This layer
+   is purely additive; nothing that renders today changes because of it.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@theme {
+  /* ── Brand — Okelcor orange. CTAs, highlights, active states only. ─────── */
+  --color-brand: #f4511e;
+  --color-brand-hover: #df4618;
+  --color-brand-soft: #fff3ee;
+
+  /* ── Ink ───────────────────────────────────────────────────────────────── */
+  --color-ink: #171a20;
+  --color-ink-muted: #5c5e62;
+  --color-ink-faint: #8c8f94;
+
+  /* ── Surfaces ──────────────────────────────────────────────────────────── */
+  --color-page: #f5f5f5;
+  --color-surface: #efefef;
+  --color-card: #ffffff;
+
+  /* ── Hairlines — the border language used across cards and panels ──────── */
+  --color-hairline: rgba(23, 26, 32, 0.06);
+  --color-hairline-strong: rgba(23, 26, 32, 0.1);
+
+  /* ── FET Engine Treatment — deliberately separate palette (see CLAUDE.md).
+        Never mix `brand-*` and `fet-*` in the same component.             ─── */
+  --color-fet: #22c55e;
+  --color-fet-hover: #16a34a;
+  --color-fet-page: #f0f4f0;
+  --color-fet-border: #e2e8e2;
+  --color-fet-badge: #dcfce7;
+  --color-fet-badge-ink: #166534;
+  --color-fet-deep: #0d2b1a;
+
+  /* ── EU tyre-label grades (Regulation (EU) 2020/740) ───────────────────────
+        The official label's A→E colour ramp. These are regulated, published
+        colours — not decorative choices — so they live as named tokens.   ─── */
+  --color-grade-a: #009e4b;
+  --color-grade-b: #7ab929;
+  --color-grade-c: #f9dd0b;
+  --color-grade-d: #f7a70c;
+  --color-grade-e: #e63329;
+
+  /* ── Radii — 22px major panels per DESIGN_SYSTEM.md §9 ─────────────────── */
+  --radius-panel: 22px;
+
+  /* ── Elevation ─────────────────────────────────────────────────────────── */
+  --shadow-soft: 0 8px 24px rgba(0, 0, 0, 0.06);
+  --shadow-medium: 0 16px 40px rgba(0, 0, 0, 0.08);
+  --shadow-lift: 0 24px 55px -22px rgba(23, 26, 32, 0.22);
+  --shadow-lift-hover: 0 30px 70px -22px rgba(23, 26, 32, 0.32);
+
+  /* ── Type scale — DESIGN_SYSTEM.md §3, now available as utilities ──────── */
+  --text-display-xl: clamp(52px, 8vw, 96px);
+  --text-display-lg: clamp(40px, 6vw, 72px);
+  --text-display-md: clamp(32px, 5vw, 56px);
+  --text-heading-lg: clamp(28px, 4vw, 40px);
+  --text-heading-md: clamp(24px, 3vw, 32px);
+
+  /* ── Motion — the single premium easing curve used by GSAP + CSS ───────── */
+  --ease-premium: cubic-bezier(0.33, 1, 0.68, 1);
+
+  /* ── Container-query breakpoints for self-sizing cards ─────────────────────
+        ProductCard renders in the shop grid, related-products rail, compare
+        modal and specials list at four different widths. Sizing off the
+        viewport is wrong there; these drive `@card-*:` variants instead. ─── */
+  --container-card-sm: 15rem;
+  --container-card-md: 19rem;
+  --container-card-lg: 24rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CUSTOM VARIANTS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Opt-in motion: `motion:` applies only when the visitor has NOT asked for
+   reduced motion. Lets components express animation intent in the class list
+   instead of every file re-implementing a prefers-reduced-motion guard. */
+@custom-variant motion (@media (prefers-reduced-motion: no-preference));
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CUSTOM UTILITIES (`@utility` — composes with variants, unlike a plain class)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* The canonical card/panel chrome: hairline border, no drop shadow.
+   Replaces the `rounded-2xl border border-black/[0.06] bg-white` triplet
+   repeated across dozens of components. */
+@utility panel {
+  border-radius: var(--radius-panel);
+  border: 1px solid var(--color-hairline);
+  background: var(--color-card);
+}
+
+/* Floating-card elevation used by the hero cluster and platform showcase. */
+@utility panel-float {
+  border-radius: 1rem;
+  border: 1px solid var(--color-hairline);
+  background: var(--color-card);
+  box-shadow: var(--shadow-lift);
+  will-change: transform;
+}
+
 :root {
   --background: #f5f5f5;
   --foreground: #171a20;

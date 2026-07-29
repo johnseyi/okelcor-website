@@ -24,6 +24,30 @@ export type Product = {
   sku: string;
   description: string;
   in_stock?: boolean;
+
+  /** ISO 4217 code for `price`/`price_b2b`/`price_b2c`. Defaults to EUR when absent. */
+  currency?: string | null;
+
+  /* ── EU tyre label — Regulation (EU) 2020/740 ─────────────────────────────
+     All optional. When the backend returns none of these the label UI does not
+     render and the page is unchanged. Accepted either nested under `eu_label`
+     or as flat columns — `readEuLabel()` in lib/eu-tyre-label.ts reads both.
+     Field contract: docs/BACKEND_NOTE_eu_tyre_label.md                      */
+  eu_label?: {
+    fuel_efficiency?: string | null;
+    wet_grip?: string | null;
+    rolling_noise_db?: number | null;
+    rolling_noise_class?: string | null;
+    snow_grip?: boolean | null;
+    ice_grip?: boolean | null;
+    eprel_id?: string | null;
+  } | null;
+
+  /* ── Used-tyre traceability (see docs/BACKEND_NOTE_premium_ux.md) ─────────
+     `dot_code` is the DOT week/year stamp; `tread_depth_mm` the measured
+     remaining tread. Both drive the used-tyre condition strip when present. */
+  dot_code?: string | null;
+  tread_depth_mm?: number | null;
 };
 
 // ── Tyre image library ────────────────────────────────────────────────────────

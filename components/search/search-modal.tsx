@@ -18,6 +18,7 @@ import { Search, X, ArrowRight } from "lucide-react";
 import { gsap, useGSAP, ease, prefersReducedMotion } from "@/lib/gsap";
 import { useSearch } from "@/context/search-context";
 import { useLanguage } from "@/context/language-context";
+import { usePrice } from "@/hooks/use-price";
 import type { SearchResult } from "@/lib/search";
 
 // ─── Result item ──────────────────────────────────────────────────────────────
@@ -36,6 +37,7 @@ function ResultItem({
   listId: string;
 }) {
   const itemRef = useRef<HTMLAnchorElement>(null);
+  const { price } = usePrice();
 
   // Scroll active item into view
   useEffect(() => {
@@ -47,7 +49,7 @@ function ResultItem({
     ? `${result.brand} ${result.name} ${result.size}`
     : result.title;
   const sub = isProduct
-    ? `${result.type} · €${result.price.toFixed(2)}`
+    ? `${result.type} · ${price(result.price)}`
     : `${result.category} · ${result.date}`;
 
   return (

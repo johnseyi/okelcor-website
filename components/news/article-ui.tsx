@@ -38,7 +38,7 @@ export default function ArticleUI({ slug, article: articleProp, related: related
             className="absolute inset-0 bg-cover bg-center transition-transform duration-700"
             style={{ backgroundImage: `url('${article.image}')` }}
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/30 to-black/70" />
+          <div className="absolute inset-0 bg-linear-to-b from-black/20 via-black/30 to-black/70" />
 
           {/* Category badge */}
           <div className="absolute left-0 right-0 top-6 z-10 flex justify-center">

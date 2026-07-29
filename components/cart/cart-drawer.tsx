@@ -6,12 +6,14 @@ import { X, Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
 import { useCart, type CartItem } from "@/context/cart-context";
 import { gsap, ease } from "@/lib/gsap";
 import { useLanguage } from "@/context/language-context";
+import { usePrice } from "@/hooks/use-price";
 import type { Translations } from "@/lib/translations";
 
 type CartT = Translations["cart"];
 
 function CartItemRow({ item, t }: { item: CartItem; t: CartT }) {
   const { removeItem, updateQuantity } = useCart();
+  const { price } = usePrice();
   const { product, quantity } = item;
   const lineTotal = product.price * quantity;
 
@@ -74,8 +76,8 @@ function CartItemRow({ item, t }: { item: CartItem; t: CartT }) {
               <Plus size={12} strokeWidth={2.5} />
             </button>
           </div>
-          <p className="text-[0.95rem] font-extrabold text-[var(--foreground)]">
-            €{lineTotal.toFixed(2)}
+          <p className="text-[0.95rem] font-extrabold tabular-nums text-[var(--foreground)]">
+            {price(lineTotal, { currency: product.currency })}
           </p>
         </div>
       </div>
@@ -87,6 +89,7 @@ export default function CartDrawer() {
   const { items, totalItems, subtotal, isOpen, closeCart, clearCart } =
     useCart();
   const { t } = useLanguage();
+  const { price } = usePrice();
   const ct = t.cart;
 
   const drawerRef = useRef<HTMLElement>(null);
@@ -271,8 +274,8 @@ export default function CartDrawer() {
               <span className="text-[0.9rem] text-[var(--muted)]">
                 {ct.subtotal} ({totalItems} {totalItems === 1 ? ct.item : ct.items})
               </span>
-              <span className="text-[1.25rem] font-extrabold text-[var(--foreground)]">
-                €{subtotal.toFixed(2)}
+              <span className="text-[1.25rem] font-extrabold tabular-nums text-[var(--foreground)]">
+                {price(subtotal)}
               </span>
             </div>
             <p className="mt-0.5 text-[0.76rem] text-[var(--muted)]">

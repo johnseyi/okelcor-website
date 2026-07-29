@@ -77,7 +77,7 @@ export default function FetPromo() {
       }`}
     >
       <div className="relative overflow-hidden rounded-2xl border border-[#e2e8e2] bg-white shadow-[0_24px_60px_-20px_rgba(13,43,26,0.38)]">
-        <div className="h-1 w-full bg-gradient-to-r from-[#22c55e] to-[#16a34a]" />
+        <div className="h-1 w-full bg-linear-to-r from-[#22c55e] to-[#16a34a]" />
 
         <button
           type="button"

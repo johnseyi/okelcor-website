@@ -68,7 +68,7 @@ export default function ShopCampaignBanner({
               className="object-cover"
               unoptimized
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent to-white/30" />
+            <div className="absolute inset-0 bg-linear-to-r from-transparent to-white/30" />
           </div>
         )}
 

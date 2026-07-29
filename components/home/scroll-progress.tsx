@@ -40,7 +40,7 @@ export default function ScrollProgress() {
     <div aria-hidden="true" className="pointer-events-none fixed inset-x-0 top-0 z-[60] h-[3px]">
       <div
         ref={fillRef}
-        className="h-full w-full origin-left bg-gradient-to-r from-[var(--primary)] to-[#ff7a45]"
+        className="h-full w-full origin-left bg-linear-to-r from-[var(--primary)] to-[#ff7a45]"
         style={{ transform: "scaleX(0)" }}
       />
     </div>

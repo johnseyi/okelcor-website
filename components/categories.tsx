@@ -77,10 +77,10 @@ function CategoryCard({
         sizes="(max-width: 768px) 88vw, (max-width: 1200px) 68vw, 62vw"
       />
 
-      <div className="absolute inset-0 bg-gradient-to-b from-black/18 via-black/10 to-black/58" />
-      <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-transparent to-black/12" />
-      <div className="absolute inset-x-0 top-0 h-[34%] bg-gradient-to-b from-black/18 to-transparent" />
-      <div className="absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t from-black/58 to-transparent" />
+      <div className="absolute inset-0 bg-linear-to-b from-black/18 via-black/10 to-black/58" />
+      <div className="absolute inset-0 bg-linear-to-r from-black/20 via-transparent to-black/12" />
+      <div className="absolute inset-x-0 top-0 h-[34%] bg-linear-to-b from-black/18 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 h-[42%] bg-linear-to-t from-black/58 to-transparent" />
 
       <div className="relative z-10 flex h-full flex-col justify-between p-6 text-white md:p-10">
         <div>

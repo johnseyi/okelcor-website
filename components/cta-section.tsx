@@ -16,7 +16,7 @@ export default function CTASection() {
           ref={cardRef}
           className="relative overflow-hidden rounded-[22px] border border-black/[0.04] bg-[#efefef] px-4 py-8 text-center shadow-[0_16px_40px_rgba(0,0,0,0.06)] sm:px-6 sm:py-10 md:px-16 md:py-12"
         >
-          <div className="pointer-events-none absolute inset-x-[10%] top-0 h-px bg-gradient-to-r from-transparent via-white/90 to-transparent" />
+          <div className="pointer-events-none absolute inset-x-[10%] top-0 h-px bg-linear-to-r from-transparent via-white/90 to-transparent" />
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[48%] bg-[radial-gradient(ellipse_at_bottom,rgba(244,81,30,0.10),transparent_68%)]" />
 
           <div className="relative z-10">

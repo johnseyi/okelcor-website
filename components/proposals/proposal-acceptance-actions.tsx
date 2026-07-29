@@ -92,7 +92,7 @@ export default function ProposalAcceptanceActions({ token }: { token: string }) 
             type="button"
             onClick={handleAccept}
             disabled={loading !== null}
-            className="inline-flex items-center gap-2 rounded-full bg-[#E85C1A] px-6 py-2.5 text-[0.875rem] font-semibold text-white transition hover:bg-[#d04d15] disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-full bg-brand px-6 py-2.5 text-[0.875rem] font-semibold text-white transition hover:bg-brand-hover disabled:opacity-60"
           >
             {loading === "accept"
               ? "Accepting…"
@@ -119,7 +119,7 @@ export default function ProposalAcceptanceActions({ token }: { token: string }) 
               onChange={(e) => setRejectReason(e.target.value)}
               placeholder="Let us know why you're declining…"
               rows={3}
-              className="w-full resize-none rounded-xl border border-black/[0.09] bg-white px-3.5 py-2.5 text-[0.875rem] text-[#1a1a1a] outline-none placeholder:text-[#aaa] transition focus:border-[#E85C1A]/40 focus:ring-2 focus:ring-[#E85C1A]/10"
+              className="w-full resize-none rounded-xl border border-black/[0.09] bg-white px-3.5 py-2.5 text-[0.875rem] text-[#1a1a1a] outline-none placeholder:text-[#aaa] transition focus:border-brand/40 focus:ring-2 focus:ring-brand/10"
             />
           </div>
           <div className="flex flex-wrap gap-3">

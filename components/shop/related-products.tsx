@@ -5,10 +5,12 @@ import type { Product } from "./data";
 import Reveal from "@/components/motion/reveal";
 import { StaggerParent, StaggerChild } from "@/components/motion/stagger";
 import { useLanguage } from "@/context/language-context";
+import { usePrice } from "@/hooks/use-price";
 const PLACEHOLDER = "/images/tyre-placeholder.svg";
 
 export default function RelatedProducts({ products }: { products: Product[] }) {
   const { t } = useLanguage();
+  const { price } = usePrice();
   if (products.length === 0) return null;
 
   return (
@@ -52,8 +54,8 @@ export default function RelatedProducts({ products }: { products: Product[] }) {
                   <p className="mt-0.5 text-[0.82rem] text-[var(--muted)]">
                     {product.size} · {product.spec}
                   </p>
-                  <p className="mt-auto pt-3 text-[1.2rem] font-extrabold text-[var(--foreground)]">
-                    €{product.price.toFixed(2)}
+                  <p className="mt-auto pt-3 text-[1.2rem] font-extrabold tabular-nums text-[var(--foreground)]">
+                    {price(product.price, { currency: product.currency })}
                   </p>
                 </div>
               </Link>

@@ -82,8 +82,10 @@ export default function GlobalReach() {
           <span className="text-[0.76rem] font-bold uppercase tracking-[0.16em]">{t.globalReach}</span>
         </div>
 
-        {/* Marquee */}
-        <div className="relative min-w-0 flex-1 overflow-hidden [mask-image:linear-gradient(to_right,transparent,#000_7%,#000_93%,transparent)]">
+        {/* Marquee — edge fade via v4 `mask-*` utilities rather than an
+            arbitrary [mask-image:…] literal, so the fade width is a normal
+            spacing value and both edges compose from named utilities. */}
+        <div className="relative min-w-0 flex-1 overflow-hidden mask-x-from-93% mask-x-to-100%">
           <div
             ref={trackRef}
             className="flex w-max gap-2.5"

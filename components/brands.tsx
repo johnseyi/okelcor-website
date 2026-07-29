@@ -91,7 +91,7 @@ export default function Brands({ brands: apiBrands }: BrandsProps) {
                   "url('/images/schwoaze-highway-339210.png')",
               }}
             />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/10 to-black/35" />
+            <div className="absolute inset-0 bg-linear-to-b from-black/10 via-black/10 to-black/35" />
 
             <div className="absolute bottom-0 left-0 right-0 z-10 p-8 md:p-10">
               <p className="text-lg font-medium text-white/90">

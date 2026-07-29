@@ -426,7 +426,7 @@ export default function LoginPage() {
             className="absolute inset-0 bg-cover bg-center"
             style={{ backgroundImage: "url('/images/pexels-einfoto-2091159.jpg')" }}
           />
-          <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/50 to-black/30" />
+          <div className="absolute inset-0 bg-linear-to-br from-black/70 via-black/50 to-black/30" />
           <div className="relative z-10 flex h-full flex-col justify-between p-12 xl:p-16">
             <div>
               <img src="/logo/okelcor-logo.png" alt="Okelcor" style={{ height: "26px", width: "auto", filter: "brightness(0) invert(1)" }} className="block object-contain" />

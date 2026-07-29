@@ -148,11 +148,11 @@ export default async function DocumentVerifyPage({
           {/* Brand header */}
           <div className="mb-8 text-center">
             <div className="mb-4 flex justify-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#E85C1A]/10">
-                <ShieldCheck size={26} className="text-[#E85C1A]" strokeWidth={1.8} />
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand/10">
+                <ShieldCheck size={26} className="text-brand" strokeWidth={1.8} />
               </div>
             </div>
-            <p className="text-[0.68rem] font-bold uppercase tracking-[0.22em] text-[#E85C1A]">
+            <p className="text-[0.68rem] font-bold uppercase tracking-[0.22em] text-brand">
               {COMPANY_LEGAL_NAME}
             </p>
             <h1 className="mt-1.5 text-[1.6rem] font-extrabold tracking-tight text-[#171a20] sm:text-[1.85rem]">
@@ -247,7 +247,7 @@ export default async function DocumentVerifyPage({
                 <div className="flex flex-col gap-2.5">
                   <a
                     href={`mailto:${COMPANY_EMAIL}`}
-                    className="inline-flex items-center gap-2 text-[0.875rem] font-semibold text-[#E85C1A] hover:underline"
+                    className="inline-flex items-center gap-2 text-[0.875rem] font-semibold text-brand hover:underline"
                   >
                     <Mail size={14} strokeWidth={2} />
                     {COMPANY_EMAIL}

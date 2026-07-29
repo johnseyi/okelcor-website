@@ -23,7 +23,7 @@ export default function WhoWeServeSection() {
                 className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-[1.03]"
                 style={{ backgroundImage: "url('/images/pexels-andris-ivanovs-296481283-19891668.png')" }}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/10" />
+              <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/40 to-black/10" />
               <div className="absolute bottom-0 left-0 right-0 p-7 md:p-8">
                 <span className="inline-flex items-center rounded-full bg-[var(--primary)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-white">
                   {t.whoWeServe.business.label}
@@ -51,7 +51,7 @@ export default function WhoWeServeSection() {
                 className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-[1.03]"
                 style={{ backgroundImage: "url('/images/pexels-mikebirdy-250307.jpg')" }}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/10" />
+              <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/40 to-black/10" />
               <div className="absolute bottom-0 left-0 right-0 p-7 md:p-8">
                 <span className="inline-flex items-center rounded-full border border-white/60 bg-white/20 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-white backdrop-blur-sm">
                   {t.whoWeServe.driver.label}

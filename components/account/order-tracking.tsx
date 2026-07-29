@@ -197,7 +197,7 @@ export default function OrderTracking({
       <div className="flex flex-col gap-4 p-4 sm:p-6 lg:p-8">
 
         {/* ── Status hero ── */}
-        <div className={`relative overflow-hidden rounded-[18px] border border-black/[0.05] bg-gradient-to-br ${accent.tint} to-white p-5 sm:p-6`}>
+        <div className={`relative overflow-hidden rounded-[18px] border border-black/[0.05] bg-linear-to-br ${accent.tint} to-white p-5 sm:p-6`}>
           <div className="flex items-start gap-4">
             <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ${accent.iconBg} ring-4 ${accent.ring}`}>
               <HeroIcon size={26} strokeWidth={1.8} className={accent.iconText} />

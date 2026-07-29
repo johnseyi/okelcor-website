@@ -2,14 +2,23 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Minus, Plus, ShoppingCart, Check, CheckCircle2, ShieldCheck, BadgeCheck, SearchCheck } from "lucide-react";
+import { Minus, Plus, ShoppingCart, Check, CheckCircle2, ShieldCheck, BadgeCheck, SearchCheck, Gauge, Weight } from "lucide-react";
 import type { Product } from "./data";
 import { useCart } from "@/context/cart-context";
 import { useLanguage } from "@/context/language-context";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
+import { usePrice } from "@/hooks/use-price";
+import { readEuLabel } from "@/lib/eu-tyre-label";
+import { parseServiceDescription } from "@/lib/tyre-specs";
+import { EuTyreLabelPanel } from "./eu-tyre-label";
 
 export default function ProductInfo({ product }: { product: Product }) {
   const { t } = useLanguage();
+  const { price } = usePrice();
+  // Both resolve to null when the backend has not supplied the data, in which
+  // case the corresponding UI below is simply not rendered.
+  const euLabel = readEuLabel(product as unknown as Record<string, unknown>);
+  const service = parseServiceDescription(product.spec);
   const { customer } = useCustomerAuth();
   const customerType = customer?.customer_type === "b2b" ? "b2b" : customer ? "b2c" : "guest";
   // Use tier price when the API returns it; otherwise fall back to base price
@@ -63,6 +72,35 @@ export default function ProductInfo({ product }: { product: Product }) {
         {product.size} · {product.spec}
       </p>
 
+      {/* Decoded service description — "91V" means nothing to most buyers, and
+          the numbers behind it are what determines whether the tyre fits the
+          job. Derived from the existing `spec` string; no backend dependency. */}
+      {(service?.loadKg || service?.speedKmh) && (
+        <div className="mt-2.5 flex flex-wrap gap-2">
+          {service.loadKg && (
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-hairline bg-page/70 px-2.5 py-1.5 text-[0.78rem] text-ink-muted">
+              <Weight size={13} strokeWidth={2.1} className="text-brand" aria-hidden="true" />
+              <span className="font-semibold text-ink">{t.tyreSpecs.maxLoad}</span>
+              <span className="tabular-nums">
+                {service.loadKg} kg
+                {service.loadKgDual ? ` / ${service.loadKgDual} kg` : ""}
+              </span>
+              <span className="text-ink-faint">
+                {service.loadKgDual ? t.tyreSpecs.dualFitment : t.tyreSpecs.perTyre}
+              </span>
+            </span>
+          )}
+          {service.speedKmh && (
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-hairline bg-page/70 px-2.5 py-1.5 text-[0.78rem] text-ink-muted">
+              <Gauge size={13} strokeWidth={2.1} className="text-brand" aria-hidden="true" />
+              <span className="font-semibold text-ink">{t.tyreSpecs.maxSpeed}</span>
+              <span className="tabular-nums">{service.speedKmh} km/h</span>
+              <span className="text-ink-faint">({service.speedSymbol})</span>
+            </span>
+          )}
+        </div>
+      )}
+
       {/* SKU */}
       <p className="mt-1 text-[0.82rem] text-[var(--muted)]">
         SKU: <span className="font-medium text-[var(--foreground)]">{product.sku}</span>
@@ -93,8 +131,8 @@ export default function ProductInfo({ product }: { product: Product }) {
             Retail Price
           </span>
         )}
-        <p className="text-[2rem] font-extrabold tracking-tight text-[var(--foreground)]">
-          €{displayPrice.toFixed(2)}
+        <p className="text-[2rem] font-extrabold tabular-nums tracking-tight text-[var(--foreground)]">
+          {price(displayPrice, { currency: product.currency })}
         </p>
         <p className="mt-0.5 text-[0.82rem] text-[var(--muted)]">
           {t.shop.info.shipping}
@@ -187,6 +225,10 @@ export default function ProductInfo({ product }: { product: Product }) {
           {t.shop.trust.inspected}
         </span>
       </div>
+
+      {/* EU tyre label — Regulation (EU) 2020/740. Renders only when the
+          product carries label data; otherwise this block is absent entirely. */}
+      <EuTyreLabelPanel label={euLabel} className="mt-5" />
 
       {/* Description */}
       <p className="mt-6 border-t border-black/[0.07] pt-5 text-[0.95rem] leading-7 text-[var(--muted)]">

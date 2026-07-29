@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useCart } from "@/context/cart-context";
 import { useLanguage } from "@/context/language-context";
+import { usePrice } from "@/hooks/use-price";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -84,6 +85,7 @@ export default function OrderSummary({
 }: Props) {
   const { items, subtotal, totalItems } = useCart();
   const { t } = useLanguage();
+  const { price } = usePrice();
   const c = t.checkout;
 
   const fetLineTotal = fetAddon ? fetAddon.unitPrice * fetAddon.qty : 0;
@@ -247,7 +249,7 @@ export default function OrderSummary({
                     </p>
                   </div>
                   <p className="shrink-0 text-[0.88rem] font-semibold text-[var(--foreground)]">
-                    €{lineTotal.toFixed(2)}
+                    {price(lineTotal)}
                   </p>
                 </div>
                 <div className="mt-1 flex items-center gap-1.5">
@@ -255,7 +257,7 @@ export default function OrderSummary({
                     {c.qty} {item.quantity}
                   </span>
                   <span className="text-[0.75rem] text-[var(--muted)]">
-                    €{item.product.price.toFixed(2)} {c.each}
+                    {price(item.product.price)} {c.each}
                   </span>
                 </div>
               </div>
@@ -278,7 +280,7 @@ export default function OrderSummary({
                   <p className="text-[0.78rem] text-[var(--muted)]">SKU: FET-001</p>
                 </div>
                 <p className="shrink-0 text-[0.88rem] font-semibold text-[var(--foreground)]">
-                  €{(fetAddon.unitPrice * fetAddon.qty).toFixed(2)}
+                  {price(fetAddon.unitPrice * fetAddon.qty)}
                 </p>
               </div>
               <div className="mt-1 flex items-center gap-1.5">
@@ -286,7 +288,7 @@ export default function OrderSummary({
                   {c.qty} {fetAddon.qty}
                 </span>
                 <span className="text-[0.75rem] text-[var(--muted)]">
-                  €{fetAddon.unitPrice.toFixed(2)} {c.each}
+                  {price(fetAddon.unitPrice)} {c.each}
                 </span>
               </div>
             </div>
@@ -297,7 +299,7 @@ export default function OrderSummary({
       {/* Totals */}
       <div className="flex flex-col gap-3 border-t border-black/[0.07] px-4 py-4 sm:px-6 sm:py-5">
         {/* Subtotal */}
-        <SummaryRow label={c.subtotal} value={`€${displaySubtotal.toFixed(2)}`} />
+        <SummaryRow label={c.subtotal} value={price(displaySubtotal)} />
 
         {/* Discount — only when backend returns discount_amount > 0 */}
         {taxPreview && taxPreview.discount_amount > 0 && (
@@ -306,7 +308,7 @@ export default function OrderSummary({
               {taxPreview.discount_label ?? "Discount"}
             </span>
             <span className="text-[0.88rem] font-semibold text-green-600">
-              −€{taxPreview.discount_amount.toFixed(2)}
+              −{price(taxPreview.discount_amount)}
             </span>
           </div>
         )}
@@ -314,7 +316,7 @@ export default function OrderSummary({
         {/* Delivery */}
         <SummaryRow
           label={c.delivery}
-          value={displayDelivery === 0 ? c.free : `€${displayDelivery.toFixed(2)}`}
+          value={displayDelivery === 0 ? c.free : price(displayDelivery)}
         />
 
         {/* VAT row — three states */}
@@ -326,14 +328,14 @@ export default function OrderSummary({
         ) : taxPreview ? (
           taxPreview.is_reverse_charge ? (
             <>
-              <SummaryRow label="VAT reverse charge (0%)" value="€0.00" />
+              <SummaryRow label="VAT reverse charge (0%)" value={price(0)} />
               <p className="text-[0.75rem] italic text-[var(--muted)]">
                 {taxPreview.note ?? "Valid EU VAT number — VAT liability transfers to the recipient."}
               </p>
             </>
           ) : taxPreview.tax_treatment === "exempt" ? (
             <>
-              <SummaryRow label="VAT exempt (0%)" value="€0.00" />
+              <SummaryRow label="VAT exempt (0%)" value={price(0)} />
               <p className="text-[0.75rem] italic text-[var(--muted)]">
                 {taxPreview.note ?? "Export outside the EU — VAT exempt."}
               </p>
@@ -341,7 +343,7 @@ export default function OrderSummary({
           ) : (
             <SummaryRow
               label={`VAT (${taxPreview.tax_rate}%)`}
-              value={`€${taxPreview.tax_amount.toFixed(2)}`}
+              value={price(taxPreview.tax_amount)}
             />
           )
         ) : (
@@ -359,7 +361,7 @@ export default function OrderSummary({
         <div className="mt-1 border-t border-black/[0.07] pt-3">
           <SummaryRow
             label={c.total}
-            value={taxLoading ? "—" : `€${displayTotal.toFixed(2)}`}
+            value={taxLoading ? "—" : price(displayTotal)}
             bold
             large
           />

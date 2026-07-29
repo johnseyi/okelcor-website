@@ -152,7 +152,7 @@ export default function FetPage() {
         </div>
 
         {/* Bottom fade into page */}
-        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-[#f0f4f0] to-transparent" />
+        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-20 bg-linear-to-t from-[#f0f4f0] to-transparent" />
       </section>
 
       {/* ── How It Works ─────────────────────────────────────────────────── */}

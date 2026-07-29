@@ -167,7 +167,7 @@ export default function HeroShowcase() {
   return (
     <section
       ref={sectionRef}
-      className="relative w-full overflow-hidden bg-gradient-to-b from-white to-[#eef0f3] pt-20"
+      className="relative w-full overflow-hidden bg-linear-to-b from-white to-[#eef0f3] pt-20"
     >
       {/* Ambient background — soft, animated, low-opacity (decorative only) */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">

@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { X, Check, Minus } from "lucide-react";
 import { useCompare } from "@/context/compare-context";
+import { usePrice } from "@/hooks/use-price";
+import { readEuLabel } from "@/lib/eu-tyre-label";
+import { parseServiceDescription } from "@/lib/tyre-specs";
+import { EuLabelChips } from "./eu-tyre-label";
 import type { Product } from "./data";
 
 const PLACEHOLDER = "/images/tyre-placeholder.svg";
@@ -15,18 +19,51 @@ function resolveImage(product: Product): string {
 
 type Row = { label: string; render: (p: Product) => React.ReactNode };
 
-const ROWS: Row[] = [
+/**
+ * Rows are built per-render rather than declared at module scope, because the
+ * price cell needs the visitor's locale (a hook) to format correctly.
+ */
+function buildRows(price: ReturnType<typeof usePrice>["price"]): Row[] {
+  return [
   { label: "Brand", render: (p) => <span className="font-semibold">{p.brand}</span> },
   { label: "Size", render: (p) => p.size || "—" },
   { label: "Spec", render: (p) => p.spec || "—" },
+  // Decoded from `spec` — comparing "91V" vs "94H" across four tyres is the
+  // exact moment a buyer needs the kg and km/h spelled out.
+  {
+    label: "Max load",
+    render: (p) => {
+      const s = parseServiceDescription(p.spec);
+      if (!s?.loadKg) return "—";
+      return (
+        <span className="tabular-nums">
+          {s.loadKg} kg{s.loadKgDual ? ` / ${s.loadKgDual} kg` : ""}
+        </span>
+      );
+    },
+  },
+  {
+    label: "Max speed",
+    render: (p) => {
+      const s = parseServiceDescription(p.spec);
+      return s?.speedKmh ? <span className="tabular-nums">{s.speedKmh} km/h</span> : "—";
+    },
+  },
   { label: "Season", render: (p) => p.season || "—" },
   { label: "Type", render: (p) => p.type || "—" },
+  {
+    label: "EU label",
+    render: (p) => {
+      const label = readEuLabel(p as unknown as Record<string, unknown>);
+      return label ? <EuLabelChips label={label} /> : "—";
+    },
+  },
   { label: "SKU", render: (p) => <span className="font-mono text-[0.78rem]">{p.sku}</span> },
   {
     label: "Price",
     render: (p) => (
-      <span className="text-[1.05rem] font-extrabold text-[var(--foreground)]">
-        €{(p.price_b2c ?? p.price).toFixed(2)}
+      <span className="text-[1.05rem] font-extrabold tabular-nums text-[var(--foreground)]">
+        {price(p.price_b2c ?? p.price, { currency: p.currency })}
       </span>
     ),
   },
@@ -39,10 +76,13 @@ const ROWS: Row[] = [
         <span className="inline-flex items-center gap-1 text-[0.8rem] font-semibold text-emerald-600"><Check size={13} /> In stock</span>
       ),
   },
-];
+  ];
+}
 
 export default function CompareModal() {
   const { products, remove, modalOpen, closeModal } = useCompare();
+  const { price } = usePrice();
+  const rows = buildRows(price);
 
   if (!modalOpen || products.length < 2) return null;
 
@@ -80,7 +120,7 @@ export default function CompareModal() {
               </tr>
             </thead>
             <tbody className="divide-y divide-black/[0.05]">
-              {ROWS.map((row) => (
+              {rows.map((row) => (
                 <tr key={row.label}>
                   <td className="sticky left-0 z-10 bg-white px-4 py-3 text-[0.72rem] font-bold uppercase tracking-wide text-[var(--muted)]">
                     {row.label}

@@ -53,7 +53,7 @@ export default function UsedTyresSection() {
                 className="object-cover transition-transform duration-700 hover:scale-[1.02]"
                 sizes="(max-width: 768px) 100vw, 50vw"
               />
-              <div className="absolute inset-0 bg-gradient-to-r from-black/8 via-transparent to-transparent" />
+              <div className="absolute inset-0 bg-linear-to-r from-black/8 via-transparent to-transparent" />
             </div>
 
           </div>

@@ -25,7 +25,7 @@ export default function CompanyStory() {
                   "url('/images/pexels-baljinder-singh-112079620-34106714.png')",
               }}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/15 to-transparent" />
+            <div className="absolute inset-0 bg-linear-to-t from-black/65 via-black/15 to-transparent" />
 
             {/* Stat chips pinned to bottom */}
             <div className="absolute bottom-0 left-0 right-0 z-10 grid grid-cols-3 gap-3 p-6 md:p-8">
