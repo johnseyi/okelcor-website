@@ -675,6 +675,38 @@ and interactive lead-time map were explicitly out of the agreed scope.
 
 ---
 
+### ✅ Premium-UX §1/§2 — backend shipped, frontend consuming (2026-07-29)
+
+Backend built, tested (19 tests / 54 assertions, executed not just written),
+migrated and deployed the first two asks from `docs/BACKEND_NOTE_premium_ux.md`.
+Frontend now consumes all of it.
+
+**What backend found that the note missed:** `stock` was already on the public
+payload but had **no write path at all** — absent from `UpdateProductRequest`,
+and `AdminProductController::formatProduct()` didn't return it, so the panel
+couldn't display the number it was publishing publicly. Fixed server-side, plus
+`POST /admin/products/bulk-stock` now accepts `stock` and/or `in_stock`
+(boolean-only callers unaffected), and setting `stock` without an explicit
+`in_stock` derives the flag so "✓ In Stock" can't sit on a zero.
+
+| Feature | Notes |
+|---|---|
+| **Banded stock** (`lib/stock.ts`, `components/shop/stock-badge.tsx`) | Backend's explicit instruction, followed: render a band, never the count. Their caveat is that `stock` is never decremented on order and `products:sync-rapid` is unscheduled, so it means "supplier availability as of the last manual import" — "24 in stock" would be a precise claim the data can't support. `StockLine` (card) / `StockPill` (detail) show In stock · Low stock · Out of stock, `LOW_STOCK_THRESHOLD = 10` as a display heuristic. Returns `null` on genuinely unknown availability rather than guessing. `in_stock === false` overrides a positive `stock` — a human marking something unavailable beats a stale import |
+| Card out-of-stock state is now band-derived + i18n'd | Previously keyed off the boolean only and had a hardcoded English "Out of Stock" string; a product reporting `stock: 0` now reads as out, and the label is translated |
+| **`estimated_dispatch_days`** | Order-manager-approved `site_settings` value, surfaced on both product endpoints. Ships blank and is nulled for out-of-stock; rendered **verbatim** with no frontend default — an invented figure here would be an unapproved delivery promise. Backend created it via migration rather than `SiteSettingsSeeder`, because that seeder's `updateOrCreate()` would reset the order manager's number on any re-run |
+| **Tyre Passport** (`components/shop/tyre-passport.tsx`) | The §2 differentiator — none of Tire Rack / SimpleTire / ATD sell graded used tyres, so none of them solve this. Renders `condition_grade`, `tread_depth_mm`, `dot_code`, `inspection_date` and an inspection-photo strip. `tyre_batch` is null until ops captures an inspection, so the card is skipped entirely rather than rendering blanks; individual fields are independently optional. `condition_grade` displayed verbatim — backend deliberately kept it a plain string, not an ENUM, since no grading scale is fixed yet (and this codebase already has an ENUM that can't hold the values its own code uses) |
+| DOT code decoding (`parseDotCode`) | `"2419"` → week 24, 2019. Post-2000 WWYY only; 3-digit pre-2000 codes return null rather than guessing a decade. Century inferred so a future-dated year falls back to 19xx |
+| **FIX** — `Product` type mismatch | The previous commit speculatively typed flat `dot_code`/`tread_depth_mm`. Backend nested them under `tyre_batch` — which is what `BACKEND_NOTE_premium_ux.md` §2 originally proposed and the frontend type failed to follow. Would have silently rendered nothing. Corrected before deploy |
+| `stock_locations[]` — **dropped by agreement** | No multi-warehouse concept exists; the only location signal is a Rapid import filename (stock held by a third party in Solnhofen). An array would have been one hardcoded entry pretending to be a split |
+| i18n | New `stock` + `passport` blocks (EN/DE/FR/ES). Reuses the existing, richer `shop.info.inStock` ("In Stock — Ready to Order") for the positive band rather than duplicating the string |
+
+**Still open:** premium-UX §3 (saved fitments / one-click reorder) wasn't
+addressed in backend's reply — parked, lowest priority of the three. Both new
+features are inert until ops starts entering data; that's expected, not
+incomplete.
+
+---
+
 ## Upcoming / Backlog
 
 | Item | Priority | Notes |
@@ -686,8 +718,12 @@ and interactive lead-time map were explicitly out of the agreed scope.
 | CRM-7 backend activation | High | 12 endpoints pending |
 | CRM-8 backend activation | High | 14 endpoints + approve must flip `onboarding_status`/`is_active` & send approval email (see CRM-8 contract block) |
 | CRM-3B notifications backend activation | High | `admin_notifications` table + service + 6 endpoints + `my-work` + triggers + dedupe + `due-followups` scheduler (see CRM-3B contract block) |
-| **EU tyre label backend fields** | High | 7 optional fields on the product payload — see `docs/BACKEND_NOTE_eu_tyre_label.md`. Frontend is live and degrades silently; legally the most significant catalogue gap |
+| **EU tyre label backend fields** | High | 7 optional fields on the product payload — see `docs/BACKEND_NOTE_eu_tyre_label.md`. Frontend is live and degrades silently; legally the most significant catalogue gap. Open question raised with backend: whether the Rapid/supplier feed already carries these, which would make it bulk-populatable per model rather than manual entry |
 | Admin product form — EU label inputs | Medium | Seven fields in `components/admin/product-form.tsx`, once the columns exist |
+| Admin product form — stock field | Medium | Backend now accepts `stock` on POST/PUT and returns it from `formatProduct()`; the admin form has no input for it yet |
+| Ops data capture — tyre passport | Medium | `tyre_batch` stays null until inspections are recorded; the frontend card is built and waiting |
+| `estimated_dispatch_days` value | Low | Ships blank by design — needs an order-manager-approved number in `site_settings` before anything displays |
+| Premium-UX §3 — saved fitments / reorder | Low | Not addressed in backend's §1/§2 reply; parked, not lost |
 | Product `currency` field | Medium | Catalogue-side equivalent of the admin order currency already shipped |
 | Pre-existing ESLint errors (11) | Medium | `react-hooks/set-state-in-effect` on the fetch-on-mount pattern; same targeted-disable convention already used in `cart-context.tsx` would clear them |
 | Customer proposal view (account portal) | Medium | Show proposal status on account quotes |

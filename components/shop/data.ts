@@ -43,11 +43,34 @@ export type Product = {
     eprel_id?: string | null;
   } | null;
 
-  /* ── Used-tyre traceability (see docs/BACKEND_NOTE_premium_ux.md) ─────────
-     `dot_code` is the DOT week/year stamp; `tread_depth_mm` the measured
-     remaining tread. Both drive the used-tyre condition strip when present. */
-  dot_code?: string | null;
-  tread_depth_mm?: number | null;
+  /* ── Stock (backend §1, shipped 2026-07-29) ───────────────────────────────
+     `stock` is now both writable and returned by the admin panel. IMPORTANT:
+     backend's own caveat is that it is never decremented on order and
+     `products:sync-rapid` is not scheduled — it is "supplier availability as
+     of the last manual import". Per their explicit instruction, render this
+     BANDED (In stock / Low stock), never as a literal "24 in stock", until
+     someone confirms it is actively maintained.                             */
+  stock?: number | null;
+
+  /* Order-manager-approved dispatch estimate from `site_settings`. Ships
+     blank by design and is nulled for out-of-stock products — render verbatim
+     when present, never substitute a default.                               */
+  estimated_dispatch_days?: number | null;
+
+  /* ── Tyre passport (backend §2, shipped 2026-07-29) ────────────────────────
+     Null until ops captures an inspection — skip the card entirely rather
+     than rendering blanks. `condition_grade` is deliberately a plain string,
+     not an enum: no grading scale is fixed yet.
+     Note: this supersedes the flat `dot_code`/`tread_depth_mm` fields
+     speculatively typed here earlier — backend nested them, as originally
+     proposed in docs/BACKEND_NOTE_premium_ux.md §2.                         */
+  tyre_batch?: {
+    condition_grade?: string | null;
+    tread_depth_mm?: number | null;
+    dot_code?: string | null;
+    inspection_date?: string | null;
+    inspection_photos?: string[] | null;
+  } | null;
 };
 
 // ── Tyre image library ────────────────────────────────────────────────────────

@@ -350,6 +350,28 @@ export type Translations = {
     perTyre: string;
     dualFitment: string;
   };
+  /** Availability banding + dispatch estimate. */
+  stock: {
+    lowStock: string;
+    outOfStock: string;
+    /** Rendered as `{dispatchPre}{n} {dispatchUnit}` — no interpolation helper
+     *  exists in this file, so prefix/suffix pairs follow the `returnPre`
+     *  /`returnPost` convention already used in `shop.accordion`. */
+    dispatchPre: string;
+    dispatchUnit: string;
+  };
+  /** Tyre passport — used-stock condition traceability. */
+  passport: {
+    title: string;
+    subtitle: string;
+    conditionGrade: string;
+    treadDepth: string;
+    dotCode: string;
+    manufactured: string;
+    weekAbbr: string;
+    inspected: string;
+    photos: string;
+  };
 };
 
 // ─── English ──────────────────────────────────────────────────────────────────
@@ -899,6 +921,24 @@ const en: Translations = {
     maxSpeed: "Max speed",
     perTyre: "per tyre",
     dualFitment: "dual fitment",
+  },
+  stock: {
+    lowStock: "Low stock",
+
+    outOfStock: "Out of stock",
+    dispatchPre: "Ships in ~",
+    dispatchUnit: "days",
+  },
+  passport: {
+    title: "Tyre Passport",
+    subtitle: "Inspection record for this batch",
+    conditionGrade: "Condition grade",
+    treadDepth: "Tread depth",
+    dotCode: "DOT code",
+    manufactured: "Manufactured",
+    weekAbbr: "week",
+    inspected: "Inspected",
+    photos: "Inspection photos",
   },
 };
 
@@ -1450,6 +1490,24 @@ const de: Translations = {
     perTyre: "pro Reifen",
     dualFitment: "Zwillingsbereifung",
   },
+  stock: {
+    lowStock: "Geringer Bestand",
+
+    outOfStock: "Nicht auf Lager",
+    dispatchPre: "Versand in ca. ",
+    dispatchUnit: "Tagen",
+  },
+  passport: {
+    title: "Reifenpass",
+    subtitle: "Prüfprotokoll für diese Charge",
+    conditionGrade: "Zustandsklasse",
+    treadDepth: "Profiltiefe",
+    dotCode: "DOT-Nummer",
+    manufactured: "Hergestellt",
+    weekAbbr: "KW",
+    inspected: "Geprüft",
+    photos: "Prüffotos",
+  },
 };
 
 // ─── French ───────────────────────────────────────────────────────────────────
@@ -2000,6 +2058,24 @@ const fr: Translations = {
     perTyre: "par pneu",
     dualFitment: "montage jumelé",
   },
+  stock: {
+    lowStock: "Stock limité",
+
+    outOfStock: "Rupture de stock",
+    dispatchPre: "Expédition sous ~",
+    dispatchUnit: "jours",
+  },
+  passport: {
+    title: "Passeport du pneu",
+    subtitle: "Rapport d'inspection de ce lot",
+    conditionGrade: "Classe d'état",
+    treadDepth: "Profondeur de sculpture",
+    dotCode: "Code DOT",
+    manufactured: "Fabriqué",
+    weekAbbr: "semaine",
+    inspected: "Inspecté",
+    photos: "Photos d'inspection",
+  },
 };
 
 // ─── Spanish ──────────────────────────────────────────────────────────────────
@@ -2519,6 +2595,24 @@ const es: Translations = {
     maxSpeed: "Velocidad máx.",
     perTyre: "por neumático",
     dualFitment: "montaje gemelo",
+  },
+  stock: {
+    lowStock: "Stock limitado",
+
+    outOfStock: "Sin stock",
+    dispatchPre: "Envío en ~",
+    dispatchUnit: "días",
+  },
+  passport: {
+    title: "Pasaporte del neumático",
+    subtitle: "Registro de inspección de este lote",
+    conditionGrade: "Grado de condición",
+    treadDepth: "Profundidad del dibujo",
+    dotCode: "Código DOT",
+    manufactured: "Fabricado",
+    weekAbbr: "semana",
+    inspected: "Inspeccionado",
+    photos: "Fotos de inspección",
   },
 };
 
