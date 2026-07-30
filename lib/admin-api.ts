@@ -732,7 +732,18 @@ export type MarketingContactStatus = "subscribed" | "unsubscribed" | "unknown";
 export type MarketingContact = {
   id: number;
   email: string;
+  /**
+   * Primary market — a single string, the original contract. Still the one to
+   * show where there's only room for one. It does NOT shift just because
+   * another market was added alongside it.
+   */
   market?: string | null;
+  /**
+   * Every market the contact belongs to, oldest first. Prefer this in new UI.
+   * Falls back to a one-element array if migration #26 hasn't run yet, so
+   * reading it is always safe.
+   */
+  markets?: string[] | null;
   first_name?: string | null;
   last_name?: string | null;
   phone?: string | null;
@@ -762,22 +773,172 @@ export type MarketingContactImportResult = {
   errors: string[];
 };
 
+/**
+ * The three market operations share one selector shape, so a single UI
+ * selection can drive any of them. Selectors are OR'd server-side; at least
+ * one is required.
+ */
+export type MarketingContactMarketSelector = {
+  contact_ids?: number[];
+  emails?: string[];
+  /** Whole-market operand. `from_market` + `to_market` alone = market rename. */
+  from_market?: string;
+};
+
+export const MARKET_OPS = ["add-to-market", "move-market", "remove-from-market"] as const;
+export type MarketingContactMarketOp = typeof MARKET_OPS[number];
+
+/**
+ * Shared result of add-to-market / move-market / remove-from-market. Which
+ * counters are populated depends on the operation; all three return
+ * `{ …counts, not_found[], contacts[] }`.
+ *
+ * Nothing is created or deleted by any of them: an address with no matching
+ * contact comes back in `not_found` rather than being imported, and
+ * unsubscribed contacts keep their status and token.
+ */
+export type MarketingContactMarketResult = {
+  /** Destination, on add/move. */
+  to_market?: string;
+  /** The market departed, on remove. */
+  market?: string;
+  added?: number;
+  moved?: number;
+  removed?: number;
+  already_in_place?: number;
+  not_found?: string[];
+  /**
+   * Refused because it was the contact's last market — a contact always keeps
+   * at least one. `removed: 0` plus a non-empty list here means "nothing
+   * happened, here's why", NOT a failure. The fix is to move it elsewhere or
+   * delete the contact outright.
+   */
+  skipped_last_market?: string[];
+  contacts?: MarketingContact[];
+};
+
+/**
+ * 422 body from POST /admin/marketing-contacts when the email already exists.
+ * `errors.email` is still populated (unchanged), so any generic 422 handling
+ * keeps working; these fields are additive and give the two real next steps.
+ */
+export type MarketingContactExistsError = {
+  code: "contact_exists";
+  message: string;
+  errors?: { email?: string[] };
+  data: {
+    existing_contact: MarketingContact;
+    existing_markets: string[];
+    target_market: string;
+    /** Add the target alongside what it already has. */
+    can_add_market: boolean;
+    /** Relocate it to the target instead. */
+    can_move: boolean;
+  };
+};
+
 // ── Bulk Email Campaigns ──────────────────────────────────────────────────────
 
 export type BulkEmailStatus = "queued" | "sending" | "completed" | "failed";
 
 export type BulkEmailFilters = {
+  /** Single-market filter — original contract, still accepted. */
   market?: string;
+  /**
+   * Target several markets in one send. A contact in two of them is selected
+   * exactly once, so nobody is emailed twice.
+   */
+  markets?: string[];
   company?: string;
   country?: string;
   status?: "subscribed" | "unknown";
   search?: string;
 };
 
+// ── Campaign designer (block-based authoring) ─────────────────────────────────
+
+/** Input control to render for a block field. */
+export type CampaignFieldType =
+  | "text" | "textarea" | "select" | "number" | "url"
+  | "image_url" | "text_list" | "link_list";
+
+export type CampaignSelectOption = { value: string; label: string };
+
+export type CampaignFieldSpec = {
+  name: string;
+  label: string;
+  type: CampaignFieldType;
+  required: boolean;
+  options: CampaignSelectOption[];
+  default?: unknown;
+  min?: number;
+  max?: number;
+  placeholder?: string;
+  help?: string;
+};
+
+export type CampaignBlockSpec = {
+  type: string;
+  label: string;
+  description?: string;
+  fields: CampaignFieldSpec[];
+};
+
+export type CampaignThemeSpec = { key: string; label: string };
+
+export type CampaignMergeTagSpec = {
+  /** Bare name, e.g. FIRST_NAME. */
+  tag: string;
+  label: string;
+  /**
+   * Suggested fallback. Most of the imported list has an email and nothing
+   * else, so the editor always inserts `[[TAG|fallback]]` rather than a bare
+   * tag — a bare one sends "Hi ," to much of the list.
+   */
+  fallback?: string;
+};
+
+/**
+ * `GET /admin/campaign-design` — the editor is generated from this, so a block
+ * type added server-side appears without a frontend change. Normalised by
+ * `lib/campaign-design.ts`, which tolerates several plausible key spellings.
+ */
+export type CampaignDesign = {
+  blocks: CampaignBlockSpec[];
+  themes: CampaignThemeSpec[];
+  mergeTags: CampaignMergeTagSpec[];
+};
+
+/** A block instance in a campaign: `{ type, ...fieldValues }`. */
+export type CampaignBlock = { type: string } & Record<string, unknown>;
+
+export type CampaignTemplate = {
+  id: number | string;
+  name: string;
+  description?: string | null;
+  blocks: CampaignBlock[];
+  theme?: string | null;
+  /** Starters are built-in and can't be edited or deleted. */
+  is_starter?: boolean;
+};
+
+export type CampaignPreview = {
+  html: string;
+  html_personalized: string;
+  text: string;
+  subject_personalized: string;
+  /** e.g. a typo'd `[[FIRSTNAME]]` — surfaced before 1,700 emails go out blank. */
+  unknown_merge_tags: string[];
+};
+
 export type BulkEmail = {
   id: number;
   subject: string;
   body_html?: string | null;
+  /** Set when the campaign was authored from blocks — enables Reopen/Duplicate. */
+  designed?: boolean;
+  blocks?: CampaignBlock[] | null;
+  theme?: string | null;
   filters?: BulkEmailFilters | null;
   total_recipients: number;
   sent_count: number;

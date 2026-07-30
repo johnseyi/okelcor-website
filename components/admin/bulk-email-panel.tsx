@@ -4,10 +4,12 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import {
   Send, RefreshCw, AlertTriangle, CheckCircle2, Clock,
-  ChevronLeft, ChevronRight, Users, Eye, X, Filter,
+  ChevronLeft, ChevronRight, Users, Eye, X, Filter, LayoutTemplate, Code2, CopyPlus,
 } from "lucide-react";
-import type { BulkEmail, BulkEmailStatus } from "@/lib/admin-api";
-import { MarketSelect, useMarketOptions } from "./market-select";
+import type { BulkEmail, BulkEmailStatus, CampaignBlock } from "@/lib/admin-api";
+import { groupBlockErrors } from "@/lib/campaign-design";
+import { MarketMultiSelect, useMarketOptions } from "./market-select";
+import CampaignDesigner from "./campaign/campaign-designer";
 
 // Reuse the same TipTap editor used for article bodies (lazy-loaded, client-only)
 const ArticleRichEditor = dynamic(
@@ -138,7 +140,9 @@ function CampaignProgress({ campaignId, onDone }: { campaignId: number; onDone: 
 
 // ── Audience filters ──────────────────────────────────────────────────────────
 
-type AudienceFilters = { market: string; company: string; country: string; status: string; search: string };
+type AudienceFilters = { markets: string[]; company: string; country: string; status: string; search: string };
+
+const EMPTY_AUDIENCE: AudienceFilters = { markets: [], company: "", country: "", status: "", search: "" };
 
 function AudienceFiltersCard({
   filters, onChange, count, countLoading,
@@ -149,7 +153,8 @@ function AudienceFiltersCard({
   countLoading: boolean;
 }) {
   const { markets } = useMarketOptions();
-  const hasFilter = filters.market || filters.company || filters.country || filters.status || filters.search;
+  const hasFilter =
+    filters.markets.length > 0 || filters.company || filters.country || filters.status || filters.search;
 
   return (
     <div className="space-y-3">
@@ -158,16 +163,19 @@ function AudienceFiltersCard({
         Audience (optional — blank = all non-unsubscribed contacts)
       </div>
 
-      {/* Market — the filter that actually matters for "who am I emailing," kept first and separate from the rest */}
+      {/* Markets — the filter that actually matters for "who am I emailing,"
+          kept first and separate from the rest. Multi-select: a contact in two
+          of the chosen markets is selected exactly once, so nobody is emailed
+          twice and the recipient count below is the real send size (never the
+          sum of the per-market counts on the chips). */}
       <div>
-        <label className="mb-1 block text-[0.78rem] font-semibold text-[#5c5e62]">Market</label>
-        <MarketSelect
+        <label className="mb-1 block text-[0.78rem] font-semibold text-[#5c5e62]">
+          Markets {filters.markets.length > 0 && `(${filters.markets.length} selected)`}
+        </label>
+        <MarketMultiSelect
           markets={markets}
-          value={filters.market}
-          onChange={(m) => onChange({ ...filters, market: m })}
-          mode="filter"
-          allLabel="All markets"
-          className="h-9 w-full max-w-xs rounded-lg border border-black/[0.10] bg-white px-3 text-[0.83rem] text-[#171a20] focus:border-[#f4511e] focus:outline-none"
+          value={filters.markets}
+          onChange={(m) => onChange({ ...filters, markets: m })}
         />
       </div>
 
@@ -207,7 +215,7 @@ function AudienceFiltersCard({
       {hasFilter && (
         <button
           type="button"
-          onClick={() => onChange({ market: "", company: "", country: "", status: "", search: "" })}
+          onClick={() => onChange(EMPTY_AUDIENCE)}
           className="flex items-center gap-1 text-[0.78rem] text-[#5c5e62] hover:text-[#171a20]"
         >
           <X size={12} /> Clear filters — send to all
@@ -234,14 +242,52 @@ function AudienceFiltersCard({
 
 // ── Composer ──────────────────────────────────────────────────────────────────
 
-function Composer({ onSent }: { onSent: (id: number) => void }) {
+/**
+ * Two authoring paths against the same send endpoint: blocks (what the
+ * marketers can actually use) and raw HTML (unchanged, still works). Blocks
+ * is the default — the HTML path exists for anyone who needs it and as the
+ * fallback when the design schema isn't available.
+ */
+type AuthoringMode = "design" | "html";
+
+function Composer({
+  onSent,
+  adminEmail,
+  reopenFrom,
+  onReopenConsumed,
+}: {
+  onSent: (id: number) => void;
+  adminEmail: string;
+  reopenFrom: BulkEmail | null;
+  onReopenConsumed: () => void;
+}) {
+  const [mode, setMode]               = useState<AuthoringMode>("design");
   const [subject, setSubject]         = useState("");
   const [bodyHtml, setBodyHtml]       = useState("");
-  const [filters, setFilters]         = useState<AudienceFilters>({ market: "", company: "", country: "", status: "", search: "" });
+  const [blocks, setBlocks]           = useState<CampaignBlock[]>([]);
+  const [theme, setTheme]             = useState("");
+  const [filters, setFilters]         = useState<AudienceFilters>(EMPTY_AUDIENCE);
   const [count, setCount]             = useState<number | null>(null);
   const [countLoading, setCountLoading] = useState(false);
   const [sending, setSending]         = useState(false);
   const [error, setError]             = useState<string | null>(null);
+  const [blockErrors, setBlockErrors] = useState<Record<number, string[]>>({});
+  const [generalErrors, setGeneral]   = useState<string[]>([]);
+
+  // Reopen / Duplicate: load a past designed campaign back into the editor.
+  useEffect(() => {
+    if (!reopenFrom) return;
+    setMode("design");
+    setSubject(reopenFrom.subject ?? "");
+    setBlocks(reopenFrom.blocks ?? []);
+    setTheme(reopenFrom.theme ?? "");
+    setBodyHtml("");
+    setError(null);
+    setBlockErrors({});
+    setGeneral([]);
+    onReopenConsumed();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [reopenFrom, onReopenConsumed]);
 
   // Debounced recipient count fetch
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -250,7 +296,7 @@ function Composer({ onSent }: { onSent: (id: number) => void }) {
     debounceRef.current = setTimeout(async () => {
       setCountLoading(true);
       const qs = new URLSearchParams();
-      if (filters.market)  qs.set("market",  filters.market);
+      for (const m of filters.markets) qs.append("markets", m);
       if (filters.company) qs.set("company", filters.company);
       if (filters.country) qs.set("country", filters.country);
       if (filters.status)  qs.set("status",  filters.status);
@@ -270,21 +316,33 @@ function Composer({ onSent }: { onSent: (id: number) => void }) {
 
   async function handleSend() {
     if (!subject.trim()) { setError("Subject is required."); return; }
-    if (!bodyHtml.trim() || bodyHtml === "<p></p>") { setError("Email body is required."); return; }
+    if (mode === "design") {
+      if (blocks.length === 0) { setError("Add at least one block before sending."); return; }
+    } else if (!bodyHtml.trim() || bodyHtml === "<p></p>") {
+      setError("Email body is required."); return;
+    }
     if (count === 0)     { setError("No matching recipients. Adjust the audience filters."); return; }
 
     setSending(true);
     setError(null);
+    setBlockErrors({});
+    setGeneral([]);
 
     // Build filters payload — only include non-empty values
-    const filtersPayload: Record<string, string> = {};
-    if (filters.market)  filtersPayload.market  = filters.market;
+    const filtersPayload: Record<string, string | string[]> = {};
+    if (filters.markets.length) filtersPayload.markets = filters.markets;
     if (filters.company) filtersPayload.company = filters.company;
     if (filters.country) filtersPayload.country = filters.country;
     if (filters.status)  filtersPayload.status  = filters.status;
     if (filters.search)  filtersPayload.search  = filters.search;
 
-    const body: Record<string, unknown> = { subject: subject.trim(), body_html: bodyHtml };
+    const body: Record<string, unknown> = { subject: subject.trim() };
+    if (mode === "design") {
+      body.blocks = blocks;
+      if (theme) body.theme = theme;
+    } else {
+      body.body_html = bodyHtml;
+    }
     if (Object.keys(filtersPayload).length > 0) body.filters = filtersPayload;
 
     try {
@@ -297,6 +355,17 @@ function Composer({ onSent }: { onSent: (id: number) => void }) {
       const json = await res.json().catch(() => ({}));
 
       if (res.status === 422) {
+        // Block validation is written for the marketer ("Block 2 (Button):
+        // "Where it goes" is required."), so each message is attached to the
+        // block it names rather than dumped in one list at the top.
+        const blockMessages: unknown = json?.errors?.blocks;
+        if (json?.code === "invalid_blocks" && Array.isArray(blockMessages)) {
+          const { byIndex, general } = groupBlockErrors(blockMessages.map(String));
+          setBlockErrors(byIndex);
+          setGeneral(general);
+          setError("Some blocks need attention — see the highlighted ones below.");
+          return;
+        }
         setError(json.message ?? "No matching recipients for those filters.");
         return;
       }
@@ -308,7 +377,9 @@ function Composer({ onSent }: { onSent: (id: number) => void }) {
       const campaign: BulkEmail = json.data ?? json;
       setSubject("");
       setBodyHtml("");
-      setFilters({ market: "", company: "", country: "", status: "", search: "" });
+      setBlocks([]);
+      setTheme("");
+      setFilters(EMPTY_AUDIENCE);
       onSent(campaign.id);
     } catch {
       setError("Network error. Please try again.");
@@ -319,9 +390,29 @@ function Composer({ onSent }: { onSent: (id: number) => void }) {
 
   return (
     <div className="rounded-xl border border-black/[0.07] bg-white p-5 space-y-5">
-      <h2 className="text-[0.875rem] font-bold text-[#171a20]">New Campaign</h2>
+      <div className="flex flex-wrap items-center gap-3">
+        <h2 className="text-[0.875rem] font-bold text-[#171a20]">New Campaign</h2>
+        <div className="ml-auto flex items-center gap-0.5 rounded-full bg-[#f0f2f5] p-0.5">
+          {([
+            ["design", LayoutTemplate, "Design with blocks"],
+            ["html", Code2, "Write HTML"],
+          ] as const).map(([m, Icon, label]) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => { setMode(m); setError(null); }}
+              className={[
+                "flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[0.78rem] font-semibold transition",
+                mode === m ? "bg-white text-[#171a20] shadow-sm" : "text-[#5c5e62] hover:text-[#171a20]",
+              ].join(" ")}
+            >
+              <Icon size={13} /> {label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-      {/* Subject */}
+      {/* Subject — merge tags work here too, so it's shared by both modes */}
       <div>
         <label className="mb-1.5 block text-[0.78rem] font-semibold text-[#5c5e62]">Subject</label>
         <input
@@ -331,18 +422,35 @@ function Composer({ onSent }: { onSent: (id: number) => void }) {
           onChange={(e) => { setSubject(e.target.value); setError(null); }}
           className="h-10 w-full rounded-lg border border-black/[0.10] bg-white px-3 text-[0.875rem] text-[#171a20] placeholder:text-[#8c8f94] focus:border-[#f4511e] focus:outline-none"
         />
+        <p className="mt-1 text-[0.72rem] text-[#8c8f94]">
+          You can personalise this too — e.g. <span className="font-mono">[[FIRST_NAME|there]]</span>,
+          a special offer for you.
+        </p>
       </div>
 
       {/* Body */}
-      <div>
-        <label className="mb-1.5 block text-[0.78rem] font-semibold text-[#5c5e62]">Email body</label>
-        <div className="min-h-[280px] rounded-xl border border-black/[0.10] overflow-hidden">
-          <ArticleRichEditor value={bodyHtml} onChange={setBodyHtml} />
+      {mode === "design" ? (
+        <CampaignDesigner
+          subject={subject}
+          blocks={blocks}
+          theme={theme}
+          onBlocksChange={(b) => { setBlocks(b); setError(null); }}
+          onThemeChange={setTheme}
+          blockErrors={blockErrors}
+          generalErrors={generalErrors}
+          adminEmail={adminEmail}
+        />
+      ) : (
+        <div>
+          <label className="mb-1.5 block text-[0.78rem] font-semibold text-[#5c5e62]">Email body</label>
+          <div className="min-h-[280px] rounded-xl border border-black/[0.10] overflow-hidden">
+            <ArticleRichEditor value={bodyHtml} onChange={setBodyHtml} />
+          </div>
+          <p className="mt-1 text-[0.72rem] text-[#8c8f94]">
+            An unsubscribe footer link is added automatically by the server — do not add one yourself.
+          </p>
         </div>
-        <p className="mt-1 text-[0.72rem] text-[#8c8f94]">
-          An unsubscribe footer link is added automatically by the server — do not add one yourself.
-        </p>
-      </div>
+      )}
 
       {/* Audience */}
       <AudienceFiltersCard
@@ -376,7 +484,13 @@ function Composer({ onSent }: { onSent: (id: number) => void }) {
 
 // ── Campaign history table ────────────────────────────────────────────────────
 
-function CampaignHistory({ refreshKey }: { refreshKey: number }) {
+function CampaignHistory({
+  refreshKey,
+  onReopen,
+}: {
+  refreshKey: number;
+  onReopen: (c: BulkEmail) => void;
+}) {
   const [campaigns, setCampaigns]   = useState<BulkEmail[]>([]);
   const [meta, setMeta]             = useState({ current_page: 1, last_page: 1, total: 0 });
   const [loading, setLoading]       = useState(true);
@@ -491,7 +605,24 @@ function CampaignHistory({ refreshKey }: { refreshKey: number }) {
                     <td className="px-4 py-3 text-[0.78rem] text-[#5c5e62] whitespace-nowrap">
                       {fmt(c.created_at)}
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                      {/* Only designed campaigns can be reopened — an HTML one
+                          has no blocks to load back into the editor. */}
+                      {c.designed && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const res = await fetch(`/api/admin/bulk-emails/${c.id}`);
+                            const json = await res.json().catch(() => null);
+                            const full: BulkEmail | null = json ? (json.data ?? json) : null;
+                            if (full?.blocks?.length) onReopen(full);
+                          }}
+                          title="Duplicate into a new campaign"
+                          className="mr-1 rounded-lg p-1.5 text-[#5c5e62] transition hover:bg-[#f0f2f5] hover:text-[#171a20]"
+                        >
+                          <CopyPlus size={14} />
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={async () => {
@@ -542,9 +673,10 @@ function CampaignHistory({ refreshKey }: { refreshKey: number }) {
 
 // ── Main export ───────────────────────────────────────────────────────────────
 
-export default function BulkEmailPanel() {
+export default function BulkEmailPanel({ adminEmail = "" }: { adminEmail?: string }) {
   const [activeCampaignId, setActiveCampaignId] = useState<number | null>(null);
   const [historyKey, setHistoryKey]             = useState(0);
+  const [reopenFrom, setReopenFrom]             = useState<BulkEmail | null>(null);
 
   function handleSent(id: number) {
     setActiveCampaignId(id);
@@ -564,10 +696,15 @@ export default function BulkEmailPanel() {
       )}
 
       {/* Composer */}
-      <Composer onSent={handleSent} />
+      <Composer
+        onSent={handleSent}
+        adminEmail={adminEmail}
+        reopenFrom={reopenFrom}
+        onReopenConsumed={() => setReopenFrom(null)}
+      />
 
       {/* History */}
-      <CampaignHistory refreshKey={historyKey} />
+      <CampaignHistory refreshKey={historyKey} onReopen={setReopenFrom} />
     </div>
   );
 }
