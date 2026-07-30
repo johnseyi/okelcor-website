@@ -762,6 +762,48 @@ export type MarketingContactImportResult = {
   errors: string[];
 };
 
+/**
+ * A marketing contact belongs to exactly one market (single `market` column,
+ * UNIQUE email), so putting an existing address under a second market is a
+ * *move*, never an add. Result of POST /admin/marketing-contacts/move-market.
+ *
+ * Nothing is created or deleted: an address with no matching contact comes
+ * back in `not_found` rather than being imported, and unsubscribed contacts
+ * keep their status and token — a move can never re-subscribe anyone.
+ */
+export type MarketingContactMoveResult = {
+  to_market: string;
+  moved: number;
+  already_in_place: number;
+  not_found: string[];
+  contacts: MarketingContact[];
+};
+
+/** Selectors are OR'd server-side; at least one is required alongside `to_market`. */
+export type MarketingContactMoveSelector = {
+  contact_ids?: number[];
+  emails?: string[];
+  /** Moves an entire market at once — `from_market` + `to_market` is a rename. */
+  from_market?: string;
+};
+
+/**
+ * 422 body from POST /admin/marketing-contacts when the email already exists.
+ * `errors.email` is still populated (unchanged), so any generic 422 handling
+ * keeps working; these fields are additive and tell you where it already is.
+ */
+export type MarketingContactExistsError = {
+  code: "contact_exists";
+  message: string;
+  errors?: { email?: string[] };
+  data: {
+    existing_contact: MarketingContact;
+    /** false when the contact is already in the market you asked for. */
+    can_move: boolean;
+    target_market: string;
+  };
+};
+
 // ── Bulk Email Campaigns ──────────────────────────────────────────────────────
 
 export type BulkEmailStatus = "queued" | "sending" | "completed" | "failed";
