@@ -855,10 +855,90 @@ export type BulkEmailFilters = {
   search?: string;
 };
 
+// ── Campaign designer (block-based authoring) ─────────────────────────────────
+
+/** Input control to render for a block field. */
+export type CampaignFieldType =
+  | "text" | "textarea" | "select" | "number" | "url"
+  | "image_url" | "text_list" | "link_list";
+
+export type CampaignSelectOption = { value: string; label: string };
+
+export type CampaignFieldSpec = {
+  name: string;
+  label: string;
+  type: CampaignFieldType;
+  required: boolean;
+  options: CampaignSelectOption[];
+  default?: unknown;
+  min?: number;
+  max?: number;
+  placeholder?: string;
+  help?: string;
+};
+
+export type CampaignBlockSpec = {
+  type: string;
+  label: string;
+  description?: string;
+  fields: CampaignFieldSpec[];
+};
+
+export type CampaignThemeSpec = { key: string; label: string };
+
+export type CampaignMergeTagSpec = {
+  /** Bare name, e.g. FIRST_NAME. */
+  tag: string;
+  label: string;
+  /**
+   * Suggested fallback. Most of the imported list has an email and nothing
+   * else, so the editor always inserts `[[TAG|fallback]]` rather than a bare
+   * tag — a bare one sends "Hi ," to much of the list.
+   */
+  fallback?: string;
+};
+
+/**
+ * `GET /admin/campaign-design` — the editor is generated from this, so a block
+ * type added server-side appears without a frontend change. Normalised by
+ * `lib/campaign-design.ts`, which tolerates several plausible key spellings.
+ */
+export type CampaignDesign = {
+  blocks: CampaignBlockSpec[];
+  themes: CampaignThemeSpec[];
+  mergeTags: CampaignMergeTagSpec[];
+};
+
+/** A block instance in a campaign: `{ type, ...fieldValues }`. */
+export type CampaignBlock = { type: string } & Record<string, unknown>;
+
+export type CampaignTemplate = {
+  id: number | string;
+  name: string;
+  description?: string | null;
+  blocks: CampaignBlock[];
+  theme?: string | null;
+  /** Starters are built-in and can't be edited or deleted. */
+  is_starter?: boolean;
+};
+
+export type CampaignPreview = {
+  html: string;
+  html_personalized: string;
+  text: string;
+  subject_personalized: string;
+  /** e.g. a typo'd `[[FIRSTNAME]]` — surfaced before 1,700 emails go out blank. */
+  unknown_merge_tags: string[];
+};
+
 export type BulkEmail = {
   id: number;
   subject: string;
   body_html?: string | null;
+  /** Set when the campaign was authored from blocks — enables Reopen/Duplicate. */
+  designed?: boolean;
+  blocks?: CampaignBlock[] | null;
+  theme?: string | null;
   filters?: BulkEmailFilters | null;
   total_recipients: number;
   sent_count: number;
