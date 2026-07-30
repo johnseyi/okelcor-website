@@ -32,8 +32,67 @@ export function useMarketOptions() {
   return { markets, loading, refresh };
 }
 
-function label(market: string) {
+export function label(market: string) {
   return market.charAt(0).toUpperCase() + market.slice(1);
+}
+
+/**
+ * Multi-market picker (campaign audience). A contact can belong to several
+ * markets, and the backend selects one in two of them exactly once — so the
+ * send size is whatever the recipient-count endpoint reports, never the sum of
+ * the per-market counts shown on the chips.
+ *
+ * Selection only, no free-text: filtering by a market with zero contacts is
+ * meaningless, same reasoning as `mode="filter"` above.
+ */
+export function MarketMultiSelect({
+  markets,
+  value,
+  onChange,
+}: {
+  markets: MarketOption[];
+  value: string[];
+  onChange: (markets: string[]) => void;
+}) {
+  if (markets.length === 0) {
+    return <p className="text-[0.78rem] text-[#8c8f94]">No markets yet — import or add a contact first.</p>;
+  }
+
+  function toggle(market: string) {
+    onChange(value.includes(market) ? value.filter((m) => m !== market) : [...value, market]);
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <button
+        type="button"
+        onClick={() => onChange([])}
+        className={[
+          "rounded-full px-3 py-1.5 text-[0.78rem] font-semibold transition",
+          value.length === 0 ? "bg-[#171a20] text-white" : "bg-[#f0f2f5] text-[#5c5e62] hover:bg-[#e5e7eb]",
+        ].join(" ")}
+      >
+        All markets
+      </button>
+      {markets.map((m) => {
+        const on = value.includes(m.market);
+        return (
+          <button
+            key={m.market}
+            type="button"
+            onClick={() => toggle(m.market)}
+            aria-pressed={on}
+            className={[
+              "rounded-full px-3 py-1.5 text-[0.78rem] font-semibold capitalize transition",
+              on ? "bg-[#f4511e] text-white" : "bg-[#f0f2f5] text-[#5c5e62] hover:bg-[#e5e7eb]",
+            ].join(" ")}
+          >
+            {m.market} ({m.contact_count})
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 const NEW_MARKET_SENTINEL = "__new__";

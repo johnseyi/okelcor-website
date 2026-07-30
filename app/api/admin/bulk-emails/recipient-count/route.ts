@@ -1,7 +1,12 @@
 /**
  * GET /api/admin/bulk-emails/recipient-count
- * → GET /admin/bulk-emails/recipient-count?company=&country=&market=&status=&search=
+ * → GET /admin/bulk-emails/recipient-count?company=&country=&market=&markets[]=&status=&search=
  * Returns: { count: number }
+ *
+ * `markets` is repeatable (`?markets=a&markets=b`) and forwarded as Laravel's
+ * `markets[]` array syntax. A contact belonging to several of the selected
+ * markets is counted once, so this figure is the real send size — not a sum
+ * of per-market counts, which would double-count.
  */
 
 import { cookies } from "next/headers";
@@ -22,6 +27,9 @@ export async function GET(req: NextRequest) {
   for (const key of allowed) {
     const v = incoming.get(key);
     if (v) qs.set(key, v);
+  }
+  for (const m of incoming.getAll("markets")) {
+    if (m) qs.append("markets[]", m);
   }
 
   try {

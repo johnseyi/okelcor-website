@@ -7,7 +7,7 @@ import {
   ChevronLeft, ChevronRight, Users, Eye, X, Filter,
 } from "lucide-react";
 import type { BulkEmail, BulkEmailStatus } from "@/lib/admin-api";
-import { MarketSelect, useMarketOptions } from "./market-select";
+import { MarketMultiSelect, useMarketOptions } from "./market-select";
 
 // Reuse the same TipTap editor used for article bodies (lazy-loaded, client-only)
 const ArticleRichEditor = dynamic(
@@ -138,7 +138,9 @@ function CampaignProgress({ campaignId, onDone }: { campaignId: number; onDone: 
 
 // ── Audience filters ──────────────────────────────────────────────────────────
 
-type AudienceFilters = { market: string; company: string; country: string; status: string; search: string };
+type AudienceFilters = { markets: string[]; company: string; country: string; status: string; search: string };
+
+const EMPTY_AUDIENCE: AudienceFilters = { markets: [], company: "", country: "", status: "", search: "" };
 
 function AudienceFiltersCard({
   filters, onChange, count, countLoading,
@@ -149,7 +151,8 @@ function AudienceFiltersCard({
   countLoading: boolean;
 }) {
   const { markets } = useMarketOptions();
-  const hasFilter = filters.market || filters.company || filters.country || filters.status || filters.search;
+  const hasFilter =
+    filters.markets.length > 0 || filters.company || filters.country || filters.status || filters.search;
 
   return (
     <div className="space-y-3">
@@ -158,16 +161,19 @@ function AudienceFiltersCard({
         Audience (optional — blank = all non-unsubscribed contacts)
       </div>
 
-      {/* Market — the filter that actually matters for "who am I emailing," kept first and separate from the rest */}
+      {/* Markets — the filter that actually matters for "who am I emailing,"
+          kept first and separate from the rest. Multi-select: a contact in two
+          of the chosen markets is selected exactly once, so nobody is emailed
+          twice and the recipient count below is the real send size (never the
+          sum of the per-market counts on the chips). */}
       <div>
-        <label className="mb-1 block text-[0.78rem] font-semibold text-[#5c5e62]">Market</label>
-        <MarketSelect
+        <label className="mb-1 block text-[0.78rem] font-semibold text-[#5c5e62]">
+          Markets {filters.markets.length > 0 && `(${filters.markets.length} selected)`}
+        </label>
+        <MarketMultiSelect
           markets={markets}
-          value={filters.market}
-          onChange={(m) => onChange({ ...filters, market: m })}
-          mode="filter"
-          allLabel="All markets"
-          className="h-9 w-full max-w-xs rounded-lg border border-black/[0.10] bg-white px-3 text-[0.83rem] text-[#171a20] focus:border-[#f4511e] focus:outline-none"
+          value={filters.markets}
+          onChange={(m) => onChange({ ...filters, markets: m })}
         />
       </div>
 
@@ -207,7 +213,7 @@ function AudienceFiltersCard({
       {hasFilter && (
         <button
           type="button"
-          onClick={() => onChange({ market: "", company: "", country: "", status: "", search: "" })}
+          onClick={() => onChange(EMPTY_AUDIENCE)}
           className="flex items-center gap-1 text-[0.78rem] text-[#5c5e62] hover:text-[#171a20]"
         >
           <X size={12} /> Clear filters — send to all
@@ -237,7 +243,7 @@ function AudienceFiltersCard({
 function Composer({ onSent }: { onSent: (id: number) => void }) {
   const [subject, setSubject]         = useState("");
   const [bodyHtml, setBodyHtml]       = useState("");
-  const [filters, setFilters]         = useState<AudienceFilters>({ market: "", company: "", country: "", status: "", search: "" });
+  const [filters, setFilters]         = useState<AudienceFilters>(EMPTY_AUDIENCE);
   const [count, setCount]             = useState<number | null>(null);
   const [countLoading, setCountLoading] = useState(false);
   const [sending, setSending]         = useState(false);
@@ -250,7 +256,7 @@ function Composer({ onSent }: { onSent: (id: number) => void }) {
     debounceRef.current = setTimeout(async () => {
       setCountLoading(true);
       const qs = new URLSearchParams();
-      if (filters.market)  qs.set("market",  filters.market);
+      for (const m of filters.markets) qs.append("markets", m);
       if (filters.company) qs.set("company", filters.company);
       if (filters.country) qs.set("country", filters.country);
       if (filters.status)  qs.set("status",  filters.status);
@@ -277,8 +283,8 @@ function Composer({ onSent }: { onSent: (id: number) => void }) {
     setError(null);
 
     // Build filters payload — only include non-empty values
-    const filtersPayload: Record<string, string> = {};
-    if (filters.market)  filtersPayload.market  = filters.market;
+    const filtersPayload: Record<string, string | string[]> = {};
+    if (filters.markets.length) filtersPayload.markets = filters.markets;
     if (filters.company) filtersPayload.company = filters.company;
     if (filters.country) filtersPayload.country = filters.country;
     if (filters.status)  filtersPayload.status  = filters.status;
@@ -308,7 +314,7 @@ function Composer({ onSent }: { onSent: (id: number) => void }) {
       const campaign: BulkEmail = json.data ?? json;
       setSubject("");
       setBodyHtml("");
-      setFilters({ market: "", company: "", country: "", status: "", search: "" });
+      setFilters(EMPTY_AUDIENCE);
       onSent(campaign.id);
     } catch {
       setError("Network error. Please try again.");

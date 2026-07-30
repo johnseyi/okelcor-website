@@ -1,16 +1,17 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, Fragment } from "react";
 import {
   Upload, Search, Trash2, Users, CheckCircle2, XCircle, Plus, Pencil,
   HelpCircle, AlertTriangle, RefreshCw, FileText, X, ChevronLeft, ChevronRight,
-  ArrowRightLeft, Info,
+  ArrowRightLeft, Info, MinusCircle, Globe,
 } from "lucide-react";
 import type {
   MarketingContact, MarketingContactStats, MarketingContactImportResult,
-  MarketingContactMoveResult, MarketingContactMoveSelector, MarketingContactExistsError,
+  MarketingContactMarketOp, MarketingContactMarketResult,
+  MarketingContactMarketSelector, MarketingContactExistsError,
 } from "@/lib/admin-api";
-import { MarketSelect, useMarketOptions, type MarketOption } from "./market-select";
+import { MarketSelect, useMarketOptions, label as marketLabel, type MarketOption } from "./market-select";
 
 // ── Status helpers ────────────────────────────────────────────────────────────
 
@@ -61,27 +62,27 @@ function StatsCards({ stats, loading }: { stats: MarketingContactStats | null; l
   );
 }
 
-// ── Moving contacts between markets ───────────────────────────────────────────
+// ── Market operations (add / move / remove) ───────────────────────────────────
 
 /**
- * A contact belongs to exactly one market, so adding an existing address under
- * a second market was never going to work through the add form — it's a move.
- * Single shared call for every entry point (add-form conflict, row action, bulk
- * selection, whole-market move); the backend ORs the selectors it's given.
+ * A contact can belong to several markets at once. The three operations take
+ * the same OR'd selectors, so one UI selection drives any of them — a single
+ * call shape serves every entry point (add-form conflict, chip ✕/+, row menu,
+ * bulk toolbar, whole-market management).
  */
-async function moveMarket(
-  selector: MarketingContactMoveSelector,
-  toMarket: string,
-): Promise<{ ok: true; result: MarketingContactMoveResult } | { ok: false; error: string }> {
+async function marketOp(
+  op: MarketingContactMarketOp,
+  body: Record<string, unknown>,
+): Promise<{ ok: true; result: MarketingContactMarketResult } | { ok: false; error: string }> {
   try {
-    const res = await fetch("/api/admin/marketing-contacts/move-market", {
+    const res = await fetch(`/api/admin/marketing-contacts/${op}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...selector, to_market: toMarket }),
+      body: JSON.stringify(body),
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
-      return { ok: false, error: json.error ?? json.message ?? `Could not move contacts (${res.status}).` };
+      return { ok: false, error: json.error ?? json.message ?? `Operation failed (${res.status}).` };
     }
     return { ok: true, result: json.data ?? json };
   } catch {
@@ -89,48 +90,69 @@ async function moveMarket(
   }
 }
 
-type MoveRequest = {
-  title: string;
-  description: string;
-  selector: MarketingContactMoveSelector;
-  /** Hidden from the picker — moving somewhere they already are is a no-op. */
-  excludeMarket?: string;
-  /** Cleanup owned by the caller (clearing a selection, resetting a filter). */
-  onDone?: (result: MarketingContactMoveResult) => void;
+const OP_COPY: Record<MarketingContactMarketOp, {
+  verb: string; gerund: string; label: string; icon: typeof Plus;
+}> = {
+  "add-to-market":      { verb: "Add",    gerund: "Adding…",   label: "Add to market *",      icon: Plus },
+  "move-market":        { verb: "Move",   gerund: "Moving…",   label: "Move to market *",     icon: ArrowRightLeft },
+  "remove-from-market": { verb: "Remove", gerund: "Removing…", label: "Remove from market *", icon: MinusCircle },
 };
 
-function MoveMarketModal({
+type MarketOpRequest = {
+  op: MarketingContactMarketOp;
+  title: string;
+  description: string;
+  selector: MarketingContactMarketSelector;
+  /** Pre-chosen market — skips the picker (chip ✕, "clear this market"). */
+  fixedMarket?: string;
+  /** Hidden from the picker: adding/moving somewhere they already are is a no-op. */
+  excludeMarkets?: string[];
+  /** For remove: only these markets are offerable. */
+  limitToMarkets?: string[];
+  /** Cleanup owned by the caller (clearing a selection, resetting a filter). */
+  onDone?: (result: MarketingContactMarketResult) => void;
+};
+
+function MarketOpModal({
   request,
   markets,
   onClose,
-  onMoved,
+  onApplied,
 }: {
-  request: MoveRequest;
+  request: MarketOpRequest;
   markets: MarketOption[];
   onClose: () => void;
-  onMoved: () => void;
+  onApplied: () => void;
 }) {
-  const [market, setMarket]   = useState("");
-  const [saving, setSaving]   = useState(false);
-  const [error, setError]     = useState<string | null>(null);
-  const [result, setResult]   = useState<MarketingContactMoveResult | null>(null);
+  const copy = OP_COPY[request.op];
+  const isRemove = request.op === "remove-from-market";
 
-  // "Germany" won't be in /markets until a contact is already in it, so the
-  // picker keeps its free-text "+ New market" path — a list limited to existing
-  // options could never create the first one.
-  const options = request.excludeMarket
-    ? markets.filter((m) => m.market !== request.excludeMarket)
-    : markets;
+  const [market, setMarket] = useState(request.fixedMarket ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError]   = useState<string | null>(null);
+  const [result, setResult] = useState<MarketingContactMarketResult | null>(null);
 
-  async function handleMove() {
+  // Removal can only target a market the contact is actually in; add/move keep
+  // the free-text "+ New market" path, because a market doesn't exist until a
+  // contact is in it — a list of existing options could never create the first.
+  const options = request.limitToMarkets
+    ? request.limitToMarkets.map((m) => markets.find((x) => x.market === m) ?? { market: m, contact_count: 0 })
+    : markets.filter((m) => !(request.excludeMarkets ?? []).includes(m.market));
+
+  async function handleApply() {
     if (!market.trim()) {
-      setError("Choose (or type) a destination market.");
+      setError(isRemove ? "Choose the market to leave." : "Choose (or type) a market.");
       return;
     }
     setSaving(true);
     setError(null);
 
-    const res = await moveMarket(request.selector, market.trim());
+    // remove-from-market names its market `market`; add/move use `to_market`.
+    const body: Record<string, unknown> = isRemove
+      ? { ...request.selector, market: market.trim() }
+      : { ...request.selector, to_market: market.trim() };
+
+    const res = await marketOp(request.op, body);
     setSaving(false);
 
     if (!res.ok) {
@@ -139,8 +161,11 @@ function MoveMarketModal({
     }
     setResult(res.result);
     request.onDone?.(res.result);
-    onMoved();
+    onApplied();
   }
+
+  const skippedLast = result?.skipped_last_market ?? [];
+  const notFound    = result?.not_found ?? [];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -154,37 +179,31 @@ function MoveMarketModal({
 
         <div className="space-y-3 p-5">
           {result ? (
-            <div className="space-y-1.5 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-[0.83rem]">
-              <p className="font-bold text-emerald-800">
-                Moved to <span className="capitalize">{result.to_market}</span>
-              </p>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-0.5 text-emerald-700">
-                <span>Moved</span><span className="font-semibold">{result.moved.toLocaleString()}</span>
-                <span>Already there</span><span className="font-semibold">{result.already_in_place.toLocaleString()}</span>
-              </div>
-              {result.not_found.length > 0 && (
-                <div className="mt-2 rounded-lg bg-amber-50 p-2 text-amber-700">
-                  <p className="font-semibold">Not on the list ({result.not_found.length})</p>
-                  <p className="mt-0.5 text-[0.78rem]">
-                    Nothing was created for these — a move never imports a new address.
-                  </p>
-                  <ul className="mt-1 list-inside list-disc space-y-0.5">
-                    {result.not_found.slice(0, 5).map((e) => <li key={e}>{e}</li>)}
-                    {result.not_found.length > 5 && <li>…and {result.not_found.length - 5} more</li>}
-                  </ul>
-                </div>
-              )}
-            </div>
+            <MarketOpResult result={result} op={request.op} notFound={notFound} skippedLast={skippedLast} />
           ) : (
             <>
               <p className="text-[0.83rem] text-[#5c5e62]">{request.description}</p>
-              <div>
-                <label className="mb-1 block text-[0.78rem] font-semibold text-[#5c5e62]">Move to market *</label>
-                <MarketSelect markets={options} value={market} onChange={setMarket} mode="create" />
-              </div>
+              {request.fixedMarket ? (
+                <p className="rounded-lg bg-[#f5f5f5] px-3 py-2 text-[0.83rem] font-semibold capitalize text-[#171a20]">
+                  {request.fixedMarket}
+                </p>
+              ) : (
+                <div>
+                  <label className="mb-1 block text-[0.78rem] font-semibold text-[#5c5e62]">{copy.label}</label>
+                  <MarketSelect
+                    markets={options}
+                    value={market}
+                    onChange={setMarket}
+                    mode={isRemove ? "filter" : "create"}
+                    allLabel="Select market…"
+                  />
+                </div>
+              )}
               <p className="flex items-start gap-1.5 text-[0.72rem] text-[#5c5e62]">
                 <Info size={12} className="mt-0.5 shrink-0" />
-                Nothing is created or deleted, and unsubscribed contacts keep their status.
+                {isRemove
+                  ? "The contact isn't deleted — it just leaves this market. A contact always keeps at least one."
+                  : "Nothing is created or deleted, and unsubscribed contacts keep their status."}
               </p>
             </>
           )}
@@ -208,16 +227,181 @@ function MoveMarketModal({
           {!result && (
             <button
               type="button"
-              onClick={handleMove}
+              onClick={handleApply}
               disabled={saving || !market.trim()}
-              className="flex items-center gap-1.5 rounded-full bg-[#f4511e] px-4 py-2 text-[0.83rem] font-semibold text-white transition hover:bg-[#df4618] disabled:opacity-60"
+              className={[
+                "flex items-center gap-1.5 rounded-full px-4 py-2 text-[0.83rem] font-semibold text-white transition disabled:opacity-60",
+                isRemove ? "bg-red-600 hover:bg-red-700" : "bg-[#f4511e] hover:bg-[#df4618]",
+              ].join(" ")}
             >
-              {saving ? <RefreshCw size={12} className="animate-spin" /> : <ArrowRightLeft size={12} />}
-              {saving ? "Moving…" : "Move"}
+              {saving ? <RefreshCw size={12} className="animate-spin" /> : <copy.icon size={12} />}
+              {saving ? copy.gerund : copy.verb}
             </button>
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function MarketOpResult({
+  result, op, notFound, skippedLast,
+}: {
+  result: MarketingContactMarketResult;
+  op: MarketingContactMarketOp;
+  notFound: string[];
+  skippedLast: string[];
+}) {
+  // "removed: 0 + skipped_last_market" is a complete no-op, not a partial
+  // success — saying "Removed" above it would read as though something changed.
+  const nothingHappened =
+    op === "remove-from-market" && (result.removed ?? 0) === 0 && skippedLast.length > 0;
+
+  const counts: Array<[string, number]> = [
+    ...(result.added   !== undefined ? [["Added",   result.added]   as [string, number]] : []),
+    ...(result.moved   !== undefined ? [["Moved",   result.moved]   as [string, number]] : []),
+    ...(result.removed !== undefined ? [["Removed", result.removed] as [string, number]] : []),
+    ...(result.already_in_place !== undefined
+      ? [["Already there", result.already_in_place] as [string, number]] : []),
+  ];
+
+  return (
+    <div
+      className={[
+        "space-y-1.5 rounded-xl border p-4 text-[0.83rem]",
+        nothingHappened ? "border-amber-200 bg-amber-50" : "border-emerald-200 bg-emerald-50",
+      ].join(" ")}
+    >
+      <p className={`font-bold ${nothingHappened ? "text-amber-800" : "text-emerald-800"}`}>
+        {nothingHappened
+          ? "Nothing changed"
+          : <>Done — <span className="capitalize">{result.to_market ?? result.market}</span></>}
+      </p>
+      {counts.length > 0 && (
+        <div className={`grid grid-cols-2 gap-x-6 gap-y-0.5 ${nothingHappened ? "text-amber-700" : "text-emerald-700"}`}>
+          {counts.map(([k, v]) => (
+            <Fragment key={k}>
+              <span>{k}</span><span className="font-semibold">{v.toLocaleString()}</span>
+            </Fragment>
+          ))}
+        </div>
+      )}
+
+      {skippedLast.length > 0 && (
+        <div className="mt-2 rounded-lg bg-amber-100/70 p-2 text-amber-800">
+          <p className="font-semibold">Kept — this was their only market ({skippedLast.length})</p>
+          <p className="mt-0.5 text-[0.78rem]">
+            A contact always belongs to at least one market. To take these out, move them to another
+            market instead, or delete the contact.
+          </p>
+          <ul className="mt-1 list-inside list-disc space-y-0.5">
+            {skippedLast.slice(0, 5).map((e) => <li key={e}>{e}</li>)}
+            {skippedLast.length > 5 && <li>…and {skippedLast.length - 5} more</li>}
+          </ul>
+        </div>
+      )}
+
+      {notFound.length > 0 && (
+        <div className="mt-2 rounded-lg bg-amber-100/70 p-2 text-amber-800">
+          <p className="font-semibold">Not on the list ({notFound.length})</p>
+          <p className="mt-0.5 text-[0.78rem]">
+            Nothing was created for these — a market operation never imports a new address.
+          </p>
+          <ul className="mt-1 list-inside list-disc space-y-0.5">
+            {notFound.slice(0, 5).map((e) => <li key={e}>{e}</li>)}
+            {notFound.length > 5 && <li>…and {notFound.length - 5} more</li>}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Every market a contact belongs to, tolerating a backend still on one. */
+function contactMarkets(c: MarketingContact): string[] {
+  if (c.markets && c.markets.length > 0) return c.markets;
+  return c.market ? [c.market] : [];
+}
+
+// ── Market management ─────────────────────────────────────────────────────────
+
+/**
+ * Per-market cleanup — the path for retiring a leftover test market. There is
+ * no delete-market endpoint and none is needed: markets are derived from live
+ * contact data, so one with no contacts left stops existing on its own.
+ */
+function MarketManager({
+  markets,
+  onOp,
+  contactTotal,
+}: {
+  markets: MarketOption[];
+  onOp: (op: MarketingContactMarketOp, m: MarketOption) => void;
+  contactTotal: number | null;
+}) {
+  const sum = markets.reduce((acc, m) => acc + m.contact_count, 0);
+  // Per-market counts each count a contact once, so a contact in two markets
+  // is counted under both — the sum legitimately exceeds the contact total and
+  // is not a number to present as one.
+  const overlaps = contactTotal !== null && sum > contactTotal;
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-black/[0.07] bg-white">
+      <div className="flex items-center gap-2 border-b border-black/[0.06] bg-[#f5f5f5] px-4 py-2.5">
+        <Globe size={14} className="text-[#5c5e62]" />
+        <h2 className="text-[0.83rem] font-bold text-[#171a20]">Markets</h2>
+        <span className="ml-auto text-[0.72rem] text-[#5c5e62]">
+          {markets.length} market{markets.length === 1 ? "" : "s"}
+          {overlaps && ` · ${sum.toLocaleString()} memberships across ${contactTotal.toLocaleString()} contacts`}
+        </span>
+      </div>
+
+      {markets.length === 0 ? (
+        <p className="px-4 py-8 text-center text-[0.83rem] text-[#5c5e62]">
+          No markets yet — import a CSV or add a contact.
+        </p>
+      ) : (
+        <ul className="divide-y divide-black/[0.04]">
+          {markets.map((m) => (
+            <li key={m.market} className="flex flex-wrap items-center gap-3 px-4 py-3">
+              <span className="text-[0.83rem] font-semibold capitalize text-[#171a20]">{m.market}</span>
+              <span className="text-[0.78rem] text-[#5c5e62]">
+                {m.contact_count.toLocaleString()} contact{m.contact_count === 1 ? "" : "s"}
+              </span>
+              <div className="ml-auto flex flex-wrap items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => onOp("add-to-market", m)}
+                  className="flex items-center gap-1 rounded-full bg-[#f0f2f5] px-3 py-1.5 text-[0.75rem] font-semibold text-[#5c5e62] transition hover:bg-[#e5e7eb] hover:text-[#171a20]"
+                >
+                  <Plus size={12} /> Add all to…
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onOp("move-market", m)}
+                  className="flex items-center gap-1 rounded-full bg-[#f0f2f5] px-3 py-1.5 text-[0.75rem] font-semibold text-[#5c5e62] transition hover:bg-[#e5e7eb] hover:text-[#171a20]"
+                >
+                  <ArrowRightLeft size={12} /> Move all to…
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onOp("remove-from-market", m)}
+                  className="flex items-center gap-1 rounded-full bg-[#f0f2f5] px-3 py-1.5 text-[0.75rem] font-semibold text-[#5c5e62] transition hover:bg-red-50 hover:text-red-600"
+                >
+                  <MinusCircle size={12} /> Clear
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <p className="flex items-start gap-1.5 border-t border-black/[0.06] px-4 py-2.5 text-[0.72rem] text-[#5c5e62]">
+        <Info size={12} className="mt-0.5 shrink-0" />
+        A market with no contacts left disappears by itself. <strong className="font-semibold">Move all</strong> to
+        a brand-new name renames a market; <strong className="font-semibold">Clear</strong> empties it without
+        deleting anyone — a contact whose only market this is keeps it.
+      </p>
     </div>
   );
 }
@@ -320,13 +504,14 @@ function ImportCard({
           Market — every imported contact is tagged with this
         </label>
         <MarketSelect markets={markets} value={market} onChange={setMarket} mode="create" />
-        {/* An import is also a move: a contact has exactly one market, so an
-            address already on the list is reassigned to this one rather than
-            duplicated. Easy to do by accident with an overlapping list. */}
+        {/* Behaviour change: a re-import used to overwrite an existing
+            contact's market, silently relocating anyone caught in an
+            overlapping list. It now adds this market alongside what they
+            already have — worth stating, since the old copy said the opposite. */}
         <p className="mt-1.5 flex items-start gap-1.5 text-[0.72rem] text-[#5c5e62]">
           <Info size={12} className="mt-0.5 shrink-0" />
-          Contacts already on the list are <strong className="font-semibold">moved</strong> into this
-          market — their current market is overwritten. Nothing is duplicated.
+          Contacts already on the list <strong className="font-semibold">keep their existing markets</strong> and
+          gain this one as well. Nothing is duplicated, moved, or removed.
         </p>
       </div>
 
@@ -426,12 +611,12 @@ function ContactModal({
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Set when the backend answers 422 `contact_exists` with can_move — the
-  // address is already on the list under another market, so the fix is a move,
-  // not an add. A bare "email already taken" field error would leave the
-  // marketer having to delete the contact first, which is what they reported.
+  // Set when the backend answers 422 `contact_exists`. The address is already
+  // on the list, so the two real next steps are "add this market alongside" or
+  // "relocate it" — a bare "email already taken" field error is what left the
+  // marketer deleting the contact first, which is what she reported.
   const [conflict, setConflict] = useState<MarketingContactExistsError["data"] | null>(null);
-  const [moving, setMoving] = useState(false);
+  const [resolving, setResolving] = useState<MarketingContactMarketOp | null>(null);
 
   function set<K extends keyof ContactFormValues>(key: K, v: string) {
     setValues((prev) => ({ ...prev, [key]: v }));
@@ -447,16 +632,16 @@ function ContactModal({
     );
   }
 
-  async function handleConfirmMove() {
+  async function handleResolveConflict(op: MarketingContactMarketOp) {
     if (!conflict) return;
-    setMoving(true);
+    setResolving(op);
     setError(null);
 
-    const res = await moveMarket(
-      { contact_ids: [conflict.existing_contact.id] },
-      conflict.target_market,
-    );
-    setMoving(false);
+    const res = await marketOp(op, {
+      contact_ids: [conflict.existing_contact.id],
+      to_market: conflict.target_market,
+    });
+    setResolving(null);
 
     if (!res.ok) {
       setError(res.error);
@@ -471,7 +656,7 @@ function ContactModal({
       setError("Email is required.");
       return;
     }
-    if (!values.market.trim()) {
+    if (!isEdit && !values.market.trim()) {
       setError("Market is required.");
       return;
     }
@@ -480,7 +665,10 @@ function ContactModal({
     setError(null);
     setConflict(null);
 
-    const body: Record<string, string> = { email: values.email.trim(), market: values.market.trim() };
+    // Editing never touches market membership — omitting the field entirely is
+    // what guarantees that, since a sent value would replace the whole set.
+    const body: Record<string, string> = { email: values.email.trim() };
+    if (!isEdit) body.market = values.market.trim();
     if (values.first_name) body.first_name = values.first_name;
     if (values.last_name) body.last_name = values.last_name;
     if (values.company) body.company = values.company;
@@ -496,9 +684,9 @@ function ContactModal({
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        // can_move === false means it's already in the market that was asked
-        // for — there is no move to offer, so the plain field error is right.
-        if (isExistsError(json) && json.data.can_move) {
+        // With neither flag there is no next step to offer (it's already in the
+        // market that was asked for), so the plain field error is right.
+        if (isExistsError(json) && (json.data.can_add_market || json.data.can_move)) {
           setConflict(json.data);
           return;
         }
@@ -538,10 +726,32 @@ function ContactModal({
               className={inputClass}
             />
           </div>
-          <div>
-            <label className={labelClass}>Market *</label>
-            <MarketSelect markets={markets} value={values.market} onChange={(m) => set("market", m)} mode="create" />
-          </div>
+          {/* Membership is managed by the chips on the contact row, not here —
+              a single-value field can't represent a contact in three markets,
+              and PATCHing `markets` from it would silently drop the rest. */}
+          {isEdit ? (
+            <div>
+              <label className={labelClass}>Markets</label>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {contactMarkets(contact!).map((m) => (
+                  <span
+                    key={m}
+                    className="rounded-full bg-[#f0f2f5] px-2.5 py-1 text-[0.75rem] font-semibold capitalize text-[#5c5e62]"
+                  >
+                    {m}
+                  </span>
+                ))}
+              </div>
+              <p className="mt-1 text-[0.72rem] text-[#8c8f94]">
+                Add or remove markets from the contact row — this form leaves them untouched.
+              </p>
+            </div>
+          ) : (
+            <div>
+              <label className={labelClass}>Market *</label>
+              <MarketSelect markets={markets} value={values.market} onChange={(m) => set("market", m)} mode="create" />
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={labelClass}>First name</label>
@@ -569,27 +779,45 @@ function ContactModal({
 
           {conflict && (
             <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-[0.83rem] text-amber-800">
-              <p className="flex items-start gap-2">
-                <ArrowRightLeft size={14} className="mt-0.5 shrink-0" />
-                <span>
-                  <strong className="font-semibold">{conflict.existing_contact.email}</strong> is
-                  already in <span className="capitalize">{conflict.existing_contact.market ?? "—"}</span>.
-                  Move it to <span className="capitalize">{conflict.target_market}</span>?
-                </span>
+              <p>
+                <strong className="font-semibold">{conflict.existing_contact.email}</strong> is already
+                in {conflict.existing_markets.length > 0
+                  ? conflict.existing_markets.map(marketLabel).join(", ")
+                  : marketLabel(conflict.existing_contact.market ?? "—")}.
               </p>
               <p className="text-[0.75rem]">
-                A contact belongs to one market at a time, so this reassigns it — no duplicate is
-                created and its subscription status is untouched.
+                A contact can belong to several markets, so you can keep what it has and add{" "}
+                <span className="capitalize">{conflict.target_market}</span> alongside — or relocate it.
+                Either way no duplicate is created and its subscription status is untouched.
               </p>
-              <button
-                type="button"
-                onClick={handleConfirmMove}
-                disabled={moving}
-                className="flex items-center gap-1.5 rounded-full bg-amber-600 px-3.5 py-1.5 text-[0.78rem] font-semibold text-white transition hover:bg-amber-700 disabled:opacity-60"
-              >
-                {moving ? <RefreshCw size={12} className="animate-spin" /> : <ArrowRightLeft size={12} />}
-                {moving ? "Moving…" : <span>Move to <span className="capitalize">{conflict.target_market}</span></span>}
-              </button>
+              <div className="flex flex-wrap gap-2">
+                {conflict.can_add_market && (
+                  <button
+                    type="button"
+                    onClick={() => handleResolveConflict("add-to-market")}
+                    disabled={resolving !== null}
+                    className="flex items-center gap-1.5 rounded-full bg-amber-600 px-3.5 py-1.5 text-[0.78rem] font-semibold text-white transition hover:bg-amber-700 disabled:opacity-60"
+                  >
+                    {resolving === "add-to-market"
+                      ? <RefreshCw size={12} className="animate-spin" />
+                      : <Plus size={12} />}
+                    Add to <span className="capitalize">{conflict.target_market}</span> too
+                  </button>
+                )}
+                {conflict.can_move && (
+                  <button
+                    type="button"
+                    onClick={() => handleResolveConflict("move-market")}
+                    disabled={resolving !== null}
+                    className="flex items-center gap-1.5 rounded-full border border-amber-600 px-3.5 py-1.5 text-[0.78rem] font-semibold text-amber-800 transition hover:bg-amber-100 disabled:opacity-60"
+                  >
+                    {resolving === "move-market"
+                      ? <RefreshCw size={12} className="animate-spin" />
+                      : <ArrowRightLeft size={12} />}
+                    Move to <span className="capitalize">{conflict.target_market}</span>
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
@@ -612,7 +840,7 @@ function ContactModal({
           <button
             type="button"
             onClick={handleSave}
-            disabled={saving || moving}
+            disabled={saving || resolving !== null}
             className="flex items-center gap-1.5 rounded-full bg-[#f4511e] px-4 py-2 text-[0.83rem] font-semibold text-white transition hover:bg-[#df4618] disabled:opacity-60"
           >
             {saving ? <RefreshCw size={12} className="animate-spin" /> : null}
@@ -653,7 +881,8 @@ export default function MarketingContactsPanel() {
   const [showAddModal, setShowAddModal] = useState(false);
 
   const [selected, setSelected] = useState<number[]>([]);
-  const [moveRequest, setMoveRequest] = useState<MoveRequest | null>(null);
+  const [opRequest, setOpRequest] = useState<MarketOpRequest | null>(null);
+  const [showMarketManager, setShowMarketManager] = useState(false);
 
   // ── Data fetchers ────────────────────────────────────────────────────────────
 
@@ -724,37 +953,78 @@ export default function MarketingContactsPanel() {
     );
   }
 
-  function requestBulkMove() {
-    setMoveRequest({
-      title: `Move ${selected.length} contact${selected.length === 1 ? "" : "s"}`,
+  // ── Market operation entry points ───────────────────────────────────────────
+
+  const plural = (n: number) => `${n.toLocaleString()} contact${n === 1 ? "" : "s"}`;
+
+  /** Bulk toolbar — one selection drives all three operations. */
+  function requestBulkOp(op: MarketingContactMarketOp) {
+    const n = selected.length;
+    setOpRequest({
+      op,
+      title: `${OP_COPY[op].verb} ${plural(n)}`,
       description:
-        `${selected.length} selected contact${selected.length === 1 ? "" : "s"} will be reassigned to the market you choose.`,
+        op === "add-to-market"
+          ? `${plural(n)} will gain the market you choose, keeping the markets they already have.`
+          : op === "move-market"
+          ? `${plural(n)} will be relocated to the market you choose, replacing their current markets.`
+          : `${plural(n)} will leave the market you choose. They aren't deleted, and any contact for which this is the only market keeps it.`,
       selector: { contact_ids: selected },
+      // Removal can only target markets present in the selection.
+      limitToMarkets: op === "remove-from-market"
+        ? [...new Set(contacts.filter((c) => selected.includes(c.id)).flatMap(contactMarkets))]
+        : undefined,
       onDone: () => setSelected([]),
     });
   }
 
-  function requestRowMove(c: MarketingContact) {
-    setMoveRequest({
-      title: "Move to market",
-      description: `${c.email} is currently in "${c.market ?? "no market"}". Choose where it should go instead.`,
+  /** Chip "+" — add one contact to another market. */
+  function requestChipAdd(c: MarketingContact) {
+    setOpRequest({
+      op: "add-to-market",
+      title: "Add to another market",
+      description: `${c.email} keeps ${contactMarkets(c).map(marketLabel).join(", ") || "its markets"} and gains the one you choose.`,
       selector: { contact_ids: [c.id] },
-      excludeMarket: c.market ?? undefined,
+      excludeMarkets: contactMarkets(c),
     });
   }
 
-  function requestMarketMove(m: MarketOption) {
-    setMoveRequest({
-      title: `Empty the "${m.market}" market`,
+  /** Chip "✕" — leave one named market, no picker needed. */
+  function requestChipRemove(c: MarketingContact, market: string) {
+    const only = contactMarkets(c).length <= 1;
+    setOpRequest({
+      op: "remove-from-market",
+      title: `Remove from ${marketLabel(market)}`,
+      description: only
+        ? `${market} is the only market ${c.email} belongs to. A contact always keeps at least one, so this will be refused — move it to another market first, or delete the contact.`
+        : `${c.email} leaves ${marketLabel(market)} and keeps its other markets. The contact itself isn't deleted.`,
+      selector: { contact_ids: [c.id] },
+      fixedMarket: market,
+    });
+  }
+
+  /** Market management row — move-all / add-all / clear. */
+  function requestMarketOp(op: MarketingContactMarketOp, m: MarketOption) {
+    const disappears =
+      "An emptied market disappears from the list on its own — markets are derived from live contact data, so there's nothing to delete.";
+    setOpRequest({
+      op,
+      title:
+        op === "move-market"   ? `Move everyone out of ${marketLabel(m.market)}`
+        : op === "add-to-market" ? `Also add ${marketLabel(m.market)}'s contacts to…`
+        : `Clear the ${marketLabel(m.market)} market`,
       description:
-        `All ${m.contact_count.toLocaleString()} contact${m.contact_count === 1 ? "" : "s"} in "${m.market}" ` +
-        `will be moved to the market you choose. "${m.market}" then disappears on its own — markets are ` +
-        `derived from live contact data, so an empty one stops existing. Pick a new name to rename it instead.`,
-      selector: { from_market: m.market },
-      excludeMarket: m.market,
-      // The active tab is about to point at a market that no longer exists.
+        op === "move-market"
+          ? `All ${plural(m.contact_count)} in ${marketLabel(m.market)} move to the market you choose, leaving it. Choosing a new name renames the market. ${disappears}`
+        : op === "add-to-market"
+          ? `All ${plural(m.contact_count)} in ${marketLabel(m.market)} also join the market you choose. They stay in ${marketLabel(m.market)} as well.`
+          : `Every contact leaves ${marketLabel(m.market)} without being deleted. Anyone for whom it's their only market keeps it and is reported back. ${disappears}`,
+      selector: op === "remove-from-market" ? {} : { from_market: m.market },
+      fixedMarket: op === "remove-from-market" ? m.market : undefined,
+      excludeMarkets: [m.market],
       onDone: () => {
         setSelected([]);
+        // The active tab may now point at a market that no longer exists.
         if (filters.market === m.market) applyFilter("market", "");
       },
     });
@@ -801,46 +1071,43 @@ export default function MarketingContactsPanel() {
         >
           All markets
         </button>
-        {markets.map((m) => {
-          const active = filters.market === m.market;
-          return (
-            <div
-              key={m.market}
-              className={[
-                "flex items-center rounded-full transition",
-                active ? "bg-[#171a20] text-white" : "bg-[#f0f2f5] text-[#5c5e62] hover:bg-[#e5e7eb]",
-              ].join(" ")}
-            >
-              <button
-                type="button"
-                onClick={() => applyFilter("market", m.market)}
-                className={`rounded-full py-1.5 pl-3 text-[0.78rem] font-semibold capitalize ${active ? "pr-1.5" : "pr-3"}`}
-              >
-                {m.market} ({m.contact_count})
-              </button>
-              {/* Only on the market you're looking at — an "empty this market"
-                  control on all of them at once invites the wrong click. */}
-              {active && (
-                <button
-                  type="button"
-                  onClick={() => requestMarketMove(m)}
-                  title={`Move all contacts out of "${m.market}"`}
-                  className="mr-1 rounded-full p-1.5 text-white/70 transition hover:bg-white/15 hover:text-white"
-                >
-                  <ArrowRightLeft size={12} />
-                </button>
-              )}
-            </div>
-          );
-        })}
-        <button
-          type="button"
-          onClick={() => setShowAddModal(true)}
-          className="ml-auto flex items-center gap-1.5 rounded-full bg-[#f4511e] px-4 py-1.5 text-[0.78rem] font-semibold text-white transition hover:bg-[#df4618]"
-        >
-          <Plus size={14} /> Add contact
-        </button>
+        {markets.map((m) => (
+          <button
+            key={m.market}
+            type="button"
+            onClick={() => applyFilter("market", m.market)}
+            className={[
+              "rounded-full px-3 py-1.5 text-[0.78rem] font-semibold capitalize transition",
+              filters.market === m.market ? "bg-[#171a20] text-white" : "bg-[#f0f2f5] text-[#5c5e62] hover:bg-[#e5e7eb]",
+            ].join(" ")}
+          >
+            {m.market} ({m.contact_count})
+          </button>
+        ))}
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowMarketManager((v) => !v)}
+            className={[
+              "flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[0.78rem] font-semibold transition",
+              showMarketManager ? "bg-[#171a20] text-white" : "bg-[#f0f2f5] text-[#5c5e62] hover:bg-[#e5e7eb]",
+            ].join(" ")}
+          >
+            <Globe size={14} /> Manage markets
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-1.5 rounded-full bg-[#f4511e] px-4 py-1.5 text-[0.78rem] font-semibold text-white transition hover:bg-[#df4618]"
+          >
+            <Plus size={14} /> Add contact
+          </button>
+        </div>
       </div>
+
+      {showMarketManager && (
+        <MarketManager markets={markets} onOp={requestMarketOp} contactTotal={stats?.total ?? null} />
+      )}
 
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-2">
@@ -906,10 +1173,24 @@ export default function MarketingContactsPanel() {
           </span>
           <button
             type="button"
-            onClick={requestBulkMove}
+            onClick={() => requestBulkOp("add-to-market")}
             className="flex items-center gap-1.5 rounded-full bg-[#f4511e] px-3.5 py-1.5 text-[0.78rem] font-semibold text-white transition hover:bg-[#df4618]"
           >
+            <Plus size={12} /> Add to market…
+          </button>
+          <button
+            type="button"
+            onClick={() => requestBulkOp("move-market")}
+            className="flex items-center gap-1.5 rounded-full border border-black/[0.10] bg-white px-3.5 py-1.5 text-[0.78rem] font-semibold text-[#5c5e62] transition hover:text-[#171a20]"
+          >
             <ArrowRightLeft size={12} /> Move to market…
+          </button>
+          <button
+            type="button"
+            onClick={() => requestBulkOp("remove-from-market")}
+            className="flex items-center gap-1.5 rounded-full border border-black/[0.10] bg-white px-3.5 py-1.5 text-[0.78rem] font-semibold text-[#5c5e62] transition hover:border-red-200 hover:text-red-600"
+          >
+            <MinusCircle size={12} /> Remove from market…
           </button>
           <button
             type="button"
@@ -985,13 +1266,52 @@ export default function MarketingContactsPanel() {
                     <td className="px-4 py-3 text-[0.83rem] text-[#171a20]">{c.email}</td>
                     <td className="px-4 py-3 text-[0.83rem] text-[#5c5e62]">{c.company ?? "—"}</td>
                     <td className="px-4 py-3 text-[0.83rem] text-[#5c5e62]">{c.country ?? "—"}</td>
-                    <td className="px-4 py-3 text-[0.83rem] capitalize text-[#5c5e62]">{c.market ?? "—"}</td>
+                    {/* Chips, not the single primary string — a contact can be
+                        in several markets and the row is where they're managed. */}
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap items-center gap-1">
+                        {contactMarkets(c).length === 0 ? (
+                          <span className="text-[0.83rem] text-[#8c8f94]">—</span>
+                        ) : contactMarkets(c).map((m) => (
+                          <span
+                            key={m}
+                            className="group/chip inline-flex items-center rounded-full bg-[#f0f2f5] py-0.5 pl-2 pr-0.5 text-[0.72rem] font-semibold capitalize text-[#5c5e62]"
+                          >
+                            {m}
+                            <button
+                              type="button"
+                              onClick={() => requestChipRemove(c, m)}
+                              title={`Remove from ${m}`}
+                              className="ml-0.5 rounded-full p-0.5 text-[#8c8f94] transition hover:bg-red-100 hover:text-red-600"
+                            >
+                              <X size={10} />
+                            </button>
+                          </span>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => requestChipAdd(c)}
+                          title="Add to another market"
+                          className="invisible rounded-full p-1 text-[#5c5e62] transition hover:bg-[#f0f2f5] hover:text-[#171a20] group-hover:visible"
+                        >
+                          <Plus size={12} />
+                        </button>
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-[0.83rem] text-[#5c5e62]">{c.source ?? "—"}</td>
                     <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
                     <td className="px-4 py-3 text-right">
                       <button
                         type="button"
-                        onClick={() => requestRowMove(c)}
+                        onClick={() => setOpRequest({
+                          op: "move-market",
+                          title: "Move to market",
+                          description:
+                            `${c.email} is in ${contactMarkets(c).map(marketLabel).join(", ") || "no market"}. ` +
+                            `Moving replaces that with the market you choose — use the chip "+" to add one alongside instead.`,
+                          selector: { contact_ids: [c.id] },
+                          excludeMarkets: contactMarkets(c),
+                        })}
                         title="Move to market…"
                         className="invisible mr-1 rounded-lg p-1.5 text-[#5c5e62] transition hover:bg-[#f0f2f5] hover:text-[#171a20] group-hover:visible"
                       >
@@ -1068,12 +1388,12 @@ export default function MarketingContactsPanel() {
           onSaved={refreshAll}
         />
       )}
-      {moveRequest && (
-        <MoveMarketModal
-          request={moveRequest}
+      {opRequest && (
+        <MarketOpModal
+          request={opRequest}
           markets={markets}
-          onClose={() => setMoveRequest(null)}
-          onMoved={refreshAll}
+          onClose={() => setOpRequest(null)}
+          onApplied={refreshAll}
         />
       )}
     </div>
