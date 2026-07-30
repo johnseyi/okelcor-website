@@ -1,7 +1,7 @@
 # Okelcor Website — Progress Tracker
 
 **Last updated:** 2026-07-30  
-**Branch:** `main`  
+**Branch:** `main` — merge `5239a69` brought in multi-market marketing contacts + the block-based campaign builder (branch `feat/marketing-multi-market-and-campaign-builder`, now merged)  
 **Build status:** TypeScript 0 errors · Production build passes · ESLint **11 errors / 45 warnings — all pre-existing** (mostly `react-hooks/set-state-in-effect` on the fetch-on-mount pattern in `navbar.tsx`, `cart-context.tsx`, `language-context.tsx`, `product-form.tsx`, `two-factor-status.tsx`, `crisp-notifier.tsx`, `use-admin-permissions.ts`, `checkout/return`). The "ESLint clean" claim above this line was inaccurate as of 2026-07-29 — corrected rather than left standing.
 
 ---
@@ -153,6 +153,13 @@
 > **Not built (in scope terms, flagged not forgotten):** the `emails` selector is a paste-a-list path
 > with no UI yet — all three market endpoints accept it, and it's the natural next step for a marketer
 > holding a list of addresses rather than a checkbox selection. Small addition if wanted.
+
+> **Where to look for all of this:** every marketing change below is **admin-only** —
+> `/admin/marketing/contacts` and `/admin/marketing/campaigns`. Nothing on the public site changed,
+> so "it's not reflecting on the website" is expected. After a deploy, the two things to check are
+> whether contact rows show market **chips**, and whether the campaign composer opens the **block
+> editor** or the "switch to Write HTML" fallback — the latter means the design schema isn't
+> reachable (see the two top backlog rows).
 
 > **Campaign builder — open item for backend:** the frontend could not verify the exact JSON shape of
 > `GET /admin/campaign-design` (no live response available from this side). `lib/campaign-design.ts`
@@ -746,6 +753,10 @@ incomplete.
 
 | Item | Priority | Notes |
 |---|---|---|
+| **Verify `GET /admin/campaign-design` response shape** | High | The one unverified assumption in the campaign builder — no live response was available from this side, so `lib/campaign-design.ts` normalises several plausible key spellings rather than guessing one. If the block editor comes up on the "not available on this server yet" fallback after deploy, **this is the first thing to check**. Also unverified: block-instance field names (`{ type, ...fields }`, inferred from the example payload) and the `test-send` recipient key (`email` assumed) |
+| **Migrations #26 + #27 not yet applied** | High | Frontend ships ahead of both by design and degrades cleanly. Until **#26**, `markets[]` returns a one-element array — chips render but ✕/+ have nothing useful to do. Until **#27**, block-designed campaigns still render and send, but Reopen/Duplicate and saved templates don't (saving returns an explicit 501, never a false success). Nothing to fix frontend-side; this is a "why does it look inert" note |
+| Campaign builder — template rename/edit | Low | `PATCH /campaign-templates/{id}` is proxied and ready; only create + delete are wired to UI |
+| Market ops — `emails` paste-a-list selector | Low | All three market endpoints accept it; no UI yet. Natural next step for a marketer holding a list of addresses rather than a checkbox selection |
 | **Rotate + scrub leaked Crisp credentials** | High (security) | Found while investigating live chat: `docs/session-handoff.md` has what look like real, plaintext `CRISP_IDENTIFIER`/`CRISP_KEY`/`NEXT_PUBLIC_CRISP_WEBSITE_ID` values committed (debug output from a past `X-Crisp-Tier` header issue). Rotate in the Crisp dashboard and scrub from git history. Not yet confirmed done |
 | Market normalisation gap | Medium | See callout under Admin Panel — Marketing — CSV-embedded market values bypass the slugify step manual entries get; filter queries don't normalise either |
 | Marketing CSV import fix | High | Backend to clarify expected email column header name |
