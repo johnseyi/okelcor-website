@@ -162,7 +162,7 @@ function NoiseBlock({ db, cls }: { db?: number | null; cls?: NoiseClass | null }
       <div className="mt-3 flex items-end gap-4">
         {db != null && (
           <span className="flex items-baseline gap-1 text-ink">
-            <span className="text-[1.9rem] font-extrabold leading-none tabular-nums tracking-tight">{db}</span>
+            <span className="font-mono text-[1.8rem] font-extrabold leading-none tracking-tight">{db}</span>
             <span className="text-[0.78rem] font-bold text-ink-muted">dB</span>
           </span>
         )}

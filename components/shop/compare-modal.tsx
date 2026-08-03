@@ -26,8 +26,8 @@ type Row = { label: string; render: (p: Product) => React.ReactNode };
 function buildRows(price: ReturnType<typeof usePrice>["price"]): Row[] {
   return [
   { label: "Brand", render: (p) => <span className="font-semibold">{p.brand}</span> },
-  { label: "Size", render: (p) => p.size || "—" },
-  { label: "Spec", render: (p) => p.spec || "—" },
+  { label: "Size", render: (p) => <span className="font-mono">{p.size || "—"}</span> },
+  { label: "Spec", render: (p) => <span className="font-mono">{p.spec || "—"}</span> },
   // Decoded from `spec` — comparing "91V" vs "94H" across four tyres is the
   // exact moment a buyer needs the kg and km/h spelled out.
   {
@@ -36,7 +36,7 @@ function buildRows(price: ReturnType<typeof usePrice>["price"]): Row[] {
       const s = parseServiceDescription(p.spec);
       if (!s?.loadKg) return "—";
       return (
-        <span className="tabular-nums">
+        <span className="font-mono">
           {s.loadKg} kg{s.loadKgDual ? ` / ${s.loadKgDual} kg` : ""}
         </span>
       );
@@ -46,7 +46,7 @@ function buildRows(price: ReturnType<typeof usePrice>["price"]): Row[] {
     label: "Max speed",
     render: (p) => {
       const s = parseServiceDescription(p.spec);
-      return s?.speedKmh ? <span className="tabular-nums">{s.speedKmh} km/h</span> : "—";
+      return s?.speedKmh ? <span className="font-mono">{s.speedKmh} km/h</span> : "—";
     },
   },
   { label: "Season", render: (p) => p.season || "—" },

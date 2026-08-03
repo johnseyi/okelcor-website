@@ -64,6 +64,20 @@
   --color-grade-d: #f7a70c;
   --color-grade-e: #e63329;
 
+  /* ── Typefaces ─────────────────────────────────────────────────────────────
+        Composed from the raw --font-geist-* vars next/font injects in
+        app/layout.tsx.
+        The system stack is retained as the fallback chain, so if the font
+        files ever fail to load the site degrades to exactly what it rendered
+        before this change rather than to Times.
+
+        `font-mono` is reserved for data — tyre sizes, service descriptions,
+        DOT codes, SKUs, registration numbers. Not for prose.              ─── */
+  --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont,
+    "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, "SF Mono",
+    Menlo, Consolas, "Liberation Mono", monospace;
+
   /* ── Radii — 22px major panels per DESIGN_SYSTEM.md §9 ─────────────────── */
   --radius-panel: 22px;
 
@@ -148,10 +162,39 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  /* Resolves to Geist, falling back to the previous system stack verbatim. */
+  font-family: var(--font-sans);
   line-height: 1.4;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Contextual alternates + kerning: the grotesque's own spacing corrections. */
+  font-feature-settings: "kern" 1, "calt" 1;
+  text-rendering: optimizeLegibility;
+}
+
+/* ─── Typographic refinement ────────────────────────────────────────────────
+   Two zero-risk wins that read as craft. `balance` evens out the last line of
+   short headings so they never leave one orphaned word; `pretty` prevents
+   orphans in body copy without the reflow cost of balancing every line.
+   Purely visual — no text content, order or markup changes.               */
+
+h1, h2, h3, h4 {
+  text-wrap: balance;
+  /* Grotesques need negative tracking at display sizes to hold together. */
+  letter-spacing: -0.02em;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+/* Data, not prose. Tyre sizes, service descriptions, DOT stamps, SKUs and
+   registration numbers set in mono so figures align and read as measurements.
+   Applied via the `font-mono` utility at the call site. */
+.font-mono,
+[class*="font-mono"] {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
 * {
@@ -601,6 +644,48 @@ a {
     opacity: 1;
     transform: none;
     transition: none;
+  }
+}
+
+/* ─── Native scroll-driven reveals (progressive enhancement) ────────────────
+   Where the browser supports scroll-driven animations, the reveal is driven by
+   `animation-timeline: view()` instead of the IntersectionObserver in
+   components/motion/fade-up.tsx. The animation runs on the compositor with no
+   JavaScript on the main thread, which helps INP rather than costing it.
+
+   Why this is safe:
+   - CSS animations win over normal declarations, so the timeline drives
+     opacity/transform whether or not the observer has added `.is-visible`.
+     The two cannot fight.
+   - Browsers without support (Firefox still has this behind
+     `layout.css.scroll-driven-animations.enabled` as of mid-2026, so roughly
+     16% of traffic) never enter this block and keep today's behaviour exactly.
+   - The observer stays in place. This replaces nothing; it overlays.
+   - Reduced-motion is honoured by the media query below.
+
+   Content is never hidden from crawlers: the element is in the DOM and
+   server-rendered either way, and the animation only affects presentation. */
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .fade-up {
+      animation: fade-up-reveal linear both;
+      animation-timeline: view();
+      /* Start as the element enters, finish well before centre so content is
+         fully legible by the time it reaches a comfortable reading position. */
+      animation-range: entry 0% cover 26%;
+    }
+  }
+}
+
+@keyframes fade-up-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

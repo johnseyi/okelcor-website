@@ -70,7 +70,7 @@ export default function ProductInfo({ product }: { product: Product }) {
       </h1>
 
       {/* Size + spec */}
-      <p className="mt-1.5 text-[1rem] text-[var(--muted)]">
+      <p className="mt-1.5 font-mono text-[0.95rem] text-[var(--muted)]">
         {product.size} · {product.spec}
       </p>
 
@@ -83,7 +83,7 @@ export default function ProductInfo({ product }: { product: Product }) {
             <span className="inline-flex items-center gap-1.5 rounded-lg border border-hairline bg-page/70 px-2.5 py-1.5 text-[0.78rem] text-ink-muted">
               <Weight size={13} strokeWidth={2.1} className="text-brand" aria-hidden="true" />
               <span className="font-semibold text-ink">{t.tyreSpecs.maxLoad}</span>
-              <span className="tabular-nums">
+              <span className="font-mono">
                 {service.loadKg} kg
                 {service.loadKgDual ? ` / ${service.loadKgDual} kg` : ""}
               </span>
@@ -96,8 +96,8 @@ export default function ProductInfo({ product }: { product: Product }) {
             <span className="inline-flex items-center gap-1.5 rounded-lg border border-hairline bg-page/70 px-2.5 py-1.5 text-[0.78rem] text-ink-muted">
               <Gauge size={13} strokeWidth={2.1} className="text-brand" aria-hidden="true" />
               <span className="font-semibold text-ink">{t.tyreSpecs.maxSpeed}</span>
-              <span className="tabular-nums">{service.speedKmh} km/h</span>
-              <span className="text-ink-faint">({service.speedSymbol})</span>
+              <span className="font-mono">{service.speedKmh} km/h</span>
+              <span className="font-mono text-ink-faint">({service.speedSymbol})</span>
             </span>
           )}
         </div>
@@ -105,7 +105,7 @@ export default function ProductInfo({ product }: { product: Product }) {
 
       {/* SKU */}
       <p className="mt-1 text-[0.82rem] text-[var(--muted)]">
-        SKU: <span className="font-medium text-[var(--foreground)]">{product.sku}</span>
+        SKU: <span className="font-mono font-medium text-[var(--foreground)]">{product.sku}</span>
       </p>
 
       {/* Stock status — banded (In stock / Low stock / Out of stock) plus the

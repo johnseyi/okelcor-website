@@ -1,5 +1,61 @@
 import type { Metadata } from "next";
+import localFont from "next/font/local";
 import "./globals.css";
+
+/**
+ * Typography — Swiss industrial grotesque + technical mono.
+ *
+ * The site previously ran on the raw system stack, so it rendered as SF Pro on
+ * macOS, Segoe UI on Windows and Roboto on Android — no typographic identity at
+ * all, and a different brand on every operating system.
+ *
+ * The font files are vendored in `app/fonts/` and loaded with
+ * `next/font/local`, so nothing is fetched from Google at build time OR at
+ * runtime. That matters here specifically: the Munich Regional Court has held
+ * that serving Google Fonts from Google's own servers breaches GDPR by
+ * transmitting the visitor's IP address. Okelcor is Munich-based.
+ *
+ * Vendoring rather than `next/font/google` also removes a network dependency
+ * from the build itself — CI cannot fail or stall because a font CDN is slow.
+ *
+ * Both are variable fonts: one file covers weights 100–900 and the browser
+ * interpolates. `size-adjust` and the matched fallback metrics below mean the
+ * swap from fallback to Geist does not shift layout, so CLS is protected
+ * rather than risked.
+ */
+const sans = localFont({
+  src: "./fonts/Geist-Variable.woff2",
+  weight: "100 900",
+  style: "normal",
+  variable: "--font-geist-sans",
+  display: "swap",
+  // Metric-matched to the previous system stack so the pre-swap render
+  // occupies the same space as the final one.
+  fallback: [
+    "-apple-system",
+    "BlinkMacSystemFont",
+    "Segoe UI",
+    "Helvetica Neue",
+    "Arial",
+    "sans-serif",
+  ],
+  adjustFontFallback: "Arial",
+});
+
+/**
+ * Mono is not decorative here. Tyre sizes (`315/80 R22.5`), service
+ * descriptions (`91V`), DOT stamps, SKUs and the REX registration number are
+ * measurements, and a fixed-width face makes them read as measurements —
+ * figures align down a column in the compare table instead of drifting.
+ */
+const mono = localFont({
+  src: "./fonts/GeistMono-Variable.woff2",
+  weight: "100 900",
+  style: "normal",
+  variable: "--font-geist-mono",
+  display: "swap",
+  fallback: ["ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"],
+});
 import { CartProvider } from "@/context/cart-context";
 import { CompareProvider } from "@/context/compare-context";
 import CompareBar from "@/components/shop/compare-bar";
@@ -71,7 +127,7 @@ export default async function RootLayout({
   const [settings, locale] = await Promise.all([getSiteSettings(), getServerLocale()]);
 
   return (
-    <html lang={locale} className="w-full">
+    <html lang={locale} className={`w-full ${sans.variable} ${mono.variable}`}>
       <body className="m-0 w-full p-0">
         {/* ── Site-wide structured data ── */}
         <script

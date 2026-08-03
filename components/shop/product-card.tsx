@@ -133,7 +133,7 @@ export default function ProductCard({
         </h3>
 
         {/* Size & spec */}
-        <p className="mt-1 text-[0.8rem] text-ink-faint">
+        <p className="mt-1 font-mono text-[0.78rem] text-ink-faint">
           {product.size}{product.spec ? ` · ${product.spec}` : ""}
         </p>
 
@@ -169,23 +169,25 @@ export default function ProductCard({
         </div>
         {showSpecs && (
           <div className="mt-2 divide-y divide-hairline rounded-lg border border-hairline bg-page/60 px-3 text-[0.76rem]">
-            {[
-              [t.shop.accordion.season, product.season],
-              [t.shop.accordion.tyreType, product.type],
+            {([
+              // [label, value, isData] — `isData` picks the mono face. Season
+              // and tyre type are words, not measurements, so they stay sans.
+              [t.shop.accordion.season, product.season, false],
+              [t.shop.accordion.tyreType, product.type, false],
               // Decoded from the existing `spec` string — no backend change.
               service?.loadKg
-                ? [t.tyreSpecs.maxLoad, `${service.loadKg} kg (${service.loadIndex})`]
+                ? [t.tyreSpecs.maxLoad, `${service.loadKg} kg (${service.loadIndex})`, true]
                 : null,
               service?.speedKmh
-                ? [t.tyreSpecs.maxSpeed, `${service.speedKmh} km/h (${service.speedSymbol})`]
+                ? [t.tyreSpecs.maxSpeed, `${service.speedKmh} km/h (${service.speedSymbol})`, true]
                 : null,
-              ["SKU", product.sku],
-            ]
-              .filter((row): row is [string, string] => !!row && !!row[1])
-              .map(([label, value]) => (
+              ["SKU", product.sku, true],
+            ] as ([string, string, boolean] | null)[])
+              .filter((row): row is [string, string, boolean] => !!row && !!row[1])
+              .map(([label, value, isData]) => (
                 <div key={label} className="flex items-center justify-between gap-3 py-1.5">
                   <span className="text-ink-muted">{label}</span>
-                  <span className="text-right font-semibold text-ink">{value}</span>
+                  <span className={`text-right font-semibold text-ink ${isData ? "font-mono text-[0.73rem]" : ""}`}>{value}</span>
                 </div>
               ))}
           </div>
@@ -213,13 +215,13 @@ export default function ProductCard({
               {service.loadKg && (
                 <span className="inline-flex items-center gap-1">
                   <Weight size={11} strokeWidth={2.2} aria-hidden="true" />
-                  <span className="tabular-nums">{service.loadKg} kg</span>
+                  <span className="font-mono">{service.loadKg} kg</span>
                 </span>
               )}
               {service.speedKmh && (
                 <span className="inline-flex items-center gap-1">
                   <Gauge size={11} strokeWidth={2.2} aria-hidden="true" />
-                  <span className="tabular-nums">{service.speedKmh} km/h</span>
+                  <span className="font-mono">{service.speedKmh} km/h</span>
                 </span>
               )}
             </div>

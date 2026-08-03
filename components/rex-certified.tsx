@@ -46,7 +46,7 @@ export default function RexCertified() {
             {/* Registration + CTA */}
             <div className="flex shrink-0 flex-col items-center gap-3 md:items-end">
               <div className="text-center md:text-right">
-                <p className="text-xl font-extrabold tracking-tight text-white">
+                <p className="font-mono text-xl font-extrabold tracking-tight text-white">
                   DEREX76000242
                 </p>
                 <p className="mt-0.5 text-[0.82rem] text-white/50">

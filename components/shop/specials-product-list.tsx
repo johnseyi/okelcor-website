@@ -144,9 +144,9 @@ function SpecialRow({
 
         {/* Size + spec */}
         <div className="w-[120px] shrink-0">
-          <p className="text-[0.82rem] font-semibold text-[#171a20]">{product.size}</p>
+          <p className="font-mono text-[0.8rem] font-semibold text-ink">{product.size}</p>
           {product.spec && (
-            <p className="text-[0.72rem] text-[#5c5e62]">{product.spec}</p>
+            <p className="font-mono text-[0.7rem] text-ink-muted">{product.spec}</p>
           )}
         </div>
 

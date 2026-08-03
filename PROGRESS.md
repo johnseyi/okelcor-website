@@ -749,6 +749,52 @@ incomplete.
 
 ---
 
+### ✅ Typography System — Swiss Grotesque + Technical Mono (2026-08-03)
+
+Research-led premium pass on the public site. Scope agreed as a **refined pass**:
+same structure, same section order, same DOM — new skin. **SEO-invariant by
+construction**: no URL, heading text/level, metadata, JSON-LD or alt changes, and
+nothing moved into client-only rendering. Redesign traffic loss comes from URLs,
+deleted content and broken redirects; none of that is touched here.
+
+Audit finding: the site had **no `next/font` at all** — it ran on the raw system
+stack, rendering as SF Pro on macOS, Segoe UI on Windows and Roboto on Android.
+No typographic identity, and a different brand on every OS.
+
+| Change | Notes |
+|---|---|
+| **Geist + Geist Mono, vendored** (`app/fonts/`, 29 KB + 23 KB) | Loaded via `next/font/local`, not `next/font/google`. Nothing is fetched from Google at build time **or** runtime — the Munich Regional Court has held that serving Google Fonts from Google's servers breaches GDPR by transmitting visitor IPs, and Okelcor is Munich-based. Vendoring also removes a network dependency from CI |
+| Zero-CLS loading | Variable fonts (one file, weights 100–900), `display: swap`, explicit metric-matched `fallback` chain + `adjustFontFallback: "Arial"`. Protects CLS rather than risking it |
+| `--font-sans` / `--font-mono` theme tokens | Composed from the raw `--font-geist-*` vars in `@theme`, with the **previous system stack retained verbatim as the fallback** — if the files ever fail to load the site degrades to exactly what it rendered before |
+| **Mono for data, not prose** | Tyre sizes, service descriptions, decoded load/speed, SKUs, DOT codes and the REX number (`DEREX76000242`) now set in mono across product card, detail page, compare table, related products, specials list, hero, tyre passport, EU label, REX band and footer. Figures align down a column instead of drifting. In the card's specs disclosure a per-row `isData` flag keeps Season/Type in the sans — monospacing a word like "Summer" reads as a bug. **Prices deliberately stay sans + `tabular-nums`**: mono prices read as a spreadsheet, and money is a commercial figure, not a measurement |
+| Typographic refinement | `text-wrap: balance` on h1–h4 (no orphaned words), `text-wrap: pretty` on paragraphs, `-0.02em` tracking on headings (grotesques need it at display sizes), `kern`/`calt` features |
+| **Native scroll-driven reveals** | `.fade-up` gains `animation-timeline: view()` behind `@supports`, running on the compositor with no main-thread JS — an INP win. CSS animations beat normal declarations, so the timeline drives opacity/transform whether or not the IntersectionObserver has added `.is-visible`; the two cannot fight. Firefox still has this behind a flag (~16% of traffic) and simply keeps today's IO behaviour. Reduced-motion honoured. **Overlay, not replacement** — the observer stays |
+
+**Research basis:** 2026 premium direction is distinctive type + mono for technical
+metadata, bento/editorial grids, and native motion replacing JS. Closest
+business-model references are Flexport (Drum B2B website award — clean type, heavy
+whitespace, real product UI over abstract shipping imagery) and project44 (leads
+with live data, not a static hero). `platform-showcase` already follows that
+instinct.
+
+> **Build environment warning.** Builds appeared to hang for hours; the actual cause
+> was Next 16's **build lock** — `⨯ Another next build process is already running`.
+> A force-killed build orphaned workers that kept holding it, and every later build
+> silently queued behind them, freezing after "Creating an optimized production
+> build …" with no further output. **Never run two builds concurrently, and never
+> `kill -9` a build** — it orphans `webpack-loaders.js`/`postcss.js` children. A
+> single clean build completes in ~4 min cold.
+>
+> Separately: **the repo lives in `~/Documents`, which macOS iCloud Drive syncs.**
+> That produced 17 duplicate source files (`route 2.ts`, `page 2.tsx`, …, since
+> deleted) and `.next/types/routes.d 3.ts` duplicates causing `Duplicate identifier`
+> errors. It also makes the filesystem slow enough that `eslint` and standalone
+> `tsc` now time out past 8 min. **Recommend moving the repo out of `~/Documents`**
+> and adding `".next"` to `tsconfig.json`'s `exclude` (it currently includes
+> `**/*.ts` with only `node_modules` excluded, so tsc walks the whole build output).
+
+---
+
 ## Upcoming / Backlog
 
 | Item | Priority | Notes |
@@ -770,6 +816,9 @@ incomplete.
 | Ops data capture — tyre passport | Medium | `tyre_batch` stays null until inspections are recorded; the frontend card is built and waiting |
 | `estimated_dispatch_days` value | Low | Ships blank by design — needs an order-manager-approved number in `site_settings` before anything displays |
 | Premium-UX §3 — saved fitments / reorder | Low | Not addressed in backend's §1/§2 reply; parked, not lost |
+| **Move repo out of `~/Documents` (iCloud)** | High (tooling) | iCloud sync duplicates source files (`route 2.ts`) and makes `eslint`/`tsc` time out. Root cause of a full session of phantom build failures |
+| Add `".next"` to `tsconfig.json` exclude | Medium | `include` is `**/*.ts` with only `node_modules` excluded, so tsc walks the entire build output |
+| Homepage `<title>` says "The Cheapest Tyres on the Internet" | Medium | Directly contradicts the premium positioning in CLAUDE.md, but it's a live SEO asset — business decision, deliberately not changed |
 | Product `currency` field | Medium | Catalogue-side equivalent of the admin order currency already shipped |
 | Pre-existing ESLint errors (11) | Medium | `react-hooks/set-state-in-effect` on the fetch-on-mount pattern; same targeted-disable convention already used in `cart-context.tsx` would clear them |
 | Customer proposal view (account portal) | Medium | Show proposal status on account quotes |

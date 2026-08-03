@@ -51,7 +51,7 @@ export default function RelatedProducts({ products }: { products: Product[] }) {
                   <h3 className="mt-1 text-[0.95rem] font-semibold text-[var(--foreground)]">
                     {product.name}
                   </h3>
-                  <p className="mt-0.5 text-[0.82rem] text-[var(--muted)]">
+                  <p className="mt-0.5 font-mono text-[0.8rem] text-[var(--muted)]">
                     {product.size} · {product.spec}
                   </p>
                   <p className="mt-auto pt-3 text-[1.2rem] font-extrabold tabular-nums text-[var(--foreground)]">

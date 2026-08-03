@@ -347,7 +347,7 @@ function ProductCard({
           <p className="truncate text-[0.7rem] font-bold uppercase tracking-[0.14em] text-[var(--primary)]">
             {product.cat}
           </p>
-          <p className="mt-0.5 text-[1.15rem] font-extrabold text-[#1a1a1a]">{product.size}</p>
+          <p className="mt-0.5 font-mono text-[1.1rem] font-extrabold text-ink">{product.size}</p>
         </div>
       </div>
     </div>
@@ -454,7 +454,7 @@ function SearchCard({
               key={s}
               type="button"
               onClick={() => go(s)}
-              className="rounded-full border border-black/[0.08] bg-white px-2.5 py-1 text-[0.72rem] font-semibold text-[#5c5e62] transition hover:border-[var(--primary)]/40 hover:text-[var(--primary)]"
+              className="rounded-full border border-hairline-strong bg-card px-2.5 py-1 font-mono text-[0.7rem] font-semibold text-ink-muted transition hover:border-brand/40 hover:text-brand"
             >
               {s}
             </button>

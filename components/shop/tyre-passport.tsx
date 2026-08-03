@@ -102,13 +102,13 @@ export default function TyrePassport({
 
           {batch.tread_depth_mm != null && (
             <Field icon={Gauge} label={t.passport.treadDepth}>
-              <span className="tabular-nums">{batch.tread_depth_mm} mm</span>
+              <span className="font-mono">{batch.tread_depth_mm} mm</span>
             </Field>
           )}
 
           {batch.dot_code && (
             <Field icon={Factory} label={t.passport.dotCode}>
-              <span className="tabular-nums">{batch.dot_code}</span>
+              <span className="font-mono">{batch.dot_code}</span>
               {/* Decoded WWYY — the number a used-tyre buyer actually reads */}
               {dot && (
                 <span className="ml-1.5 font-normal text-ink-muted">

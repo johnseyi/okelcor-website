@@ -111,7 +111,7 @@ export default function Footer() {
           </span>
           <span className="inline-flex items-center gap-2 rounded-full border border-black/[0.08] bg-white px-3.5 py-2 text-[0.72rem] font-bold uppercase tracking-[0.14em] text-[var(--foreground)]">
             <BadgeCheck size={14} strokeWidth={2} className="text-[var(--primary)]" />
-            REX · DEREX76000242
+            REX · <span className="font-mono">DEREX76000242</span>
           </span>
         </div>
 
