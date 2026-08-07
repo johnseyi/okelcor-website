@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
-import { X, Search, ChevronLeft, ChevronRight, ImageOff } from "lucide-react";
+import { X, Search, ChevronLeft, ChevronRight, ImageOff, Upload, RefreshCw, AlertTriangle } from "lucide-react";
 import type { MediaItem, MediaCollection } from "@/lib/admin-api";
+
+const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // matches the proxy's own cap
+const ACCEPT = "image/jpeg,image/png,image/webp,image/gif,image/svg+xml";
 
 const COLLECTION_OPTS: { value: "" | MediaCollection; label: string }[] = [
   { value: "",            label: "All" },
@@ -19,9 +22,11 @@ type Props = {
   /** Called with the image URL and alt text when the user picks an image. */
   onSelect: (url: string, alt: string) => void;
   onClose: () => void;
+  /** Collection new uploads land in when "All" is selected. */
+  defaultCollection?: MediaCollection;
 };
 
-export default function MediaPickerModal({ onSelect, onClose }: Props) {
+export default function MediaPickerModal({ onSelect, onClose, defaultCollection = "general" }: Props) {
   const [items, setItems] = useState<MediaItem[]>([]);
   const [page, setPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
@@ -30,6 +35,14 @@ export default function MediaPickerModal({ onSelect, onClose }: Props) {
   const [searchInput, setSearchInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [hovered, setHovered] = useState<number | null>(null);
+
+  // Upload lives here, not only on /admin/media. Sending someone to another
+  // screen to add an image is what lost a marketer's half-written campaign in
+  // the first place — browse, upload and insert all belong in one modal.
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
@@ -52,6 +65,51 @@ export default function MediaPickerModal({ onSelect, onClose }: Props) {
     setPage(1);
     setSearch(searchInput);
   };
+
+  /**
+   * Upload, then insert straight away — she opened this to use the image, not
+   * to file it. It also lands in the library, so it's there next time.
+   */
+  const handleUpload = useCallback(async (file: File) => {
+    setUploadError(null);
+
+    if (!file.type.startsWith("image/")) {
+      setUploadError("That file isn't an image.");
+      return;
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setUploadError("That image is over 50 MB. Please use a smaller file.");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("collection", collection || defaultCollection);
+
+      const res  = await fetch("/api/admin/media", { method: "POST", body: fd });
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        setUploadError(json?.error ?? json?.message ?? `Upload failed (${res.status}).`);
+        return;
+      }
+
+      const item: MediaItem | null = json?.data ?? json ?? null;
+      if (!item?.url) {
+        // Uploaded but unusable from here — say so instead of closing on nothing.
+        setUploadError("Uploaded, but the server didn't return a usable URL.");
+        void fetchItems();
+        return;
+      }
+      onSelect(item.url, item.alt_text ?? "");
+    } catch {
+      setUploadError("Could not reach the server. The image was not uploaded.");
+    } finally {
+      setUploading(false);
+    }
+  }, [collection, defaultCollection, onSelect, fetchItems]);
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
@@ -81,6 +139,26 @@ export default function MediaPickerModal({ onSelect, onClose }: Props) {
             </button>
           ))}
           <div className="ml-auto flex gap-2">
+            <button
+              type="button"
+              onClick={() => fileInput.current?.click()}
+              disabled={uploading}
+              className="flex h-8 items-center gap-1.5 rounded-lg bg-[#E85C1A] px-3 text-xs font-semibold text-white transition hover:bg-[#d24f13] disabled:opacity-60"
+            >
+              {uploading ? <RefreshCw size={13} className="animate-spin" /> : <Upload size={13} />}
+              {uploading ? "Uploading…" : "Upload"}
+            </button>
+            <input
+              ref={fileInput}
+              type="file"
+              accept={ACCEPT}
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = ""; // let the same file be picked again after an error
+                if (f) void handleUpload(f);
+              }}
+            />
             <input
               type="text"
               value={searchInput}
@@ -99,14 +177,43 @@ export default function MediaPickerModal({ onSelect, onClose }: Props) {
           </div>
         </div>
 
-        {/* Grid */}
-        <div className="flex-1 overflow-y-auto px-5 py-4">
+        {uploadError && (
+          <div className="flex flex-shrink-0 items-start gap-2 border-b border-red-100 bg-red-50 px-5 py-2.5 text-xs text-red-700">
+            <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+            {uploadError}
+          </div>
+        )}
+
+        {/* Grid — also the drop target, so dragging an image straight in works */}
+        <div
+          className={`relative flex-1 overflow-y-auto px-5 py-4 ${dragging ? "bg-[#E85C1A]/[0.04]" : ""}`}
+          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={(e) => { e.preventDefault(); setDragging(false); }}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragging(false);
+            const f = e.dataTransfer.files?.[0];
+            if (f) void handleUpload(f);
+          }}
+        >
+          {dragging && (
+            <div className="pointer-events-none absolute inset-3 z-10 flex items-center justify-center rounded-xl border-2 border-dashed border-[#E85C1A] bg-white/80 text-sm font-semibold text-[#E85C1A]">
+              Drop to upload and insert
+            </div>
+          )}
           {loading ? (
             <div className="flex h-40 items-center justify-center text-sm text-[#aaa]">Loading…</div>
           ) : items.length === 0 ? (
             <div className="flex h-40 flex-col items-center justify-center gap-2 text-sm text-[#aaa]">
               <ImageOff size={24} />
               <span>No images found</span>
+              <button
+                type="button"
+                onClick={() => fileInput.current?.click()}
+                className="text-xs font-semibold text-[#E85C1A] hover:underline"
+              >
+                Upload one instead — or drag it in
+              </button>
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5">

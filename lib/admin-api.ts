@@ -932,21 +932,38 @@ export type CampaignPreview = {
 };
 
 /**
+ * The campaign theme. The composer holds a bare preset key (that's what the
+ * design schema and the send endpoint use); draft storage documents the object
+ * form `{ preset }`. Both are accepted on read — see `themeToKey`/`themeToWire`
+ * in `hooks/use-campaign-autosave.ts`.
+ */
+export type CampaignThemeValue = string | { preset?: string | null } | null;
+
+/**
  * An in-progress campaign, persisted so leaving the tab doesn't lose it.
  *
  * Deliberately holds invalid, half-built work: a Button with no URL yet is
  * exactly what needs storing, so nothing here is validated on the way in.
  * Block rules still apply at preview and at send.
  *
- * The list endpoint returns these *without* `blocks` (it's the light shape),
- * so `blocks` is optional on read even though it's always sent on write.
+ * The *list* endpoint returns the light shape (no `blocks`); `/latest` and
+ * `/{id}` return everything. `blocks` is optional to cover the light case.
+ *
+ * Drafts are private to their author and capped at 20 each, oldest pruned —
+ * so another admin's id reads as 404, and an id can legitimately vanish
+ * between sessions.
  */
 export type CampaignDraft = {
   id: number;
+  /** Server-side display label for the restore list — sent as `name`, returned as `label`. */
+  label?: string | null;
   name?: string | null;
   subject?: string | null;
   blocks?: CampaignBlock[] | null;
-  theme?: string | null;
+  block_count?: number;
+  /** Backend's own emptiness verdict — authoritative over any client heuristic. */
+  is_empty?: boolean;
+  theme?: CampaignThemeValue;
   body_html?: string | null;
   filters?: BulkEmailFilters | null;
   created_at?: string;

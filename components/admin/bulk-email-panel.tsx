@@ -6,10 +6,14 @@ import {
   Send, RefreshCw, AlertTriangle, CheckCircle2, Clock,
   ChevronLeft, ChevronRight, Users, Eye, X, Filter, LayoutTemplate, Code2, CopyPlus,
 } from "lucide-react";
-import type { BulkEmail, BulkEmailStatus, CampaignBlock } from "@/lib/admin-api";
+import type {
+  BulkEmail, BulkEmailStatus, BulkEmailFilters, CampaignBlock, CampaignDraft,
+} from "@/lib/admin-api";
 import { groupBlockErrors } from "@/lib/campaign-design";
+import { useCampaignAutosave, draftHasContent, themeToKey } from "@/hooks/use-campaign-autosave";
 import { MarketMultiSelect, useMarketOptions } from "./market-select";
 import CampaignDesigner from "./campaign/campaign-designer";
+import { AutosaveIndicator, RestoreDraftBar } from "./campaign/autosave";
 
 // Reuse the same TipTap editor used for article bodies (lazy-loaded, client-only)
 const ArticleRichEditor = dynamic(
@@ -144,6 +148,29 @@ type AudienceFilters = { markets: string[]; company: string; country: string; st
 
 const EMPTY_AUDIENCE: AudienceFilters = { markets: [], company: "", country: "", status: "", search: "" };
 
+/** Editor state → wire shape. Empty values are dropped, never sent as "". */
+function audienceToFilters(f: AudienceFilters): BulkEmailFilters {
+  const out: BulkEmailFilters = {};
+  if (f.markets.length) out.markets = f.markets;
+  if (f.company)        out.company = f.company;
+  if (f.country)        out.country = f.country;
+  if (f.status)         out.status  = f.status as BulkEmailFilters["status"];
+  if (f.search)         out.search  = f.search;
+  return out;
+}
+
+/** Wire shape → editor state, for restoring a draft. Accepts the older single `market` too. */
+function filtersToAudience(f: BulkEmailFilters | null | undefined): AudienceFilters {
+  if (!f) return EMPTY_AUDIENCE;
+  return {
+    markets: f.markets ?? (f.market ? [f.market] : []),
+    company: f.company ?? "",
+    country: f.country ?? "",
+    status:  f.status  ?? "",
+    search:  f.search  ?? "",
+  };
+}
+
 function AudienceFiltersCard({
   filters, onChange, count, countLoading,
 }: {
@@ -273,6 +300,76 @@ function Composer({
   const [error, setError]             = useState<string | null>(null);
   const [blockErrors, setBlockErrors] = useState<Record<number, string[]>>({});
   const [generalErrors, setGeneral]   = useState<string[]>([]);
+  const [restorable, setRestorable]   = useState<CampaignDraft | null>(null);
+
+  // ── Autosave ───────────────────────────────────────────────────────────────
+  // The safety net, not the fix. The fix is that nothing in this composer
+  // should require leaving the tab in the first place (see the media picker).
+  const autosave = useCampaignAutosave({
+    subject,
+    blocks,
+    theme,
+    bodyHtml,
+    filters: audienceToFilters(filters),
+  });
+
+  // "Restore your work?" — only offered when there is genuinely something to
+  // restore. Backend returns data: null for an empty draft for exactly this
+  // reason: a prompt that sometimes restores nothing gets dismissed reflexively.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res  = await fetch("/api/admin/campaign-drafts/latest");
+        const json = await res.json().catch(() => null);
+        const d: CampaignDraft | null = json?.data ?? null;
+        if (cancelled || !d || !draftHasContent(d)) return;
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount, same pattern as cart-context.tsx
+        setRestorable(d);
+      } catch { /* nothing to restore is the normal case */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  async function restoreDraft(d: CampaignDraft) {
+    // `/latest` returns the full record; only the *list* is the light shape.
+    // The one case worth guarding is blocks missing while the draft says it
+    // has some — restoring a designed campaign as an empty canvas would look
+    // like the draft was lost, which is the failure this feature exists to stop.
+    let full = d;
+    if (!d.blocks && (d.block_count ?? 0) > 0) {
+      try {
+        const res  = await fetch(`/api/admin/campaign-drafts/${d.id}`);
+        const json = await res.json().catch(() => null);
+        const fetched: CampaignDraft | null = json?.data ?? null;
+        if (fetched) full = fetched;
+      } catch { /* fall back to what /latest gave us */ }
+    }
+
+    const audience  = filtersToAudience(full.filters);
+    const themeKey  = themeToKey(full.theme);
+    setSubject(full.subject ?? "");
+    setBlocks(full.blocks ?? []);
+    setTheme(themeKey);
+    setBodyHtml(full.body_html ?? "");
+    setFilters(audience);
+    setMode(full.blocks?.length ? "design" : full.body_html ? "html" : "design");
+    setRestorable(null);
+    setError(null);
+
+    autosave.adopt(full, {
+      subject: full.subject ?? "",
+      blocks: full.blocks ?? [],
+      theme: themeKey,
+      bodyHtml: full.body_html ?? "",
+      filters: audienceToFilters(audience),
+    });
+  }
+
+  async function discardDraft(d: CampaignDraft) {
+    setRestorable(null);
+    await fetch(`/api/admin/campaign-drafts/${d.id}`, { method: "DELETE" }).catch(() => {});
+  }
 
   // Reopen / Duplicate: load a past designed campaign back into the editor.
   useEffect(() => {
@@ -329,12 +426,7 @@ function Composer({
     setGeneral([]);
 
     // Build filters payload — only include non-empty values
-    const filtersPayload: Record<string, string | string[]> = {};
-    if (filters.markets.length) filtersPayload.markets = filters.markets;
-    if (filters.company) filtersPayload.company = filters.company;
-    if (filters.country) filtersPayload.country = filters.country;
-    if (filters.status)  filtersPayload.status  = filters.status;
-    if (filters.search)  filtersPayload.search  = filters.search;
+    const filtersPayload = audienceToFilters(filters);
 
     const body: Record<string, unknown> = { subject: subject.trim() };
     if (mode === "design") {
@@ -344,6 +436,11 @@ function Composer({
       body.body_html = bodyHtml;
     }
     if (Object.keys(filtersPayload).length > 0) body.filters = filtersPayload;
+
+    // Retires the draft server-side — but only once the campaign is safely
+    // queued, so a failed send never destroys the only copy of her work.
+    const draftId = autosave.getDraftId();
+    if (draftId) body.draft_id = draftId;
 
     try {
       const res = await fetch("/api/admin/bulk-emails", {
@@ -375,6 +472,7 @@ function Composer({
       }
 
       const campaign: BulkEmail = json.data ?? json;
+      autosave.retire(); // queued — the draft has done its job
       setSubject("");
       setBodyHtml("");
       setBlocks([]);
@@ -390,6 +488,14 @@ function Composer({
 
   return (
     <div className="rounded-xl border border-black/[0.07] bg-white p-5 space-y-5">
+      {restorable && (
+        <RestoreDraftBar
+          draft={restorable}
+          onRestore={() => { void restoreDraft(restorable); }}
+          onDiscard={() => { void discardDraft(restorable); }}
+        />
+      )}
+
       <div className="flex flex-wrap items-center gap-3">
         <h2 className="text-[0.875rem] font-bold text-[#171a20]">New Campaign</h2>
         <div className="ml-auto flex items-center gap-0.5 rounded-full bg-[#f0f2f5] p-0.5">
@@ -467,7 +573,8 @@ function Composer({
         </div>
       )}
 
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-end gap-4">
+        <AutosaveIndicator status={autosave.status} lastSavedAt={autosave.lastSavedAt} />
         <button
           type="button"
           onClick={handleSend}
