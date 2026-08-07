@@ -931,6 +931,28 @@ export type CampaignPreview = {
   unknown_merge_tags: string[];
 };
 
+/**
+ * An in-progress campaign, persisted so leaving the tab doesn't lose it.
+ *
+ * Deliberately holds invalid, half-built work: a Button with no URL yet is
+ * exactly what needs storing, so nothing here is validated on the way in.
+ * Block rules still apply at preview and at send.
+ *
+ * The list endpoint returns these *without* `blocks` (it's the light shape),
+ * so `blocks` is optional on read even though it's always sent on write.
+ */
+export type CampaignDraft = {
+  id: number;
+  name?: string | null;
+  subject?: string | null;
+  blocks?: CampaignBlock[] | null;
+  theme?: string | null;
+  body_html?: string | null;
+  filters?: BulkEmailFilters | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
 export type BulkEmail = {
   id: number;
   subject: string;
@@ -1027,3 +1049,66 @@ export async function adminSafeFetch<T>(
     return null;
   }
 }
+
+/* ─── Partner Sales Log ──────────────────────────────────────────────────────
+   Overseas partners reporting what they sold, replacing paper reports.
+   Frontend app: okelcor-gmbh/okelcor-partner (partners.okelcor.com).
+   Contract: that repo's docs/BACKEND_NOTE_partner_sales.md                  */
+
+export type PartnerOrganisation = {
+  id: number;
+  name: string;
+  country: string;
+  country_code: string;
+  default_currency: string;
+  status?: string;
+  users_count?: number;
+  sales_count?: number;
+  created_at?: string;
+};
+
+export type PartnerUser = {
+  id: number;
+  partner_org_id: number;
+  name: string;
+  phone: string;
+  is_active: boolean;
+  must_change_pin: boolean;
+  locked_until?: string | null;
+  last_login_at?: string | null;
+};
+
+export type PartnerSaleRecord = {
+  id: number;
+  client_generated_id: string;
+  partner_org_id: number;
+  partner_name?: string;
+  entered_by?: string | null;
+  sold_at: string;
+  size: string;
+  brand?: string | null;
+  tyre_type: string;
+  quantity: number;
+  unit_price: number;
+  total_amount: number;
+  currency: string;
+  customer_name?: string | null;
+  notes?: string | null;
+  status: "submitted" | "verified" | "disputed";
+  deleted?: boolean;
+  verified_by?: string | null;
+  verified_at?: string | null;
+  created_at?: string;
+};
+
+/**
+ * Totals are grouped by currency and never summed across them — partners sell
+ * in NGN, GHS, KES, AED and more, nothing converts, and a single combined
+ * figure would be meaningless while looking authoritative.
+ */
+export type PartnerSalesTotals = {
+  currency: string;
+  total: number;
+  pieces: number;
+  entries: number;
+}[];

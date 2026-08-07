@@ -17,9 +17,9 @@ export type AdminRole = (typeof ALL_ROLES)[number];
 // Mirrors backend ROLE_ACCESS table.
 
 export const ROLE_ACCESS: Record<string, string[]> = {
-  super_admin:     ["dashboard", "products", "orders", "quotes", "articles", "hero_slides", "promotions", "fet", "brands", "categories", "media", "settings", "users", "supplier", "customers", "ebay", "analytics", "chats", "security", "eu_declarations", "logistics", "system_health", "crm", "marketing"],
-  admin:           ["dashboard", "products", "orders", "quotes", "articles", "hero_slides", "promotions", "fet", "brands", "categories", "media", "settings", "users", "supplier", "customers", "ebay", "analytics", "chats", "security", "eu_declarations", "logistics", "system_health", "crm", "marketing"],
-  order_manager:   ["dashboard", "orders", "quotes", "supplier", "eu_declarations", "logistics", "crm", "marketing"],
+  super_admin:     ["dashboard", "products", "orders", "quotes", "articles", "hero_slides", "promotions", "fet", "brands", "categories", "media", "settings", "users", "supplier", "customers", "ebay", "analytics", "chats", "security", "eu_declarations", "logistics", "system_health", "crm", "marketing", "partners"],
+  admin:           ["dashboard", "products", "orders", "quotes", "articles", "hero_slides", "promotions", "fet", "brands", "categories", "media", "settings", "users", "supplier", "customers", "ebay", "analytics", "chats", "security", "eu_declarations", "logistics", "system_health", "crm", "marketing", "partners"],
+  order_manager:   ["dashboard", "orders", "quotes", "supplier", "eu_declarations", "logistics", "crm", "marketing", "partners"],
   sales_manager:   ["dashboard", "orders", "quotes", "customers", "analytics", "logistics", "crm"],
   content_manager: ["dashboard", "articles", "hero_slides", "promotions", "fet", "brands", "media"],
   support:         ["dashboard", "orders", "quotes", "customers", "chats", "logistics"],
@@ -58,6 +58,8 @@ export const PATH_SECTION: Record<string, string> = {
   "/admin/inbox":           "crm",
   "/admin/marketing":       "marketing",
   "/admin/media":           "media",
+  "/admin/partners":        "partners",
+  "/admin/partner-sales":   "partners",
 };
 
 // ── Permission map ─────────────────────────────────────────────────────────────
@@ -117,6 +119,17 @@ const PERMISSION_ROLES: Record<string, string[]> = {
 
   // Trade documents
   "trade_documents.manage": ["super_admin", "admin", "order_manager"],
+
+  // Partner sales log — overseas partners reporting what they sold.
+  // Verification is restricted to roles that actually exist: `sales_manager`
+  // appears throughout this map but cannot be stored, because admin_users.role
+  // is a DB ENUM missing it. Granting it here would create a permission nobody
+  // could hold. Revisit once that ENUM is widened.
+  "partners.view":          ["super_admin", "admin", "order_manager"],
+  "partners.manage":        ["super_admin", "admin"],
+  "partner_sales.view":     ["super_admin", "admin", "order_manager"],
+  "partner_sales.verify":   ["super_admin", "admin", "order_manager"],
+  "partner_sales.export":   ["super_admin", "admin", "order_manager"],
 
   // eBay
   "ebay.manage": ["super_admin", "admin"],

@@ -41,6 +41,8 @@ import {
   Mail,
   Send,
   Images,
+  Handshake,
+  ReceiptText,
 } from "lucide-react";
 import { logoutAdmin } from "@/app/admin/actions";
 import { canAccess, PATH_SECTION, ROLE_LABELS, ROLE_BADGE_COLORS } from "@/lib/admin-permissions";
@@ -111,6 +113,13 @@ const NAV_GROUPS: readonly NavGroup[] = [
     items: [
       { label: "Contacts",   href: "/admin/marketing/contacts",  icon: Mail, section: "marketing" },
       { label: "Campaigns",  href: "/admin/marketing/campaigns", icon: Send, section: "marketing" },
+    ],
+  },
+  {
+    label: "Partner Sales",
+    items: [
+      { label: "Partners",      href: "/admin/partners",      icon: Handshake,  section: "partners" },
+      { label: "Reported Sales", href: "/admin/partner-sales", icon: ReceiptText, section: "partners" },
     ],
   },
   {

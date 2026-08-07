@@ -1,7 +1,7 @@
 # Okelcor Website — Progress Tracker
 
-**Last updated:** 2026-07-30  
-**Branch:** `main` — merge `5239a69` brought in multi-market marketing contacts + the block-based campaign builder (branch `feat/marketing-multi-market-and-campaign-builder`, now merged)  
+**Last updated:** 2026-08-06  
+**Branch:** `main` — merge `5239a69` brought in multi-market marketing contacts + the block-based campaign builder (branch `feat/marketing-multi-market-and-campaign-builder`, now merged). Latest: `7a7344f` typography system — **deployed and confirmed live on Vercel**  
 **Build status:** TypeScript 0 errors · Production build passes · ESLint **11 errors / 45 warnings — all pre-existing** (mostly `react-hooks/set-state-in-effect` on the fetch-on-mount pattern in `navbar.tsx`, `cart-context.tsx`, `language-context.tsx`, `product-form.tsx`, `two-factor-status.tsx`, `crisp-notifier.tsx`, `use-admin-permissions.ts`, `checkout/return`). The "ESLint clean" claim above this line was inaccurate as of 2026-07-29 — corrected rather than left standing.
 
 ---
@@ -749,7 +749,7 @@ incomplete.
 
 ---
 
-### ✅ Typography System — Swiss Grotesque + Technical Mono (2026-08-03)
+### ✅ Typography System — Swiss Grotesque + Technical Mono (`7a7344f`, deployed)
 
 Research-led premium pass on the public site. Scope agreed as a **refined pass**:
 same structure, same section order, same DOM — new skin. **SEO-invariant by
@@ -777,6 +777,27 @@ whitespace, real product UI over abstract shipping imagery) and project44 (leads
 with live data, not a static hero). `platform-showcase` already follows that
 instinct.
 
+**Runtime verification** (production build served locally, then confirmed on Vercel):
+
+| Check | Result |
+|---|---|
+| Font CSS vars on `<html>` | `class="w-full sans_…__variable mono_…__variable"` ✅ |
+| Font files served from our origin | `/_next/static/media/Geist_Variable-….woff2` + `GeistMono_Variable-….woff2` ✅ |
+| Requests to Google Fonts | **0** — fully self-hosted, GDPR-safe ✅ |
+| `body` resolves to Geist | `font-family: var(--font-sans)` → `var(--font-geist-sans), -apple-system, …` ✅ |
+| Mono on data | `REX · <span class="font-mono">DEREX76000242</span>` ✅ |
+| Native scroll reveals in shipped CSS | `animation-timeline` present ✅ |
+| Full production build | Compiled ✅ · TypeScript passed ✅ · all pages generated ✅ |
+| ESLint | ⚠️ **Could not run** — times out past 8 min on this machine (see environment note below). Changes were almost entirely `className` edits; the one structural edit (per-row `isData` flag) was covered by the build's type-check |
+
+**Outcome, stated plainly:** this was the *refined* option — same layout, same
+section order, new skin. It reads more expensive up close but **does not look like
+a different website**, which is the expected result and was flagged before starting.
+If visible structural change is wanted, that is the **editorial restructure** option
+(bento/broken-grid homepage recomposition, redesigned product detail page, reworked
+shop catalogue) — still SEO-invariant, since DOM content and heading hierarchy are
+preserved. Not started; see backlog.
+
 > **Build environment warning.** Builds appeared to hang for hours; the actual cause
 > was Next 16's **build lock** — `⨯ Another next build process is already running`.
 > A force-killed build orphaned workers that kept holding it, and every later build
@@ -792,6 +813,42 @@ instinct.
 > `tsc` now time out past 8 min. **Recommend moving the repo out of `~/Documents`**
 > and adding `".next"` to `tsconfig.json`'s `exclude` (it currently includes
 > `**/*.ts` with only `node_modules` excluded, so tsc walks the whole build output).
+>
+> **⚠️ It has now reached `.git`.** After the push, `git fetch` failed with
+> `fatal: bad object refs/remotes/origin/main 2`. iCloud had duplicated six files
+> inside `.git`: four copies of the index (`index 2`–`index 5`), `ORIG_HEAD 2`, and
+> `refs/remotes/origin/main 2` — and git *does* read that duplicated ref during ref
+> iteration, which is what broke fetch. Deleted; fetch is clean and `HEAD` matches
+> `origin/main`. **This will recur.** Repository corruption is a different order of
+> risk from slow builds, so moving the repo off iCloud is now the top tooling item.
+
+**Verification the deploy is live:** no Okelcor server was running locally during
+review (the only Next dev server on the machine belongs to an unrelated project on
+port 3000, and a stale Okelcor `next start` on 3737 was Next **15.5.22**, predating
+this work) — worth knowing before concluding "nothing changed" from a local tab.
+
+---
+
+### ✅ Partner Sales Log — admin screens (2026-08-07)
+
+Companion to the separate partner app (`okelcor-gmbh/okelcor-partner`,
+`partners.okelcor.com`) where overseas distributors record daily sales. Backend
+is deployed; this is the Okelcor-side window onto it, and the reason the system
+exists — head office could not get numbers out of paper reports.
+
+| Screen | Notes |
+|---|---|
+| `/admin/partners` | Create a partner organisation + its first user. **Replaces onboarding by curl** — which meant an admin-chosen PIN typed into a shell, landing in shell history. PIN field mirrors the server policy (6–10 digits, no all-same, no runs, no repeating blocks) so an admin is told before submitting, and the form states that the partner is forced to replace it on first sign-in. Expand a partner for its people: reset PIN, deactivate, unlock |
+| `/admin/partner-sales` | Filter by partner / status / date range · verify · dispute with a required note · **Export CSV**. Totals render **per currency in separate cards, never summed** — nothing converts, so a combined figure would be meaningless while looking authoritative |
+| Export proxy | The one route that does not parse JSON: the upstream streams CSV via `streamDownload`, so the body is piped through with `Content-Disposition` preserved. Proxied rather than linked directly because a token-protected download cannot be driven by a plain `<a href>` |
+| RBAC | New `partners` section → `super_admin`, `admin`, `order_manager`. Deliberately **not** `sales_manager`: that role appears throughout the permission map but cannot be stored, since `admin_users.role` is a DB ENUM missing it — granting it would create a permission nobody could hold |
+| Degradation | If migration #28 is not applied the sales screen shows an amber banner explaining the API is unreachable and that partners' entries stay queued on their phones — rather than an empty table that reads as "no sales" |
+
+**Verified:** the new files typecheck clean against the real project config
+(scoped `tsc`). ⚠️ **The full production build could not be run** — see the
+environment note above; `next build` on this machine now sits at 0% CPU with no
+output. The same code in the partner repo (`~/dev`, off iCloud) builds in 5
+seconds. Worth a `npm run build` from a clean checkout before relying on this.
 
 ---
 
@@ -816,7 +873,9 @@ instinct.
 | Ops data capture — tyre passport | Medium | `tyre_batch` stays null until inspections are recorded; the frontend card is built and waiting |
 | `estimated_dispatch_days` value | Low | Ships blank by design — needs an order-manager-approved number in `site_settings` before anything displays |
 | Premium-UX §3 — saved fitments / reorder | Low | Not addressed in backend's §1/§2 reply; parked, not lost |
-| **Move repo out of `~/Documents` (iCloud)** | High (tooling) | iCloud sync duplicates source files (`route 2.ts`) and makes `eslint`/`tsc` time out. Root cause of a full session of phantom build failures |
+| **Move repo out of `~/Documents` (iCloud)** | **Critical (tooling)** | Escalated 2026-08-06: iCloud now duplicates files **inside `.git`** — four stray index copies plus `refs/remotes/origin/main 2`, which broke `git fetch` with `bad object`. Cleaned, but it recurs. Also duplicates source files (`route 2.ts`) and makes `eslint`/`tsc` time out past 8 min. Root cause of a full session of phantom build failures |
+| **UI — editorial restructure** | Medium | The visible-change follow-on to the shipped typography pass: bento/broken-grid homepage recomposition, redesigned product detail page, reworked shop catalogue. DOM content + heading hierarchy preserved, so still SEO-invariant. Researched and scoped, not started |
+| Never `kill -9` a Next build | — (process) | Orphans `webpack-loaders.js`/`postcss.js` children that keep holding Next 16's build lock; every later build then queues silently. One build at a time; ~4 min cold |
 | Add `".next"` to `tsconfig.json` exclude | Medium | `include` is `**/*.ts` with only `node_modules` excluded, so tsc walks the entire build output |
 | Homepage `<title>` says "The Cheapest Tyres on the Internet" | Medium | Directly contradicts the premium positioning in CLAUDE.md, but it's a live SEO asset — business decision, deliberately not changed |
 | Product `currency` field | Medium | Catalogue-side equivalent of the admin order currency already shipped |
