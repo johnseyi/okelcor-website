@@ -288,10 +288,16 @@ export default async function OrderDetailPage({ params }: Props) {
                   />
                 )}
 
-                {/* ── Payment milestones progress (DOC-7) ── */}
+                {/* ── Payment milestones progress (DOC-7) ──
+                    Gated on the backend's own payment_milestones_active flag:
+                    the ladder exists only once an admin has deliberately
+                    requested a deposit. Falls back to the stage check for a
+                    payload that predates the flag — the two agree by
+                    construction, the flag is just the authority. */}
                 {!acceptancePending &&
                   order.payment_stage &&
-                  order.payment_stage !== "pending_proforma" && (
+                  (order.payment_milestones_active
+                    ?? order.payment_stage !== "pending_proforma") && (
                   <PaymentMilestoneProgress
                     paymentStage={order.payment_stage}
                     depositAmount={order.deposit_amount}
@@ -317,7 +323,9 @@ export default async function OrderDetailPage({ params }: Props) {
                     status={order.declaration_status}
                     signedAt={order.declaration_signed_at}
                     signedName={order.declaration_signed_name}
+                    canSign={order.declaration_can_sign}
                     paymentStatus={order.payment_status}
+                    paymentStage={order.payment_stage}
                     orderStatus={order.status}
                   />
                 )}

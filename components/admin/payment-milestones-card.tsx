@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   AlertCircle, AlertTriangle, CheckCircle2,
-  Loader2, Mail, MailCheck, MailX, RotateCcw,
+  Loader2, Mail, MailCheck, Send, X,
 } from "lucide-react";
 import { canDo } from "@/lib/admin-permissions";
 import { formatMoney } from "@/lib/currency";
@@ -158,6 +158,7 @@ export default function PaymentMilestonesCard({
   adminRole,
   currency,
   initialStage,
+  orderTotal,
   depositPercent,
   depositAmount,
   balanceAmount,
@@ -177,6 +178,8 @@ export default function PaymentMilestonesCard({
   /** ISO 4217 code — defaults to EUR when the order predates currency support. */
   currency?: string | null;
   initialStage: PaymentStage;
+  /** Order total — the base the deposit is calculated against. */
+  orderTotal?: number | null;
   depositPercent?: number | null;
   depositAmount?: number | null;
   balanceAmount?: number | null;
@@ -191,6 +194,13 @@ export default function PaymentMilestonesCard({
   shipmentReleasedEmailAt?: string | null;
 }) {
   const [stage,       setStage]       = useState<PaymentStage>(initialStage);
+  // The deposit/balance split is now set either by generating a proforma or by
+  // requesting the deposit, so it has to be live rather than read from props.
+  const [split,       setSplit]       = useState({
+    depositPercent: depositPercent ?? null,
+    depositAmount:  depositAmount  ?? null,
+    balanceAmount:  balanceAmount  ?? null,
+  });
   const [depPaidAt,   setDepPaidAt]   = useState(depositPaidAt);
   const [balPaidAt,   setBalPaidAt]   = useState(balancePaidAt);
   const [releasedAt,  setReleasedAt]  = useState(shipmentReleasedAt);
@@ -212,6 +222,18 @@ export default function PaymentMilestonesCard({
   const [note,    setNote]    = useState("");
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState<string | null>(null);
+
+  // ── Request-deposit form (pending_proforma only) ──────────────────────────
+  // Generating a proforma no longer starts the ladder or e-mails anyone.
+  // Asking the customer for money is now this deliberate, separate act.
+  const [reqOpen,    setReqOpen]    = useState(false);
+  const [reqBasis,   setReqBasis]   = useState<"percent" | "amount">("percent");
+  const [reqPercent, setReqPercent] = useState(String(depositPercent ?? 50));
+  const [reqAmount,  setReqAmount]  = useState("");
+  const [reqNotify,  setReqNotify]  = useState(false);
+  const [reqNotes,   setReqNotes]   = useState("");
+  const [reqLoading, setReqLoading] = useState(false);
+  const [reqError,   setReqError]   = useState<string | null>(null);
 
   // Toast
   const [toast, setToast] = useState<{ message: string; variant: "success" | "warning" } | null>(null);
@@ -250,6 +272,9 @@ export default function PaymentMilestonesCard({
         message?: string;
         data?: {
           payment_stage?: PaymentStage;
+          deposit_percent?: number | null;
+          deposit_amount?: number | null;
+          balance_amount?: number | null;
           deposit_paid_at?: string;
           balance_paid_at?: string;
           shipment_released_at?: string;
@@ -268,6 +293,13 @@ export default function PaymentMilestonesCard({
       }
       // Update optimistic state from backend echo
       if (json.data?.payment_stage) setStage(json.data.payment_stage);
+      // deposit-paid can be recorded straight from pending_proforma, in which
+      // case the backend backfills the split — take its figures, not ours.
+      setSplit((prev) => ({
+        depositPercent: json.data?.deposit_percent ?? prev.depositPercent,
+        depositAmount:  json.data?.deposit_amount  ?? prev.depositAmount,
+        balanceAmount:  json.data?.balance_amount  ?? prev.balanceAmount,
+      }));
       if (json.data?.deposit_paid_at) setDepPaidAt(json.data.deposit_paid_at);
       if (json.data?.balance_paid_at) setBalPaidAt(json.data.balance_paid_at);
       if (json.data?.shipment_released_at) setReleasedAt(json.data.shipment_released_at);
@@ -286,6 +318,91 @@ export default function PaymentMilestonesCard({
       return { ok: false };
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleRequestDeposit() {
+    setReqError(null);
+
+    // Mirror the server's own bounds so an obvious mistake is caught before
+    // the round trip; the server remains the authority on both.
+    if (reqBasis === "amount") {
+      const amt = Number(reqAmount);
+      if (!reqAmount.trim() || !Number.isFinite(amt) || amt < 0.01) {
+        setReqError("Enter the deposit amount agreed with the buyer."); return;
+      }
+      if (orderTotal != null && amt > orderTotal) {
+        setReqError("The deposit cannot be more than the order total."); return;
+      }
+    } else {
+      const pct = Number(reqPercent);
+      if (!Number.isFinite(pct) || pct < 0.01 || pct > 100) {
+        setReqError("Enter a deposit percentage between 0.01 and 100."); return;
+      }
+    }
+
+    setReqLoading(true);
+    try {
+      const body: Record<string, unknown> = { notify_customer: reqNotify };
+      if (reqBasis === "amount") body.deposit_amount  = Number(reqAmount);
+      else                      body.deposit_percent = Number(reqPercent);
+      if (reqNotes.trim()) body.notes = reqNotes.trim();
+
+      const res  = await fetch(`/api/admin/orders/${orderId}/payment-milestones/request-deposit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json().catch(() => ({})) as {
+        message?: string;
+        code?: string;
+        email_sent?: boolean;
+        email_warning?: string | null;
+        data?: {
+          payment_stage?: PaymentStage;
+          deposit_percent?: number | null;
+          deposit_amount?: number | null;
+          balance_amount?: number | null;
+          deposit_requested_email_sent_at?: string | null;
+        };
+      };
+
+      if (!res.ok) {
+        // The three documented failures, said in the operator's terms.
+        const byCode: Record<string, string> = {
+          invalid_payment_stage: "The payment ladder has already been started on this order. Reload the page to see where it stands.",
+          deposit_exceeds_total: "The deposit cannot be more than the order total.",
+          order_total_missing:   "This order has no total to take a deposit against. Add the line items or an order total first.",
+        };
+        setReqError((json.code && byCode[json.code]) ?? json.message ?? "Could not request the deposit. Please try again.");
+        return;
+      }
+
+      setStage(json.data?.payment_stage ?? "deposit_requested");
+      setSplit((prev) => ({
+        depositPercent: json.data?.deposit_percent ?? prev.depositPercent,
+        depositAmount:  json.data?.deposit_amount  ?? prev.depositAmount,
+        balanceAmount:  json.data?.balance_amount  ?? prev.balanceAmount,
+      }));
+      setEmailSent((prev) => ({
+        ...prev,
+        deposit_requested: json.data?.deposit_requested_email_sent_at
+          ?? (json.email_sent ? new Date().toISOString() : null),
+      }));
+      setReqOpen(false);
+      setReqNotes("");
+
+      if (json.email_warning) {
+        setToast({ message: json.email_warning, variant: "warning" });
+      } else if (reqNotify) {
+        setToast({ message: "Deposit requested. The customer has been e-mailed.", variant: "success" });
+      } else {
+        setToast({ message: "Deposit requested. The customer was not e-mailed.", variant: "success" });
+      }
+    } catch {
+      setReqError("Network error. Please try again.");
+    } finally {
+      setReqLoading(false);
     }
   }
 
@@ -345,9 +462,9 @@ export default function PaymentMilestonesCard({
     {
       id: "deposit_requested",
       label: "Deposit Requested",
-      sub: depositAmount != null
-        ? `${depositPercent ?? 50}% · ${formatMoney(depositAmount, currency)}`
-        : depositPercent != null ? `${depositPercent}%` : undefined,
+      sub: split.depositAmount != null
+        ? `${split.depositPercent ?? 50}% · ${formatMoney(split.depositAmount, currency)}`
+        : split.depositPercent != null ? `${split.depositPercent}%` : undefined,
     },
     {
       id: "deposit_paid",
@@ -362,7 +479,7 @@ export default function PaymentMilestonesCard({
     {
       id: "balance_due",
       label: "Balance Due",
-      sub: balanceAmount != null ? formatMoney(balanceAmount, currency) : undefined,
+      sub: split.balanceAmount != null ? formatMoney(split.balanceAmount, currency) : undefined,
       action: {
         label: "Mark Balance Due",
         modal: "balance_due",
@@ -409,9 +526,179 @@ export default function PaymentMilestonesCard({
         </div>
 
         {stage === "pending_proforma" ? (
-          <p className="text-[0.875rem] text-[#5c5e62]">
-            Generate the proforma invoice to begin milestone payment tracking.
-          </p>
+          /* ── Resting state: nothing has been asked for yet ──────────────
+             Generating a proforma calculates the split but no longer starts
+             the ladder or e-mails the customer. This is the deliberate act
+             that does both. The customer sees no schedule until it happens. */
+          <div>
+            <p className="text-[0.875rem] text-[#5c5e62]">
+              No deposit has been requested yet. The customer sees no payment
+              schedule until one is.
+            </p>
+
+            {!reqOpen ? (
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                {canMarkPaid ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => { setReqOpen(true); setReqError(null); }}
+                      className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[#E85C1A] px-4 text-[0.78rem] font-semibold text-white transition hover:bg-[#d04d15]"
+                    >
+                      <Send size={12} strokeWidth={2.2} />
+                      Request Deposit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setModal("deposit"); setNote(""); setError(null); }}
+                      className="text-[0.78rem] font-semibold text-[#5c5e62] underline-offset-2 transition hover:text-[#1a1a1a] hover:underline"
+                    >
+                      Deposit already received
+                    </button>
+                  </>
+                ) : (
+                  <p className="text-[0.78rem] text-[#9ca3af]">
+                    An order manager starts the payment ladder.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="mt-4 rounded-xl border border-black/[0.08] bg-[#fafafa] p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <p className="text-[0.78rem] font-bold text-[#1a1a1a]">Request Deposit</p>
+                  <button
+                    type="button"
+                    onClick={() => { setReqOpen(false); setReqError(null); }}
+                    disabled={reqLoading}
+                    className="text-[#9ca3af] transition hover:text-[#5c5e62] disabled:opacity-50"
+                  >
+                    <X size={15} strokeWidth={2} />
+                  </button>
+                </div>
+
+                {/* Percentage or an agreed round figure */}
+                <div className="mb-3 flex gap-2">
+                  {(["percent", "amount"] as const).map((b) => (
+                    <button
+                      key={b}
+                      type="button"
+                      onClick={() => { setReqBasis(b); setReqError(null); }}
+                      className={`h-7 rounded-full px-3 text-[0.73rem] font-semibold transition ${
+                        reqBasis === b
+                          ? "bg-[#1a1a1a] text-white"
+                          : "border border-black/[0.1] bg-white text-[#5c5e62] hover:border-black/25"
+                      }`}
+                    >
+                      {b === "percent" ? "Percentage" : "Agreed amount"}
+                    </button>
+                  ))}
+                </div>
+
+                {reqBasis === "percent" ? (
+                  <div className="mb-3">
+                    <label htmlFor="req-pct" className="mb-1 block text-[0.72rem] font-semibold text-[#5c5e62]">
+                      Deposit percentage
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        id="req-pct"
+                        type="number"
+                        min="0.01"
+                        max="100"
+                        step="0.01"
+                        value={reqPercent}
+                        onChange={(e) => setReqPercent(e.target.value)}
+                        className="h-9 w-28 rounded-lg border border-black/[0.1] bg-white px-3 text-[0.85rem] tabular-nums text-[#1a1a1a] outline-none transition focus:border-[#E85C1A]/50 focus:ring-2 focus:ring-[#E85C1A]/10"
+                      />
+                      <span className="text-[0.8rem] text-[#5c5e62]">%</span>
+                      {orderTotal != null && Number(reqPercent) > 0 && (
+                        <span className="text-[0.75rem] tabular-nums text-[#9ca3af]">
+                          = {formatMoney(Math.round(orderTotal * Number(reqPercent)) / 100, currency)} of {formatMoney(orderTotal, currency)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mb-3">
+                    <label htmlFor="req-amt" className="mb-1 block text-[0.72rem] font-semibold text-[#5c5e62]">
+                      Deposit amount
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        id="req-amt"
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        value={reqAmount}
+                        onChange={(e) => setReqAmount(e.target.value)}
+                        placeholder="e.g. 5000"
+                        className="h-9 w-36 rounded-lg border border-black/[0.1] bg-white px-3 text-[0.85rem] tabular-nums text-[#1a1a1a] outline-none placeholder:text-[#bbb] transition focus:border-[#E85C1A]/50 focus:ring-2 focus:ring-[#E85C1A]/10"
+                      />
+                      {orderTotal != null && (
+                        <span className="text-[0.75rem] tabular-nums text-[#9ca3af]">
+                          of {formatMoney(orderTotal, currency)}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1 text-[0.68rem] text-[#9ca3af]">
+                      For a round figure agreed with the buyer. The percentage is derived from it.
+                    </p>
+                  </div>
+                )}
+
+                {/* Notification is a decision, not a default */}
+                <label className="mb-3 flex cursor-pointer items-start gap-2.5">
+                  <input
+                    type="checkbox"
+                    checked={reqNotify}
+                    onChange={(e) => setReqNotify(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 accent-[#E85C1A]"
+                  />
+                  <span className="text-[0.8rem] text-[#1a1a1a]">
+                    Also e-mail the customer
+                    <span className="mt-0.5 block text-[0.7rem] text-[#9ca3af]">
+                      Leave unticked if the deposit was already agreed by phone or e-mail —
+                      a duplicate request is worse than silence.
+                    </span>
+                  </span>
+                </label>
+
+                <div className="mb-3">
+                  <label htmlFor="req-notes" className="mb-1 block text-[0.72rem] font-semibold text-[#5c5e62]">
+                    Note <span className="font-normal text-[#9ca3af]">(optional — goes to the audit trail)</span>
+                  </label>
+                  <textarea
+                    id="req-notes"
+                    value={reqNotes}
+                    onChange={(e) => setReqNotes(e.target.value.slice(0, 500))}
+                    rows={2}
+                    placeholder="e.g. Agreed 40% with Mr Adeyemi on the call of 8 Aug"
+                    className="w-full resize-none rounded-lg border border-black/[0.1] bg-white px-3 py-2 text-[0.83rem] text-[#1a1a1a] outline-none placeholder:text-[#bbb] transition focus:border-[#E85C1A]/50 focus:ring-2 focus:ring-[#E85C1A]/10"
+                  />
+                  <p className="mt-1 text-right text-[0.66rem] tabular-nums text-[#c0c3c8]">{reqNotes.length}/500</p>
+                </div>
+
+                {reqError && (
+                  <div className="mb-3 flex items-start gap-2 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-[0.8rem] text-red-700">
+                    <AlertCircle size={13} className="mt-0.5 shrink-0" />
+                    {reqError}
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleRequestDeposit}
+                  disabled={reqLoading}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[#E85C1A] px-4 text-[0.78rem] font-semibold text-white transition hover:bg-[#d04d15] disabled:opacity-60"
+                >
+                  {reqLoading
+                    ? <><Loader2 size={12} className="animate-spin" /> Requesting…</>
+                    : <><Send size={12} strokeWidth={2.2} /> Request Deposit</>
+                  }
+                </button>
+              </div>
+            )}
+          </div>
         ) : (
           <ol className="relative space-y-0 border-l-2 border-black/[0.06] pl-5">
             {steps.map((step, i) => {
@@ -453,7 +740,15 @@ export default function PaymentMilestonesCard({
                         </p>
                       )}
 
-                      {/* ── Email status (DOC-8) — only for reached milestones ── */}
+                      {/* ── Email status (DOC-8) ────────────────────────────
+                          Only for stages this order has actually reached. A
+                          stage that hasn't happened has no notification to
+                          send, so offering the control there is noise.
+
+                          An unsent notification is no longer flagged amber:
+                          not e-mailing is now a legitimate choice (the deposit
+                          request defaults to silent), so this states the fact
+                          and offers the action without implying a failure. */}
                       {reached && (
                         sentAt ? (
                           <p className="mt-1 flex items-center gap-1 text-[0.7rem] text-emerald-600">
@@ -462,22 +757,21 @@ export default function PaymentMilestonesCard({
                           </p>
                         ) : (
                           <div className="mt-1 flex items-center gap-2">
-                            <span className="flex items-center gap-1 text-[0.7rem] text-amber-600">
-                              <MailX size={11} strokeWidth={2} />
-                              Email not sent
+                            <span className="text-[0.7rem] text-[#9ca3af]">
+                              Customer not notified
                             </span>
                             <button
                               type="button"
                               onClick={() => handleResendEmail(step.id)}
                               disabled={resendLoading === step.id}
-                              title={`Resend ${STAGE_LABEL[step.id]} notification`}
-                              className="inline-flex h-5 items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 text-[0.68rem] font-semibold text-amber-700 transition hover:bg-amber-100 disabled:opacity-50"
+                              title={`Send the ${STAGE_LABEL[step.id]} notification now`}
+                              className="inline-flex h-5 items-center gap-1 rounded-full border border-black/[0.12] bg-white px-2 text-[0.68rem] font-semibold text-[#5c5e62] transition hover:border-black/25 hover:text-[#1a1a1a] disabled:opacity-50"
                             >
                               {resendLoading === step.id
                                 ? <Loader2 size={9} className="animate-spin" />
-                                : <RotateCcw size={9} strokeWidth={2.5} />
+                                : <Mail size={9} strokeWidth={2.5} />
                               }
-                              {resendLoading === step.id ? "…" : "Resend"}
+                              {resendLoading === step.id ? "…" : "Send now"}
                             </button>
                           </div>
                         )
@@ -506,7 +800,9 @@ export default function PaymentMilestonesCard({
       {modal === "deposit" && (
         <ConfirmModal
           title="Mark Deposit as Paid"
-          body={`Confirm that the deposit of ${formatMoney(depositAmount, currency)} has been received. The customer will be notified by email.`}
+          body={split.depositAmount != null
+            ? `Confirm that the deposit of ${formatMoney(split.depositAmount, currency)} has been received. The customer will be notified by email.`
+            : "Confirm that the deposit has been received. The deposit / balance split will be calculated from the order total, and the customer will be notified by email."}
           noteLabel="Payment Reference"
           noteValue={note}
           onNoteChange={setNote}
@@ -523,7 +819,7 @@ export default function PaymentMilestonesCard({
       {modal === "balance_due" && (
         <ConfirmModal
           title="Mark Balance as Due"
-          body={`Notify the system that the balance of ${formatMoney(balanceAmount, currency)} is now due. The customer will be sent a balance-due notification email.`}
+          body={`Notify the system that the balance of ${formatMoney(split.balanceAmount, currency)} is now due. The customer will be sent a balance-due notification email.`}
           onConfirm={handleBalanceDue}
           onCancel={closeModal}
           loading={loading}
@@ -537,7 +833,7 @@ export default function PaymentMilestonesCard({
       {modal === "balance" && (
         <ConfirmModal
           title="Mark Balance as Paid"
-          body={`Confirm that the balance payment of ${formatMoney(balanceAmount, currency)} has been received. The customer will be notified by email.`}
+          body={`Confirm that the balance payment of ${formatMoney(split.balanceAmount, currency)} has been received. The customer will be notified by email.`}
           noteLabel="Payment Reference"
           noteValue={note}
           onNoteChange={setNote}

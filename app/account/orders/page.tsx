@@ -45,6 +45,14 @@ export type Order = {
   eta?: string;
   shipment_events?: ShipmentEvent[];
   declaration_required?: boolean | null;
+  /**
+   * Whether POST .../declaration would be accepted right now — backend-derived
+   * from the same conditions the endpoint enforces. Must NOT be recomputed from
+   * payment_status on the client: a milestone order settles through
+   * payment_stage and leaves payment_status "pending" for life, which is what
+   * used to refuse the certificate to exactly the EU B2B orders that need it.
+   */
+  declaration_can_sign?: boolean | null;
   declaration_status?: "pending" | "signed" | "acknowledged" | null;
   declaration_signed_at?: string | null;
   declaration_signed_name?: string | null;
@@ -55,6 +63,13 @@ export type Order = {
   customer_accepted_at?: string | null;
   // DOC-7 payment milestones (customer-visible subset)
   payment_stage?: "pending_proforma" | "deposit_requested" | "deposit_paid" | "balance_due" | "balance_paid" | "shipment_released" | null;
+  /**
+   * Backend's authoritative flag: an admin has actually requested a deposit.
+   * The schedule must only render when this is true — `pending_proforma` is the
+   * resting state of every order, and showing the ladder on it told customers
+   * they owed money nobody had asked them for.
+   */
+  payment_milestones_active?: boolean | null;
   deposit_amount?: number | null;
   balance_amount?: number | null;
   deposit_paid_at?: string | null;

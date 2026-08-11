@@ -446,8 +446,11 @@ function getNextAction(p: {
   if (p.declarationRequired && p.declarationStatus !== "acknowledged") {
     return { label: "Complete EU entry certificate", sublabel: "Gelangensbestätigung required and not yet acknowledged.", priority: "amber", tab: "compliance" };
   }
-  if (p.paymentStatus === "pending" && p.paymentMethod === "bank_transfer" && !p.paymentStage) {
-    return { label: "Awaiting bank transfer", sublabel: "Mark as paid once payment appears in the Okelcor account.", priority: "amber", tab: "payments" };
+  // Any order settled off-platform — bank transfer, an admin-recorded order
+  // (payment_method is null on those), an import. Only Stripe owns its own
+  // payment status, so only Stripe is excluded here.
+  if (p.paymentStatus === "pending" && p.paymentMethod !== "stripe" && !p.paymentStage) {
+    return { label: "Awaiting payment", sublabel: "Mark as paid once payment appears in the Okelcor account.", priority: "amber", tab: "payments" };
   }
   if (p.status === "pending" && !p.paymentStage) {
     return { label: "Confirm order", sublabel: "Review and update the order status to confirmed.", priority: "amber", tab: "overview" };
@@ -578,6 +581,18 @@ export default function OrderDetail({
   const canDelete          = canDo(adminRole, "orders.delete");
   const canApproveRevision = canDo(adminRole, "orders.approve_financial_revision");
   const cancelDisabled     = ["cancelled", "delivered"].includes(status);
+
+  // Marking paid by hand is available on every order settled off-platform.
+  // Stripe is the only exclusion: the gateway sets its own payment status via
+  // webhook, and the backend returns 422 `gateway_managed_payment` for it.
+  // This used to require payment_method === "bank_transfer", which no
+  // admin-recorded order has (payment_method is null on those) — so the only
+  // way to reach a paid manual order was ticking "paid" on the creation form,
+  // i.e. declaring receipt before the money arrived.
+  const canMarkPaidByHand =
+    order.payment_method !== "stripe" &&
+    paymentStatus === "pending" &&
+    canDo(adminRole, "payments.mark_paid");
 
   // ── Tab badge logic ───────────────────────────────────────────────────────────
   const paymentsHasBadge = revisionRequired || customerAcceptancePending || customerRejected
@@ -1491,7 +1506,7 @@ export default function OrderDetail({
                 </button>
               )}
 
-              {order.payment_method === "bank_transfer" && paymentStatus === "pending" && (
+              {canMarkPaidByHand && (
                 <button
                   type="button"
                   onClick={() => setMarkPaidOpen(true)}
@@ -1705,6 +1720,7 @@ export default function OrderDetail({
               adminRole={adminRole}
               currency={order.currency ?? "EUR"}
               initialStage={order.payment_stage}
+              orderTotal={order.total != null ? Number(order.total) : null}
               depositPercent={order.deposit_percent ?? null}
               depositAmount={order.deposit_amount ?? null}
               balanceAmount={order.balance_amount ?? null}
@@ -1720,8 +1736,8 @@ export default function OrderDetail({
             />
           )}
 
-          {/* Mark bank transfer paid (shortcut from payments tab) */}
-          {order.payment_method === "bank_transfer" && paymentStatus === "pending" && (
+          {/* Mark payment received (shortcut from payments tab) */}
+          {canMarkPaidByHand && (
             <div className="rounded-2xl bg-white p-5 shadow-sm">
               <p className="mb-3 text-[0.7rem] font-bold uppercase tracking-[0.15em] text-[#5c5e62]">
                 Payment Receipt
@@ -1732,8 +1748,13 @@ export default function OrderDetail({
                 className="inline-flex h-9 items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-50 px-5 text-[0.83rem] font-semibold text-emerald-700 transition hover:bg-emerald-100"
               >
                 <Landmark size={13} strokeWidth={2} />
-                Mark Bank Transfer as Paid
+                Mark Payment as Received
               </button>
+              <p className="mt-2 text-[0.72rem] text-[#9ca3af]">
+                {order.payment_method
+                  ? `Settled off-platform (${order.payment_method.replace(/_/g, " ")}) — confirm once the money is in the Okelcor account.`
+                  : "Recorded by an admin with no online payment — confirm once the money is in the Okelcor account."}
+              </p>
             </div>
           )}
         </>
@@ -1839,17 +1860,18 @@ export default function OrderDetail({
           MODALS (always mounted — shown/hidden by their own state)
       ══════════════════════════════════════════════════════════════════════ */}
 
-      {/* Mark bank transfer as paid modal */}
+      {/* Mark payment as received modal */}
       {markPaidOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
             <p className="mb-1 text-[0.75rem] font-bold uppercase tracking-[0.15em] text-emerald-700">
-              Mark Bank Transfer as Paid
+              Mark Payment as Received
             </p>
 
             <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[0.83rem] text-amber-800">
               <AlertCircle size={14} className="mt-0.5 shrink-0 text-amber-600" />
               Confirm only after payment appears in the Okelcor bank / Wise account.
+              This marks the order paid and confirmed, and e-mails the customer.
             </div>
 
             <label className="mb-4 flex cursor-pointer items-start gap-3">

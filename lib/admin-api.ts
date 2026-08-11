@@ -266,6 +266,13 @@ export type AdminOrderFull = AdminOrder & {
   trade_documents?: TradeDocument[];
   // DOC-7 payment milestones
   payment_stage?: "pending_proforma" | "deposit_requested" | "deposit_paid" | "balance_due" | "balance_paid" | "shipment_released" | null;
+  /**
+   * Backend's authoritative flag (`Order::paymentMilestonesActive`): the ladder
+   * has genuinely been started. False on `pending_proforma`, which is the
+   * resting state of every order — a proforma no longer starts it. Prefer this
+   * over recomputing from `payment_stage`.
+   */
+  payment_milestones_active?: boolean | null;
   deposit_percent?: number | null;
   deposit_amount?: number | null;
   deposit_paid_at?: string | null;

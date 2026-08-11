@@ -82,7 +82,13 @@ export default function AddHistoricalOrderModal({
   const [country, setCountry]       = useState(customerCountry ?? "");
 
   const [status, setStatus]               = useState<(typeof ORDER_STATUSES)[number]>("delivered");
-  const [paymentStatus, setPaymentStatus]  = useState<(typeof PAYMENT_STATUSES)[number]>("paid");
+  // Defaults to "pending", not "paid". Ticking paid here writes "money
+  // received" without anyone having verified it, and it used to be the only
+  // route to a paid manual order because mark-paid rejected every order with
+  // no payment_method. It no longer does — so the safe default is pending and
+  // an admin confirms receipt from the order page. "Paid" is still correct for
+  // a genuinely settled historical order; it now has to be chosen.
+  const [paymentStatus, setPaymentStatus]  = useState<(typeof PAYMENT_STATUSES)[number]>("pending");
   const [paymentStage, setPaymentStage]    = useState<(typeof PAYMENT_STAGES)[number] | "">("");
 
   const [carrier, setCarrier]             = useState("");
@@ -469,6 +475,11 @@ export default function AddHistoricalOrderModal({
                 <select id="ho-pay-status" value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value as typeof paymentStatus)} className={ic("payment_status")}>
                   {PAYMENT_STATUSES.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
                 </select>
+                <p className="mt-1 text-[0.72rem] text-[#9ca3af]">
+                  {paymentStatus === "paid"
+                    ? "Only for an order already settled in full. This records payment as received without anyone verifying it here."
+                    : "Leave as Pending for a live order — confirm receipt with “Mark as Paid” on the order page once the money arrives."}
+                </p>
               </div>
               <div className="sm:col-span-2">
                 <label htmlFor="ho-pay-stage" className={labelCls}>Payment Stage</label>

@@ -13,7 +13,19 @@ interface Props {
   status?: DeclarationStatus | null;
   signedAt?: string | null;
   signedName?: string | null;
+  /**
+   * Backend's `declaration_can_sign` — whether the signing endpoint would
+   * accept a submission right now. This is the gate. It must not be
+   * reconstructed from `paymentStatus`: an order on deposit-and-balance terms
+   * settles through `payment_stage` and never writes `payment_status`, so it
+   * stays "pending" after being paid in full and delivered. Reading payment
+   * status here permanently refused the certificate to every reverse-charge
+   * EU B2B order — precisely the orders that legally require one.
+   */
+  canSign?: boolean | null;
   paymentStatus?: string | null;
+  /** Only used by the legacy fallback when `canSign` is absent. */
+  paymentStage?: string | null;
   orderStatus?: string | null;
 }
 
@@ -158,7 +170,9 @@ export default function EntryCertificateCard({
   status,
   signedAt,
   signedName,
+  canSign,
   paymentStatus,
+  paymentStage,
   orderStatus,
 }: Props) {
   const [localStatus, setLocalStatus] = useState<DeclarationStatus | null>(status ?? null);
@@ -427,32 +441,33 @@ export default function EntryCertificateCard({
     );
   }
 
-  // ── Payment not yet confirmed ────────────────────────────────────────────────
-  // Only gate when the backend explicitly tells us payment_status.
-  // If paymentStatus is undefined (backend hasn't returned it yet), skip this guard.
-  if (paymentStatus !== undefined && paymentStatus !== null && paymentStatus !== "paid") {
-    return (
-      <div className="rounded-[18px] bg-[#efefef] p-4 sm:rounded-[22px] sm:p-5 lg:p-6">
-        <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[var(--muted)] sm:text-[11px]">
-          EU Entry Certificate
-        </p>
-        <p className="mt-2 text-[0.83rem] leading-relaxed text-[var(--muted)]">
-          Complete payment first. The EU Entry Certificate will be requested after delivery.
-        </p>
-      </div>
-    );
-  }
+  // ── Not signable yet ─────────────────────────────────────────────────────────
+  // `canSign` is the backend's own answer to "would the signing endpoint accept
+  // this right now", so it decides. It is only recomputed locally when the
+  // payload predates the field — and even then payment is checked via
+  // payment_stage as well as payment_status, because a milestone order is paid
+  // in full with payment_status still "pending".
+  // Mirrors Order::isFullyPaid() exactly (payment_status paid OR stage
+  // balance_paid/shipment_released) — copied from the model, not inferred.
+  const paidOff =
+    paymentStatus === "paid" ||
+    ["balance_paid", "shipment_released"].includes(paymentStage ?? "");
+  const legacyCanSign =
+    (paymentStatus == null || paidOff) &&
+    (orderStatus == null || orderStatus === "delivered");
+  const signable = canSign ?? legacyCanSign;
 
-  // ── Paid but not yet delivered ────────────────────────────────────────────────
-  // Only gate when the backend explicitly tells us order status.
-  if (orderStatus !== undefined && orderStatus !== null && orderStatus !== "delivered") {
+  if (!signable) {
+    const waitingOnDelivery = orderStatus != null && orderStatus !== "delivered";
     return (
       <div className="rounded-[18px] bg-[#efefef] p-4 sm:rounded-[22px] sm:p-5 lg:p-6">
         <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[var(--muted)] sm:text-[11px]">
           EU Entry Certificate
         </p>
         <p className="mt-2 text-[0.83rem] leading-relaxed text-[var(--muted)]">
-          After delivery, you will be asked to confirm receipt for VAT compliance.
+          {waitingOnDelivery
+            ? "After delivery, you will be asked to confirm receipt for VAT compliance."
+            : "This will become available once payment is settled and delivery is confirmed."}
         </p>
       </div>
     );

@@ -43,30 +43,39 @@ const TYPE_DESCRIPTION: Record<string, string> = {
   delivery_note:      "Delivery confirmation",
 };
 
-const SHIPMENT_LABELS = [
+// Starter suggestions for the free-text "File as" label. The server returns the
+// labels this Okelcor has actually used before; these seed the list when it is
+// empty (a fresh install) or unreachable. Never a closed list — `type_label` has
+// always been free text on the API, and the old dropdown was frontend-only.
+const FILE_AS_FALLBACK_SUGGESTIONS = [
   "Bill of Lading",
   "CMR",
   "Air Waybill",
   "Customs Document",
   "Certificate of Origin",
   "Proof of Delivery",
-  "Other",
 ];
 
-// The backend's actual upload `type` enum — separate from TYPE_LABEL above,
+// The backend's upload `type` vocabulary — separate from TYPE_LABEL above,
 // which uses "proforma_invoice" for a different (already-generated-document)
 // concept; the upload endpoint's value is the bare "proforma".
-const UPLOAD_TYPE_OPTIONS: { value: string; label: string }[] = [
-  { value: "shipment_document", label: "Shipment Document (default)" },
-  { value: "order_confirmation", label: "Order Confirmation" },
-  { value: "proforma", label: "Proforma Invoice" },
-  { value: "commercial_invoice", label: "Commercial Invoice" },
-  { value: "packing_list", label: "Packing List" },
-  { value: "delivery_note", label: "Delivery Note" },
+//
+// Rendered from GET /admin/trade-documents/upload-options at runtime; this is
+// only the fallback for a backend that doesn't serve that route yet, so a type
+// added server-side needs no frontend deploy.
+const UPLOAD_TYPE_FALLBACK: UploadTypeOption[] = [
+  { value: "shipment_document", label: "Shipment Document (BOL, CMR, …)" },
+  { value: "order_confirmation", label: "Order Confirmation (AB)" },
+  { value: "proforma", label: "Proforma Invoice (PI)" },
+  { value: "commercial_invoice", label: "Commercial Invoice (CI)" },
+  { value: "packing_list", label: "Packing List (PL)" },
+  { value: "delivery_note", label: "Delivery Note (DN)" },
+  { value: "other", label: "Other — type your own", custom_label_required: true },
 ];
 
 const ALLOWED_EXTENSIONS = ["pdf", "jpg", "jpeg", "png", "xls", "xlsx", "csv"];
-const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
+const MAX_FILE_BYTES = 20 * 1024 * 1024; // 20 MB — matches the server's max:20480
+const FILE_AS_FALLBACK_MAX = 100;        // server: type_label max:100
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -104,6 +113,19 @@ function canViewInline(doc: TradeDocument): boolean {
 }
 
 // ── Types ──────────────────────────────────────────────────────────────────────
+
+type UploadTypeOption = {
+  value: string;
+  label: string;
+  supersedes?: boolean;
+  custom_label_required?: boolean;
+};
+
+type UploadOptions = {
+  documentTypes: UploadTypeOption[];
+  fileAsSuggestions: string[];
+  fileAsMaxLength: number;
+};
 
 type GenerateState = { loading: boolean; error: string | null };
 const IDLE: GenerateState = { loading: false, error: null };
@@ -193,6 +215,46 @@ export default function TradeDocumentsCard({
   const [uploading,    setUploading]    = useState(false);
   const [uploadError,  setUploadError]  = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Upload vocabulary, served rather than hardcoded so a type added
+  // server-side appears without a frontend deploy. Fetched once, on first open
+  // of the panel — not on mount, since most visits never upload anything.
+  const [uploadOptions, setUploadOptions] = useState<UploadOptions>({
+    documentTypes:     UPLOAD_TYPE_FALLBACK,
+    fileAsSuggestions: FILE_AS_FALLBACK_SUGGESTIONS,
+    fileAsMaxLength:   FILE_AS_FALLBACK_MAX,
+  });
+  const optionsFetched = useRef(false);
+
+  async function loadUploadOptions() {
+    if (optionsFetched.current) return;
+    optionsFetched.current = true;
+    try {
+      const res = await fetch("/api/admin/trade-documents/upload-options");
+      if (!res.ok) return; // keep the fallbacks — the dialog still works
+      const json = await res.json().catch(() => ({})) as {
+        data?: {
+          document_types?: UploadTypeOption[];
+          file_as_suggestions?: string[];
+        };
+        meta?: { file_as_max_length?: number };
+      };
+      const types = json.data?.document_types;
+      const served = json.data?.file_as_suggestions ?? [];
+      setUploadOptions({
+        documentTypes: Array.isArray(types) && types.length > 0 ? types : UPLOAD_TYPE_FALLBACK,
+        // Labels already used here come first; the starters fill the gap on a
+        // fresh install without ever displacing real history.
+        fileAsSuggestions: Array.from(new Set([...served, ...FILE_AS_FALLBACK_SUGGESTIONS])),
+        fileAsMaxLength: json.meta?.file_as_max_length ?? FILE_AS_FALLBACK_MAX,
+      });
+    } catch {
+      // Network error — fallbacks stand.
+    }
+  }
+
+  const selectedType    = uploadOptions.documentTypes.find((t) => t.value === uploadType);
+  const customLabelOnly = selectedType?.custom_label_required === true;
 
   // Delete state
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
@@ -321,7 +383,7 @@ export default function TradeDocumentsCard({
       return;
     }
     if (file.size > MAX_FILE_BYTES) {
-      setUploadError("File exceeds 10 MB limit.");
+      setUploadError("File exceeds the 20 MB limit.");
       setUploadFile(null);
       e.target.value = "";
       return;
@@ -330,13 +392,20 @@ export default function TradeDocumentsCard({
   }
 
   async function handleUpload() {
-    if (!uploadLabel) { setUploadError("Select a document type."); return; }
+    if (!uploadLabel.trim()) {
+      setUploadError(customLabelOnly
+        ? "Name this document — “Other” has no label of its own."
+        : "Enter what to file this document as.");
+      return;
+    }
     if (!uploadFile)  { setUploadError("Choose a file to upload."); return; }
     setUploading(true);
     setUploadError(null);
     const fd = new FormData();
     fd.append("file", uploadFile);
-    fd.append("document_label", uploadLabel);
+    // `type_label` is the API's own name for this field. It also accepts
+    // `document_label` as an alias, so older clients keep working.
+    fd.append("type_label", uploadLabel.trim());
     fd.append("type", uploadType);
     if (uploadNotes.trim()) fd.append("notes", uploadNotes.trim());
     try {
@@ -535,7 +604,7 @@ export default function TradeDocumentsCard({
                 )
               )}
               <button type="button"
-                onClick={() => { setShowUpload((v) => !v); setUploadError(null); }}
+                onClick={() => { setShowUpload((v) => !v); setUploadError(null); void loadUploadOptions(); }}
                 className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[0.75rem] font-semibold transition ${
                   showUpload
                     ? "border-gray-300 bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -732,7 +801,7 @@ export default function TradeDocumentsCard({
         {canManage && showUpload && (
           <div className="mt-5 rounded-xl border border-black/[0.08] bg-[#fafafa] p-4">
             <div className="mb-3 flex items-center justify-between">
-              <p className="text-[0.78rem] font-bold text-[#1a1a1a]">Upload Shipment Document</p>
+              <p className="text-[0.78rem] font-bold text-[#1a1a1a]">Upload Document</p>
               <button
                 type="button"
                 onClick={() => { setShowUpload(false); setUploadError(null); setUploadFile(null); }}
@@ -743,41 +812,57 @@ export default function TradeDocumentsCard({
             </div>
 
             <div className="flex flex-col gap-3">
-              {/* Document type */}
+              {/* Document type — the controlled vocabulary. Drives supersede,
+                  payment gating and what the customer sees, so it stays a
+                  fixed list; it ends in "Other", a plain filing bucket, so
+                  nothing is ever unfileable. */}
               <div>
-                <label className="mb-1 block text-[0.72rem] font-semibold text-[#5c5e62]">
+                <label htmlFor="td-type" className="mb-1 block text-[0.72rem] font-semibold text-[#5c5e62]">
                   Document Type <span className="text-red-500">*</span>
                 </label>
                 <select
-                  value={uploadLabel}
-                  onChange={(e) => setUploadLabel(e.target.value)}
-                  className="w-full rounded-lg border border-black/[0.1] bg-white px-3 py-2 text-[0.85rem] text-[#1a1a1a] focus:border-[#E85C1A]/50 focus:outline-none focus:ring-2 focus:ring-[#E85C1A]/10"
-                >
-                  <option value="">Select document type…</option>
-                  {SHIPMENT_LABELS.map((l) => (
-                    <option key={l} value={l}>{l}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* File as — the actual document type this is filed under, separate
-                  from the free-text label above */}
-              <div>
-                <label className="mb-1 block text-[0.72rem] font-semibold text-[#5c5e62]">
-                  File as
-                </label>
-                <select
+                  id="td-type"
                   value={uploadType}
                   onChange={(e) => setUploadType(e.target.value)}
                   className="w-full rounded-lg border border-black/[0.1] bg-white px-3 py-2 text-[0.85rem] text-[#1a1a1a] focus:border-[#E85C1A]/50 focus:outline-none focus:ring-2 focus:ring-[#E85C1A]/10"
                 >
-                  {UPLOAD_TYPE_OPTIONS.map((opt) => (
+                  {uploadOptions.documentTypes.map((opt) => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
                 <p className="mt-1 text-[0.68rem] text-[#9ca3af]">
-                  Use this when filing an externally-produced document (e.g. from an
-                  accountant) as its real type instead of the generic bucket.
+                  {selectedType?.supersedes
+                    ? "Filing this replaces any document of the same type already issued on this order."
+                    : "Use one of the official types when filing an externally-produced document (e.g. from an accountant) instead of the generic bucket."}
+                </p>
+              </div>
+
+              {/* File as — free text on the API (max 100), so a combo box:
+                  pick a label used before or type a new one. */}
+              <div>
+                <label htmlFor="td-file-as" className="mb-1 block text-[0.72rem] font-semibold text-[#5c5e62]">
+                  File as <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="td-file-as"
+                  list="td-file-as-options"
+                  type="text"
+                  value={uploadLabel}
+                  maxLength={uploadOptions.fileAsMaxLength}
+                  onChange={(e) => setUploadLabel(e.target.value)}
+                  placeholder={customLabelOnly ? "Name this document" : "e.g. Bill of Lading"}
+                  autoComplete="off"
+                  className="w-full rounded-lg border border-black/[0.1] bg-white px-3 py-2 text-[0.85rem] text-[#1a1a1a] placeholder:text-[#9ca3af] focus:border-[#E85C1A]/50 focus:outline-none focus:ring-2 focus:ring-[#E85C1A]/10"
+                />
+                <datalist id="td-file-as-options">
+                  {uploadOptions.fileAsSuggestions.map((l) => (
+                    <option key={l} value={l} />
+                  ))}
+                </datalist>
+                <p className="mt-1 text-[0.68rem] text-[#9ca3af]">
+                  {customLabelOnly
+                    ? "Required — this is the only name this document will carry."
+                    : `How it is named for the customer. Pick a previous label or type your own · max ${uploadOptions.fileAsMaxLength} characters.`}
                 </p>
               </div>
 
@@ -817,7 +902,7 @@ export default function TradeDocumentsCard({
                   )}
                 </div>
                 <p className="mt-1 text-[0.68rem] text-[#9ca3af]">
-                  PDF, JPG, PNG, XLS, XLSX, CSV · max 10 MB
+                  PDF, JPG, PNG, XLS, XLSX, CSV · max 20 MB
                 </p>
               </div>
 
