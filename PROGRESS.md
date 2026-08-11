@@ -1,8 +1,9 @@
 # Okelcor Website — Progress Tracker
 
-**Last updated:** 2026-08-07  
-**Branch:** `main` — merge `5239a69` brought in multi-market marketing contacts + the block-based campaign builder (branch `feat/marketing-multi-market-and-campaign-builder`, now merged). Latest: `7a7344f` typography system — **deployed and confirmed live on Vercel**  
-**Build status:** TypeScript 0 errors · Production build passes · ESLint **11 errors / 45 warnings — all pre-existing** (mostly `react-hooks/set-state-in-effect` on the fetch-on-mount pattern in `navbar.tsx`, `cart-context.tsx`, `language-context.tsx`, `product-form.tsx`, `two-factor-status.tsx`, `crisp-notifier.tsx`, `use-admin-permissions.ts`, `checkout/return`). The "ESLint clean" claim above this line was inaccurate as of 2026-07-29 — corrected rather than left standing.
+**Last updated:** 2026-08-11  
+**Branch:** `main` — latest `cfd4498` campaign editor autosave + in-place image upload, **committed and pushed** (`350e5ff..cfd4498`). Previously `7a7344f` typography system — deployed and confirmed live on Vercel  
+**Repo location:** still `~/Documents/project/okelcor-website` — **a move to `~/dev/okelcor-website` was attempted on 2026-08-07 and failed** (`mv: rename …: Operation timed out`). Source verified intact afterwards; destination was never created. See the backlog row for why and what to do instead.  
+**Build status:** TypeScript 0 errors (scoped run — the full `tsc` still times out, see below) · ESLint **not verified this session** — it produced no output in ~25 min on six files and was killed to free the directory for the move; a "completed, exit 0" from the runner reflected `tail`, not `eslint`. Previously recorded as **11 errors / 45 warnings — all pre-existing** (mostly `react-hooks/set-state-in-effect` on the fetch-on-mount pattern in `navbar.tsx`, `cart-context.tsx`, `language-context.tsx`, `product-form.tsx`, `two-factor-status.tsx`, `crisp-notifier.tsx`, `use-admin-permissions.ts`, `checkout/return`). The "ESLint clean" claim above this line was inaccurate as of 2026-07-29 — corrected rather than left standing.
 
 ---
 
@@ -886,6 +887,49 @@ seconds. Worth a `npm run build` from a clean checkout before relying on this.
 
 ---
 
+### ✅ Partner Sales Log — live, first partners onboarded (2026-08-10)
+
+Backend deployed (migration #28 applied), `partners.okelcor.com` live on its own
+Vercel project, real partner accounts created for **Ghana** and **Nigeria**
+through `/admin/partners` rather than curl. Sales are being entered.
+
+Everything below is in `okelcor-gmbh/okelcor-partner` (now at
+`~/dev/okelcor-partner`, off iCloud — it builds in ~5s there). Recorded here
+because it is the same system and this is the company tracker.
+
+**Four bugs found by real use, all frontend, all fixed.** Worth reading as a
+set: every one of them presented as something other than what it was.
+
+| Bug | Presented as | Actually |
+|---|---|---|
+| **PIN truncated to 6 digits on login** | "That phone number and PIN do not match" | The login screen capped input at 6 while the admin form issues up to 10 and the server accepts 6–10. A 7-digit PIN could never match its own hash |
+| **Login proxy misread the success response** | 502 "Could not sign you in" | Upstream returns `{ data: { token, user } }`; the proxy looked for `token` at the top level and rejected its own success. The contract note we were given documented the flatter shape — corrected with backend |
+| **Every login failure collapsed into one message** | "wrong PIN" for locked *and* suspended accounts | The server distinguishes `invalid_credentials` / `account_locked` (423) / `user_inactive` / `org_suspended`; the proxy discarded three of four. Fixing this is what made the others findable |
+| **Local sales not scoped to the signed-in partner** | A 6 Aug test entry appearing inside a newly created partner's account | IndexedDB is per-browser and rows carried no owner, so a second partner on the same handset saw the first one's book. A privacy leak on exactly the shared devices this tool targets — and there was already a comment in `sign-out.tsx` warning about it |
+
+Also shipped 2026-08-10: **removal available on every row** (the 24h window was
+blocking partners from clearing junk that never reached Okelcor — labelled
+"Remove", since anything Okelcor holds returns on the next sync), locked rows now
+say *why*, and a **mobile pass** — chiefly `interactiveWidget: "resizes-content"`
+so the on-screen keyboard stops burying the running total and Save button.
+
+> **Method note, worth keeping.** The first three bugs were diagnosed by guessing
+> and cost a deploy cycle each. They were all answerable by reading
+> `~/dev/okelcor-api`, which had been on this machine the whole time. The client
+> was built against a *documented* contract and never checked against the running
+> implementation — and the mock returned the shape we had assumed, so nothing
+> disagreed until production. **Check the source before theorising.**
+
+**Open with backend** (`docs/BACKEND_REQUEST_3_editability.md` in the partner repo):
+`AdminPartnerSaleController` has verify/dispute but **no update path**, so a sale
+past the 24h window can be flagged wrong by an admin and corrected by nobody —
+the wrong figure stays in the CSV export. Requested `PATCH
+/admin/partner-sales/{id}` with a required `reason` writing to the existing audit
+trail, mirroring the DOC-5 order line-item revision pattern. Also asked what
+`PARTNER_EDIT_WINDOW_HOURS` should be (config only, business decision).
+
+---
+
 ## Upcoming / Backlog
 
 | Item | Priority | Notes |
@@ -909,7 +953,10 @@ seconds. Worth a `npm run build` from a clean checkout before relying on this.
 | Ops data capture — tyre passport | Medium | `tyre_batch` stays null until inspections are recorded; the frontend card is built and waiting |
 | `estimated_dispatch_days` value | Low | Ships blank by design — needs an order-manager-approved number in `site_settings` before anything displays |
 | Premium-UX §3 — saved fitments / reorder | Low | Not addressed in backend's §1/§2 reply; parked, not lost |
-| **Move repo out of `~/Documents` (iCloud)** | **Critical (tooling)** | Escalated 2026-08-06: iCloud now duplicates files **inside `.git`** — four stray index copies plus `refs/remotes/origin/main 2`, which broke `git fetch` with `bad object`. Cleaned, but it recurs. Also duplicates source files (`route 2.ts`) and makes `eslint`/`tsc` time out past 8 min. Root cause of a full session of phantom build failures |
+| **Admin correction of partner sales** | High | `AdminPartnerSaleController` has no update path — a sale past the 24h window can be disputed but never corrected, and the wrong figure ships in the CSV export. Requested: `PATCH /admin/partner-sales/{id}` + required `reason` → audit trail. See `okelcor-partner/docs/BACKEND_REQUEST_3_editability.md` |
+| `PARTNER_EDIT_WINDOW_HOURS` | Medium | Currently 24, env-driven, no code change. Business call — 24h locks most of a weekend paper-backlog entry session |
+| Partner app — pull-and-merge under real load | Medium | Shipped, but only exercised against one partner. Worth watching once two people in one organisation report from different phones |
+| **Move repo out of `~/Documents` (iCloud)** | **Critical (tooling) — first attempt FAILED 2026-08-07** | **`mv` does not work here. Don't just retry it.** `mv ~/Documents/project/okelcor-website ~/dev/okelcor-website` ran ~25 min and died with `mv: rename …: Operation timed out` — a single `rename()` syscall the iCloud file provider never serviced. **That failure mode is the safe one:** `rename()` is atomic, so the destination was never created and there is no half-copied tree. Source verified intact after: `HEAD` = `cfd4498`, 726 tracked files, `contacts.csv` md5 `1dc6b168…` and `docs/FRONTEND_NOTE_tracking.md` md5 `075918eb…` both unchanged from the pre-move manifest. (`git fsck` could not be used as evidence either way — it times out past 5 min on this filesystem.) **What the attempt revealed:** macOS materialises every evicted placeholder before it will move the folder — the source **grew 398 MB → 434 MB → 621 MB** while the destination still didn't exist. Those were dataless files, which is exactly the corruption risk that makes this move worth doing. **Recommended approach instead:** `rsync -a` the repo excluding `node_modules` and `.next` (both regenerable, and together the bulk of the 621 MB — leaving ~100 MB, mostly `.git`), verify at the destination, `npm install` there, and **only then** delete the original. A copy-then-verify-then-delete is resumable and inspectable where an atomic rename is neither. Everything tracked is already pushed (`cfd4498`), so a `git clone` into `~/dev` plus copying the four untracked files across is an equally valid, even simpler route. Prior history: iCloud had duplicated files **inside `.git`** (four stray index copies + `refs/remotes/origin/main 2`, breaking `git fetch` with `bad object`), duplicated source files (`route 2.ts`), and makes `eslint`/`tsc` time out. `.git` was verified free of duplicates immediately before the attempt |
 | **UI — editorial restructure** | Medium | The visible-change follow-on to the shipped typography pass: bento/broken-grid homepage recomposition, redesigned product detail page, reworked shop catalogue. DOM content + heading hierarchy preserved, so still SEO-invariant. Researched and scoped, not started |
 | Never `kill -9` a Next build | — (process) | Orphans `webpack-loaders.js`/`postcss.js` children that keep holding Next 16's build lock; every later build then queues silently. One build at a time; ~4 min cold |
 | Add `".next"` to `tsconfig.json` exclude | Medium | `include` is `**/*.ts` with only `node_modules` excluded, so tsc walks the entire build output |
@@ -918,3 +965,44 @@ seconds. Worth a `npm run build` from a clean checkout before relying on this.
 | Pre-existing ESLint errors (11) | Medium | `react-hooks/set-state-in-effect` on the fetch-on-mount pattern; same targeted-disable convention already used in `cart-context.tsx` would clear them |
 | Customer proposal view (account portal) | Medium | Show proposal status on account quotes |
 | Proposal PDF document (AN number) | Medium | Backend to generate; frontend to display |
+| **`contacts.csv` sitting in the repo root** | **High (data)** | The real 188-row marketing list — company names and e-mail addresses. Untracked and **deliberately not committed**: pushing it publishes real contact data to GitHub permanently, and a later scrub can't fully undo that. Add it to `.gitignore` (there is currently no `csv` rule) and keep the file outside the repo |
+| Repo-root junk — 15 screenshots + a `.webp` | Low | Untracked leftovers from a July session, referenced nowhere. Delete or ignore |
+| **Verify ESLint once the repo is off iCloud** | Medium | It has not completed on this machine for two sessions. The move is the fix; until it runs, the "11 pre-existing errors" figure is a stale claim, and this session's changes are unlinted |
+
+---
+
+## Session note — 2026-08-07
+
+**Shipped:** campaign editor autosave + in-place image upload (`cfd4498`, pushed). Full
+detail in the Marketing table and `docs/FRONTEND_NOTE_campaign-autosave.md`.
+
+**Two things a reader should not have to rediscover:**
+
+**The partner-sales module vanished from the working tree during this session.**
+`app/admin/partners/`, `app/admin/partner-sales/`, `app/api/admin/{partners,partner-sales,partner-users}/`,
+`components/admin/{partners-manager,partner-sales-review}.tsx`, `lib/partner-proxy.ts` and
+`docs/PROPOSAL_partner_sales_app.md` were all untracked-present at session start; by the
+time of the commit they were gone and `admin-shell.tsx` / `admin-permissions.ts` had
+reverted to unmodified. **None of it was ever committed, so if that removal wasn't
+deliberate, it is not recoverable from git.** Nothing in this session touched those
+files. Flagged rather than acted on.
+
+**The repo move failed and the repo is still in `~/Documents`.** Details and the
+recommended alternative are in the backlog row above. Nothing was lost — the attempt
+died on an atomic `rename()` that never took effect.
+
+**When the move is retried, in this order:**
+
+1. `rsync -a --exclude node_modules --exclude .next` into `~/dev/okelcor-website`
+   (or simply `git clone` there — everything tracked is pushed at `cfd4498` — then copy
+   the untracked files across: `contacts.csv`, `.claude/settings.local.json`,
+   `docs/FRONTEND_NOTE_tracking.md`, and the repo-root screenshots if they're wanted).
+2. Verify at the destination — `git log -1` = `cfd4498`, `git status` matches, the
+   untracked checksums match — **before** deleting anything in `~/Documents`.
+3. `npm install` in the new location (`node_modules` is deliberately not copied).
+4. Restart the editor/CLI there — a session opened against the old path keeps a working
+   directory that no longer exists.
+5. Re-run `tsc` and `eslint`; both should now complete. If `tsc` is still slow, the
+   `".next"`-in-`exclude` backlog item is the remaining cause, not iCloud.
+6. Per the build-environment warning below, **one build at a time, and never `kill -9`
+   a build.**
