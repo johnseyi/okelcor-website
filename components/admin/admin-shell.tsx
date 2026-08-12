@@ -43,6 +43,7 @@ import {
   Images,
   Handshake,
   ReceiptText,
+  Search,
 } from "lucide-react";
 import { logoutAdmin } from "@/app/admin/actions";
 import { canAccess, PATH_SECTION, ROLE_LABELS, ROLE_BADGE_COLORS } from "@/lib/admin-permissions";
@@ -132,6 +133,10 @@ const NAV_GROUPS: readonly NavGroup[] = [
     label: "Insights",
     items: [
       { label: "Analytics",     href: "/admin/analytics", icon: BarChart2,  section: "analytics" },
+      // Its own section, not "analytics": the roles the backend grants this
+      // report to are not the ones our analytics section lists, and the two
+      // pages read different data sources.
+      { label: "Customer Behaviour", href: "/admin/analytics/behaviour", icon: Search, section: "behaviour" },
       { label: "Supplier Intel", href: "/admin/supplier", icon: TrendingUp, section: "supplier" },
     ],
   },

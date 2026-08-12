@@ -295,6 +295,54 @@ TypeScript 0 errors (scoped run — the full `tsc` still times out, see below) �
 
 ---
 
+### ✅ Admin Panel — Customer Behaviour Analytics (2026-08-12)
+
+Backend session 79 (`05f359e`, migration #32) records every catalogue search the
+site already makes — **no instrumentation, no events, no SDK on this side.** New
+page `/admin/analytics/behaviour` answers "what are customers looking for, and
+what can't we give them".
+
+| Feature | Notes |
+|---|---|
+| `components/admin/behaviour-analytics.tsx` + `lib/behaviour-analytics.ts` + one proxy | Built in backend's stated priority order, which is deliberately **not** volume-first: unmet demand → demand-vs-stock → no-result rate → breakdowns. Everything is plotted as served; nothing is recomputed client-side |
+| **Unmet demand is the top card**, styled as the only accented panel | Every row is a product to stock or a term the catalogue doesn't recognise. It's the one list that changes a purchasing decision, so it outranks the charts — a volume chart at the top would bury it |
+| Demand-vs-stock filtered to `status !== "available"` | `all_out_of_stock` (red, "Restock") and `not_stocked` (amber, "Range decision") are **different actions**, so they carry different labels, and each ships a dot **and** a word — never colour alone. Rendered as tinted badges with dark text rather than raw status hues, which keeps text clear of contrast limits (`#fab219` measures 1.83:1 on white) |
+| `meta.not_covered` printed under the title | A screen called "customer behaviour" that silently omits page views invites the reader to conclude they aren't happening. Turned into navigation rather than a disclaimer: it links to `/admin/analytics`, the GA/PostHog page that **does** cover them |
+| **The funnel is three figures side by side, never a narrowing graphic** | Searches are anonymous, orders are not, nothing is joined. A funnel with arrows would assert individual journeys the data can't support. Per-visitor figures are labelled "Proportion, not a conversion path", and `funnel.note` is printed verbatim |
+| `available: false` shows the reason, not an empty chart | An empty chart asserts "customers aren't searching". The panel says nothing has been *collected* yet, names the collecting-since date, and adds that a week is when the lists start to mean something |
+| Charts | Two-series day chart (searches vs found-nothing) with a **"Show table" twin** so no value is reachable only by hovering; zero days plotted **as zeros** since `daily` is gap-free on purpose and a gap would read as missing data. Rim size as the lead bar chart. Single-series bars use **one hue for every bar** — colouring bars by their own value would re-encode what bar length already shows |
+| Palette **validated, not eyeballed** | `#E85C1A` (admin accent) + `#2a78d6`, run through the dataviz validator against the real `#ffffff` card surface: lightness band PASS · chroma PASS · CVD ΔE 26.3 (≥8) · normal-vision ΔE 34.2 (≥15) · contrast 3.51:1 / 4.42:1 (≥3:1). **No dark mode invented** — the admin has zero `dark:` utilities, so a second palette would have been fiction |
+| Refetch holds the previous render at 60% opacity | No skeleton flash, no layout jump when the range changes |
+| RBAC — **its own `behaviour` section** | Roles copied verbatim from the backend (`super_admin, admin, order_manager, editor`). Deliberately **not** folded into the existing `analytics` section: see the divergence note below |
+| AI insights `behaviour` category | **Confirmed needing no change, not assumed:** `AdminInsightCategory` is `… | string` and `categoryLabel()` falls back to a capitalised label, so a `behaviour` insight renders as "Behaviour" on its own |
+
+> **RBAC divergence found while wiring this (worth telling backend).** The backend
+> grants `analytics.view` to **`super_admin, admin, order_manager, editor`**
+> (`AdminPermissions.php:96`); this repo's map grants it to
+> **`super_admin, admin, sales_manager`**. Both directions are wrong: `order_manager`
+> and `editor` are authorised server-side but hidden client-side, and `sales_manager`
+> is shown a page the server would 403 — and `sales_manager` **cannot even be stored**,
+> since `admin_users.role` is a DB ENUM missing it (same finding as the partner-sales
+> pass). **Deliberately not "fixed" in this pass:** `analytics.view` is defined but
+> **never consumed** anywhere in the frontend, so the divergence has no live effect
+> today, and the `analytics` *section* it sits beside also gates the Google
+> Analytics page — widening that would hand GA data to two more roles, which is a
+> business decision, not a typo. The new page sidesteps it entirely with its own
+> section. Flagged for a joint decision on which list is canonical.
+
+> **`X-Okelcor-Visitor` — not implemented, and it needs a decision.** Backend's
+> optional header would make unique-visitor counts accurate (every request reaches
+> them via our proxy, so they currently see the proxy's IP). **We do have the
+> consent mechanism it requires** — `lib/cookie-consent.ts` (`getConsent()` →
+> `accepted | rejected | null`), already gating GA and PostHog — so gating on
+> `accepted` is a small change. Not done unilaterally because it stores a new
+> identifier in public visitors' browsers and may need a line in the privacy
+> policy; backend called it "a consent decision, not a technical one" and that
+> decision isn't ours. Everything on the page works without it; only unique-visitor
+> precision is affected.
+
+---
+
 ### ✅ Admin Panel — AI Insights
 
 Idea: a Gemini-powered scheduled job (backend, every 15 min) summarizes the
@@ -944,6 +992,8 @@ trail, mirroring the DOC-5 order line-item revision pattern. Also asked what
 
 | Item | Priority | Notes |
 |---|---|---|
+| **Behaviour analytics — visual layout check not completed** | Medium | The page is built, typechecks, lints and builds, and its palette is validated — but it has **never been looked at with data in it.** A mock-data harness was written and served correctly (dev server 200), yet the Chrome extension refused every screenshot with "Frame with ID 0 is showing error page" on both `localhost` and `127.0.0.1` — it appears to lack localhost site permission, which only the user can grant. No headless browser is installed. **So label collisions, bar geometry and overflow are unverified**, which is exactly what the colour validator does not check. Re-run: `npm run dev -- --port 3939`, open `/viz-check`, look at the rim bar chart's Y labels and the day chart's x-axis band, then delete `app/viz-check/page.tsx` |
+| **`analytics.view` role list diverges from the backend** | Medium | Backend: `super_admin, admin, order_manager, editor`. This repo: `super_admin, admin, sales_manager`. No live effect — the permission is defined but never consumed here — but the neighbouring `analytics` *section* gates the Google Analytics page, so aligning it would grant GA to two more roles. Needs a joint call on which list is canonical; the behaviour page uses its own `behaviour` section meanwhile |
 | **Imported designs stack where the source has columns — needs 4 new block types (backend)** | **High — backend, nothing frontend can do** | Reported after the first real import: the three industry photographs sit side by side in the source deck and stack vertically after import. **Not an importer bug.** `CampaignBlockRenderer::BLOCKS` is `heading · text · image · button · list · divider · spacer · footer` — every one a single full-width element concatenated into one column (`image` renders at `width="552"; display:block; width:100%`), so **no block can place two things beside each other** and three stacked `image` blocks was the only available output. The same gap kills the green section bands (`heading` has no background colour) and the 12 three-across benefit cards (no card, no columns). **No frontend fix exists:** blocks are rendered server-side, and inventing a columns block client-side would fail `validateBlocks()` as `invalid_blocks` and stop the campaign sending. Asked for, most-value-first: **`image_row`** (fixes the report; fixed `image_url` slots need **zero frontend work** since that field type already carries the Media Library picker), **`section_header`** (named `tone` rather than a colour picker, so no new field type), **`cards`** (recommended as a `group_list` field type — the one item with a frontend cost, one new renderer in `block-field.tsx`, which we'd build), and a **`fet_green` preset** (both existing presets are teal+gold; FET is a documented separate design system in CLAUDE.md). Full contract, field shapes and the Outlook/mobile requirements: **`docs/BACKEND_NOTE_campaign_layout_blocks.md`**. The hero band is explicitly out of reach by any method — recommended there: flatten that region to one image with strong alt text |
 | **InDesign import — 4.5 MB upload ceiling (understood, not currently binding)** | Low — watch, don't build | The endpoint accepts 50 MB but the upload crosses a Next.js route handler, and **Vercel caps a Function's request body at 4.5 MB**, answering `413 FUNCTION_PAYLOAD_TOO_LARGE` *before* our code runs ([limits](https://vercel.com/docs/functions/limitations), [error ref](https://vercel.com/docs/errors/FUNCTION_PAYLOAD_TOO_LARGE)). Not raisable from application code: `experimental.serverActions.bodySizeLimit: "300mb"` in `next.config.ts` covers **Server Actions only**. **Downgraded from High on backend's reply, which supplied the two facts that settle it:** the importer already reduces every image to **2000px longest side, JPEG 90**, discarding anything above that on the way in — so past that threshold a larger export produces a **byte-identical email**, and InDesign's Publish Online at **Medium / 150 ppi** is at or above what survives. The real Fuel Eco Tech export is **1.6 MB, about a third of the ceiling**. My earlier claim that photographic exports would "exceed 4.5 MB routinely" was wrong in the direction that matters — corrected rather than left standing. Exporting smaller is therefore not a quality compromise, and the UI now says exactly that (naming Medium/150 ppi and the 2000px cap) instead of vaguely asking for "a lower resolution". The 413 branch stays, caught on status alone since the body is Vercel's HTML error page rather than our JSON. **Still never blocked client-side** — a self-hosted or direct upload genuinely takes the full 50 MB, which is why the API keeps its 50. **If a real export ever does exceed it, backend prefers the image-splitting route over my upload-ticket idea, and is right:** strip images client-side, send the tiny HTML+CSS through the proxy, push each image through the existing `POST /admin/media` (each far under 4.5 MB), and pass a `filename → media_id` map to a new optional `media_map` parameter. That reuses an endpoint live since session 51 and **adds no new way to authenticate**, where a short-lived upload ticket means a bearer-equivalent credential outside the normal token path — single-use, short TTL, bound to the admin and to this one action, header not query string so it stays out of access logs. Neither is built |
 | **Milestone audit trail is gone for every existing order** | High (data, backend) | Backend found it while doing session 76: `order_logs.action` is a MySQL ENUM that never contained the milestone actions, and those writes sit behind a `try/catch` that logs a warning and continues — so MySQL has silently rejected every one since DOC-7 shipped. **The payment-milestone history does not exist on production for any order and those rows are unrecoverable.** Migration #31 adds the eleven values. Nothing to do frontend-side, but the admin order log will read as though nothing ever happened before #31 — worth knowing before someone concludes the log is broken |

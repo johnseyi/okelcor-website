@@ -17,13 +17,13 @@ export type AdminRole = (typeof ALL_ROLES)[number];
 // Mirrors backend ROLE_ACCESS table.
 
 export const ROLE_ACCESS: Record<string, string[]> = {
-  super_admin:     ["dashboard", "products", "orders", "quotes", "articles", "hero_slides", "promotions", "fet", "brands", "categories", "media", "settings", "users", "supplier", "customers", "ebay", "analytics", "chats", "security", "eu_declarations", "logistics", "system_health", "crm", "marketing", "partners"],
-  admin:           ["dashboard", "products", "orders", "quotes", "articles", "hero_slides", "promotions", "fet", "brands", "categories", "media", "settings", "users", "supplier", "customers", "ebay", "analytics", "chats", "security", "eu_declarations", "logistics", "system_health", "crm", "marketing", "partners"],
-  order_manager:   ["dashboard", "orders", "quotes", "supplier", "eu_declarations", "logistics", "crm", "marketing", "partners"],
+  super_admin:     ["dashboard", "products", "orders", "quotes", "articles", "hero_slides", "promotions", "fet", "brands", "categories", "media", "settings", "users", "supplier", "customers", "ebay", "analytics", "behaviour", "chats", "security", "eu_declarations", "logistics", "system_health", "crm", "marketing", "partners"],
+  admin:           ["dashboard", "products", "orders", "quotes", "articles", "hero_slides", "promotions", "fet", "brands", "categories", "media", "settings", "users", "supplier", "customers", "ebay", "analytics", "behaviour", "chats", "security", "eu_declarations", "logistics", "system_health", "crm", "marketing", "partners"],
+  order_manager:   ["dashboard", "orders", "quotes", "supplier", "eu_declarations", "logistics", "crm", "marketing", "partners", "behaviour"],
   sales_manager:   ["dashboard", "orders", "quotes", "customers", "analytics", "logistics", "crm"],
   content_manager: ["dashboard", "articles", "hero_slides", "promotions", "fet", "brands", "media"],
   support:         ["dashboard", "orders", "quotes", "customers", "chats", "logistics"],
-  editor:          ["dashboard", "articles", "hero_slides", "promotions", "fet", "media"],
+  editor:          ["dashboard", "articles", "hero_slides", "promotions", "fet", "media", "behaviour"],
   viewer:          ["dashboard", "analytics"],
 };
 
@@ -49,6 +49,9 @@ export const PATH_SECTION: Record<string, string> = {
   "/admin/customers":       "customers",
   "/admin/security":        "security",
   "/admin/ebay":            "ebay",
+  // Listed before "/admin/analytics": PATH_SECTION is matched with startsWith()
+  // and the first entry wins, so the broader prefix must come second.
+  "/admin/analytics/behaviour": "behaviour",
   "/admin/analytics":       "analytics",
   "/admin/chats":           "chats",
   "/admin/eu-declarations": "eu_declarations",
@@ -116,6 +119,11 @@ const PERMISSION_ROLES: Record<string, string[]> = {
 
   // Analytics
   "analytics.view":        ["super_admin", "admin", "sales_manager"],
+  // Behaviour analytics is its own permission, copied from the backend's list
+  // verbatim (AdminPermissions.php: super_admin, admin, order_manager, editor).
+  // Deliberately NOT merged into "analytics.view" above, which diverges from the
+  // backend and also gates the Google Analytics page — see PROGRESS.md.
+  "behaviour.view":        ["super_admin", "admin", "order_manager", "editor"],
 
   // Trade documents
   "trade_documents.manage": ["super_admin", "admin", "order_manager"],
