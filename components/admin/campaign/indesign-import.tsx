@@ -6,6 +6,7 @@ import {
   Info, Loader2, Monitor, MousePointerClick, Smartphone, Upload, X,
 } from "lucide-react";
 import type { CampaignImportResult } from "@/lib/admin-api";
+import { PREVIEW_WIDTH } from "@/lib/campaign-design";
 
 /**
  * Importing a design the marketers made in InDesign.
@@ -526,6 +527,9 @@ export default function InDesignImport({
               <div className="flex min-h-[380px] flex-1 flex-col overflow-hidden rounded-xl border border-black/[0.07] bg-white">
                 <div className="flex items-center gap-2 border-b border-black/[0.06] bg-[#f5f5f5] px-4 py-2.5">
                   <h3 className="text-[0.83rem] font-bold text-[#171a20]">How the email will look</h3>
+                  <span className="font-mono text-[0.7rem] text-[#8c8f94]">
+                    {mobile ? "Mobile" : "Desktop"} · {mobile ? PREVIEW_WIDTH.mobile : PREVIEW_WIDTH.desktop}px
+                  </span>
                   <div className="ml-auto flex items-center gap-0.5 rounded-full bg-white p-0.5">
                     <button
                       type="button" onClick={() => setMobile(false)} title="Desktop"
@@ -552,7 +556,8 @@ export default function InDesignImport({
                       srcDoc={result.preview_html}
                       sandbox=""
                       className="h-full w-full rounded-lg border border-black/[0.06] bg-white"
-                      style={{ maxWidth: mobile ? 380 : 700, minHeight: 360 }}
+                      // Real width, not a scaled desktop render — see PREVIEW_WIDTH.
+                      style={{ maxWidth: mobile ? PREVIEW_WIDTH.mobile : PREVIEW_WIDTH.desktop, minHeight: 360 }}
                     />
                   ) : (
                     <p className="self-center text-[0.83rem] text-[#8c8f94]">

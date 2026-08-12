@@ -152,6 +152,21 @@ export function normaliseCampaignDesign(raw: unknown): CampaignDesign {
 }
 
 /**
+ * Widths of the two preview modes, in CSS pixels.
+ *
+ * These are the iframe element's **real** width, never a `transform: scale()` on
+ * a wider document. The distinction is the whole ballgame: scaling a 620px render
+ * down still leaves the document 620px wide, so the email's media queries never
+ * fire and the result is the desktop layout drawn smaller — which is
+ * indistinguishable from "the email isn't responsive". If a zoom control is ever
+ * added, it must transform the iframe *element*, never the document inside it.
+ *
+ * 375 is the canonical phone width and the one the backend's responsive checks
+ * are written against, so both sides test the same number.
+ */
+export const PREVIEW_WIDTH = { mobile: 375, desktop: 700 } as const;
+
+/**
  * Colour overrides carried alongside a theme preset — `heading_color`,
  * `button_background` and so on. An imported design brings its recovered palette
  * this way; a hand-built campaign has none.

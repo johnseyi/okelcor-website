@@ -2,16 +2,28 @@
 
 import { Monitor, Smartphone, RefreshCw, AlertTriangle } from "lucide-react";
 import type { CampaignPreview } from "@/lib/admin-api";
+import { PREVIEW_WIDTH } from "@/lib/campaign-design";
 
 /**
  * Live preview. Renders `html_personalized` so the author sees "Hi Anna", not
  * `[[FIRST_NAME]]` — the whole point of the merge-tag system is invisible
  * otherwise.
  *
- * The email HTML is rendered in a sandboxed iframe: it's a full document with
- * its own styles, and injecting it into the admin panel's DOM would let it
- * restyle the page around it. `sandbox` with no `allow-*` also stops any
+ * The email HTML is rendered in a sandboxed iframe via `srcDoc`: it's a full
+ * document with its own styles, and injecting it into the admin panel's DOM would
+ * let it restyle the page around it. `sandbox` with no `allow-*` also stops any
  * script in a pasted block from touching the admin session.
+ *
+ * Two properties this relies on, both load-bearing for responsiveness:
+ *
+ * - `srcDoc` on an iframe renders the document *as a document*, so its `<head>`
+ *   and the `<style>` block holding every media query survive. Injecting the
+ *   same HTML into a `<div>` would drop them and the email could only ever look
+ *   like its desktop layout.
+ * - `sandbox=""` restricts scripts, forms and origin — it has no effect on CSS
+ *   parsing or media-query evaluation, so it is kept as-is rather than relaxed to
+ *   `allow-same-origin`, which would hand the framed document our origin for no
+ *   gain here.
  */
 export default function CampaignPreviewPane({
   preview,
@@ -33,6 +45,12 @@ export default function CampaignPreviewPane({
       <div className="flex items-center gap-2 border-b border-black/[0.06] bg-[#f5f5f5] px-4 py-2.5">
         <h3 className="text-[0.83rem] font-bold text-[#171a20]">Preview</h3>
         {loading && <RefreshCw size={12} className="animate-spin text-[#8c8f94]" />}
+        {/* The rendered width, stated. A layout report that omits which view was
+            active costs a round trip to find out — printing it here means any
+            screenshot of this pane carries the answer. */}
+        <span className="font-mono text-[0.7rem] text-[#8c8f94]">
+          {mobile ? "Mobile" : "Desktop"} · {mobile ? PREVIEW_WIDTH.mobile : PREVIEW_WIDTH.desktop}px
+        </span>
         <div className="ml-auto flex items-center gap-0.5 rounded-full bg-white p-0.5">
           <button
             type="button"
@@ -89,7 +107,8 @@ export default function CampaignPreviewPane({
             srcDoc={preview.html_personalized || preview.html}
             sandbox=""
             className="h-full w-full rounded-lg border border-black/[0.06] bg-white"
-            style={{ maxWidth: mobile ? 380 : 700, minHeight: 420 }}
+            // A real width, never a scaled-down desktop render — see PREVIEW_WIDTH.
+            style={{ maxWidth: mobile ? PREVIEW_WIDTH.mobile : PREVIEW_WIDTH.desktop, minHeight: 420 }}
           />
         ) : (
           <p className="self-center text-[0.83rem] text-[#8c8f94]">

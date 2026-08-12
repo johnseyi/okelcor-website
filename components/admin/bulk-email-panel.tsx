@@ -659,10 +659,26 @@ function CampaignHistory({
                 <X size={16} />
               </button>
             </div>
-            <div
-              className="prose max-w-none p-5 text-[0.875rem]"
-              dangerouslySetInnerHTML={{ __html: preview.body_html ?? "<p>No body content.</p>" }}
-            />
+            {/* A sandboxed iframe, not dangerouslySetInnerHTML into a div.
+                `body_html` on a block-designed campaign is the *whole rendered
+                email document* — the backend renders blocks at send time and
+                stores the result here — so injecting it into a div drops the
+                <head>, and with it the <style> block that carries every media
+                query. The sent campaign would render here unstyled and get
+                reported as a broken email. It also let a sent document restyle
+                the admin page around it, which is the reason the live preview
+                has always used an iframe. */}
+            {preview.body_html ? (
+              <iframe
+                title={`Sent campaign: ${preview.subject}`}
+                srcDoc={preview.body_html}
+                sandbox=""
+                className="block w-full border-0 bg-white"
+                style={{ height: "70vh" }}
+              />
+            ) : (
+              <p className="p-5 text-[0.875rem] text-[#5c5e62]">No body content.</p>
+            )}
           </div>
         </div>
       )}
