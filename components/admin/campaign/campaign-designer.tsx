@@ -5,7 +5,10 @@ import { Palette, Save, RefreshCw, AlertTriangle, LayoutTemplate } from "lucide-
 import type {
   CampaignBlock, CampaignDesign, CampaignImportResult, CampaignPreview, CampaignTemplate,
 } from "@/lib/admin-api";
-import { normaliseCampaignDesign } from "@/lib/campaign-design";
+import {
+  normaliseCampaignDesign, themeToWire, themeOverridesOf,
+  type CampaignThemeOverrides,
+} from "@/lib/campaign-design";
 import { themeToKey } from "@/hooks/use-campaign-autosave";
 import BlockEditor from "./block-editor";
 import CampaignPreviewPane from "./campaign-preview";
@@ -20,17 +23,23 @@ export default function CampaignDesigner({
   subject,
   blocks,
   theme,
+  themeOverrides,
   onBlocksChange,
   onThemeChange,
+  onThemeOverridesChange,
   blockErrors,
   generalErrors,
   adminEmail,
 }: {
   subject: string;
   blocks: CampaignBlock[];
+  /** The preset key. The picker needs a string; overrides ride alongside. */
   theme: string;
+  /** Colour overrides from an imported or saved design, passed through verbatim. */
+  themeOverrides?: CampaignThemeOverrides | null;
   onBlocksChange: (b: CampaignBlock[]) => void;
   onThemeChange: (t: string) => void;
+  onThemeOverridesChange?: (o: CampaignThemeOverrides | null) => void;
   blockErrors: Record<number, string[]>;
   generalErrors: string[];
   adminEmail: string;
@@ -75,14 +84,26 @@ export default function CampaignDesigner({
         const res = await fetch("/api/admin/bulk-emails/preview", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ subject, blocks, theme: theme || undefined }),
+          body: JSON.stringify({ subject, blocks, theme: themeToWire(theme, themeOverrides) }),
         });
         const json = await res.json().catch(() => ({}));
         if (!res.ok) {
-          // A 422 while half-finished is normal — those messages land on the
-          // blocks themselves when the author tries to send, so the preview
-          // pane stays quiet rather than nagging on every keystroke.
-          setPreviewError(res.status === 422 ? null : (json.error ?? json.message ?? null));
+          // A 422 carrying *block* errors is normal while half-finished — those
+          // messages land on the blocks themselves at send time, so the pane
+          // stays quiet rather than nagging on every keystroke.
+          //
+          // A 422 with no block errors is a different animal: the request itself
+          // was rejected. Swallowing those indiscriminately is what let a
+          // malformed `theme` reach production looking like an empty preview
+          // beside a full block list, for two weeks, with nothing logged.
+          const hasBlockErrors =
+            !!json?.errors?.blocks ||
+            Object.keys(json?.errors ?? {}).some((k) => k.startsWith("blocks"));
+          setPreviewError(
+            res.status === 422 && hasBlockErrors
+              ? null
+              : (json.error ?? json.message ?? null),
+          );
           return;
         }
         setPreviewError(null);
@@ -95,29 +116,50 @@ export default function CampaignDesigner({
     }, 700);
 
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [blocks, theme, subject]);
+  }, [blocks, theme, themeOverrides, subject]);
 
   const buildTestPayload = useCallback(() => {
     if (blocks.length === 0) return { error: "Add at least one block before sending a test." };
     if (!subject.trim())     return { error: "Add a subject line before sending a test." };
-    return { payload: { subject, blocks, theme: theme || undefined } };
-  }, [blocks, subject, theme]);
+    return { payload: { subject, blocks, theme: themeToWire(theme, themeOverrides) } };
+  }, [blocks, subject, theme, themeOverrides]);
 
-  function applyTemplate(t: CampaignTemplate) {
-    onBlocksChange(t.blocks ?? []);
-    if (t.theme) onThemeChange(t.theme);
+  /**
+   * Applying a saved design.
+   *
+   * The blocks are fetched by id rather than taken from the card, because the
+   * *list* endpoint returns `block_count` without `blocks` — deliberately, to
+   * keep the list light. Trusting the list payload here applied an empty design
+   * over the marketer's canvas and looked exactly like a template that had lost
+   * its contents. Starters carry their blocks inline, so they skip the fetch.
+   */
+  async function applyTemplate(t: CampaignTemplate) {
     setPicked(true);
+    let full = t;
+    if ((t.blocks?.length ?? 0) === 0 && !t.is_starter) {
+      try {
+        const res  = await fetch(`/api/admin/campaign-templates/${t.id}`);
+        const json = await res.json().catch(() => null);
+        const fetched: CampaignTemplate | null = json?.data ?? null;
+        if (fetched?.blocks?.length) full = fetched;
+      } catch { /* fall back to the card's own payload */ }
+    }
+    onBlocksChange(full.blocks ?? []);
+    const key = themeToKey(full.theme);
+    if (key) onThemeChange(key);
+    onThemeOverridesChange?.(themeOverridesOf(full.theme));
   }
 
   /**
    * An imported design is an ordinary template from here on, so it goes through
    * the same path as any other. Two differences worth noting:
    *
-   * - its `theme` arrives as an object (`{ preset, text_color, … }`) rather than
-   *   the bare preset key the composer uses, hence `themeToKey`. Only the preset
-   *   is applied: the importer has already replaced an illegible recovered
-   *   palette with the house theme, and reinstating the export's own colours is
-   *   exactly how you end up sending white text on a white page.
+   * - its `theme` is an object (`{ preset, heading_color, … }`), never a bare
+   *   preset key. The preset drives the picker; the rest are overrides passed
+   *   through verbatim. Note this does *not* mean reinstating the export's own
+   *   palette — the importer has already replaced an illegible one with the
+   *   house theme before it ever reaches here, so what arrives is what should be
+   *   rendered. Dropping the overrides is the actual bug, not keeping them.
    * - the templates list is refreshed either way, so a design saved but not used
    *   now is waiting under "Your saved designs" rather than needing a reload.
    */
@@ -128,6 +170,11 @@ export default function CampaignDesigner({
     onBlocksChange(result.blocks ?? []);
     const key = themeToKey(result.theme);
     if (key) onThemeChange(key);
+    // The recovered palette — gold headings, button colours — travels as
+    // overrides on top of the preset and is passed through verbatim. Reducing
+    // the imported theme to its preset alone (which this did at first) silently
+    // repainted the design in house colours the moment it was previewed.
+    onThemeOverridesChange?.(themeOverridesOf(result.theme));
     setPicked(true);
   }
 
@@ -255,6 +302,7 @@ export default function CampaignDesigner({
         <SaveTemplateModal
           blocks={blocks}
           theme={theme}
+          themeOverrides={themeOverrides}
           onClose={() => setShowSave(false)}
           onSaved={templates.refresh}
         />

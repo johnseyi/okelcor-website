@@ -151,6 +151,50 @@ export function normaliseCampaignDesign(raw: unknown): CampaignDesign {
   };
 }
 
+/**
+ * Colour overrides carried alongside a theme preset — `heading_color`,
+ * `button_background` and so on. An imported design brings its recovered palette
+ * this way; a hand-built campaign has none.
+ */
+export type CampaignThemeOverrides = Record<string, string | number>;
+
+/**
+ * Build the `theme` value every campaign endpoint expects.
+ *
+ * **This is an object, never a bare preset string.** `preview`, `test-send`,
+ * `bulk-emails` (the real send) and both `campaign-templates` writes all
+ * validate `theme` as `['nullable', 'array']`, so a string is a 422 — and on the
+ * preview that 422 was being swallowed as "normal while half-finished", which is
+ * how a broken theme reached production looking like an empty preview pane.
+ *
+ * Overrides go through verbatim: the renderer applies them on top of the preset
+ * and ignores any key it doesn't recognise, so there is nothing to filter here.
+ */
+export function themeToWire(
+  preset: string,
+  overrides?: CampaignThemeOverrides | null,
+): Record<string, unknown> | undefined {
+  const hasOverrides = overrides != null && Object.keys(overrides).length > 0;
+  if (!preset && !hasOverrides) return undefined;
+  return { ...(preset ? { preset } : {}), ...(hasOverrides ? overrides : {}) };
+}
+
+/**
+ * Pull the colour overrides out of a served theme, dropping the preset itself
+ * (which the composer tracks separately, because the picker needs a string).
+ * A bare string theme carries no overrides.
+ */
+export function themeOverridesOf(theme: unknown): CampaignThemeOverrides | null {
+  if (!theme || typeof theme !== "string" && typeof theme !== "object") return null;
+  if (typeof theme === "string") return null;
+  const out: CampaignThemeOverrides = {};
+  for (const [k, v] of Object.entries(theme as Record<string, unknown>)) {
+    if (k === "preset" || k === "label") continue;
+    if (typeof v === "string" || typeof v === "number") out[k] = v;
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
 /** A new block pre-filled from its spec's declared defaults. */
 export function blankBlock(spec: CampaignBlockSpec): CampaignBlock {
   const block: CampaignBlock = { type: spec.type };

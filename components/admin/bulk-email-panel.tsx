@@ -11,6 +11,7 @@ import type {
 } from "@/lib/admin-api";
 import { groupBlockErrors } from "@/lib/campaign-design";
 import { useCampaignAutosave, draftHasContent, themeToKey } from "@/hooks/use-campaign-autosave";
+import { themeToWire, themeOverridesOf, type CampaignThemeOverrides } from "@/lib/campaign-design";
 import { MarketMultiSelect, useMarketOptions } from "./market-select";
 import CampaignDesigner from "./campaign/campaign-designer";
 import { AutosaveIndicator, RestoreDraftBar } from "./campaign/autosave";
@@ -293,6 +294,10 @@ function Composer({
   const [bodyHtml, setBodyHtml]       = useState("");
   const [blocks, setBlocks]           = useState<CampaignBlock[]>([]);
   const [theme, setTheme]             = useState("");
+  // Colour overrides riding on top of the preset — an imported or saved design
+  // brings its own palette. Kept beside `theme` rather than folded into it
+  // because the picker's <select> needs a plain string value.
+  const [themeOverrides, setThemeOverrides] = useState<CampaignThemeOverrides | null>(null);
   const [filters, setFilters]         = useState<AudienceFilters>(EMPTY_AUDIENCE);
   const [count, setCount]             = useState<number | null>(null);
   const [countLoading, setCountLoading] = useState(false);
@@ -351,6 +356,7 @@ function Composer({
     setSubject(full.subject ?? "");
     setBlocks(full.blocks ?? []);
     setTheme(themeKey);
+    setThemeOverrides(themeOverridesOf(full.theme));
     setBodyHtml(full.body_html ?? "");
     setFilters(audience);
     setMode(full.blocks?.length ? "design" : full.body_html ? "html" : "design");
@@ -377,7 +383,11 @@ function Composer({
     setMode("design");
     setSubject(reopenFrom.subject ?? "");
     setBlocks(reopenFrom.blocks ?? []);
-    setTheme(reopenFrom.theme ?? "");
+    // The campaigns endpoint returns `theme` as an object, so this cannot be
+    // assigned straight to a string state — doing so put an object into the
+    // colour <select>. Preset drives the picker, the rest ride as overrides.
+    setTheme(themeToKey(reopenFrom.theme));
+    setThemeOverrides(themeOverridesOf(reopenFrom.theme));
     setBodyHtml("");
     setError(null);
     setBlockErrors({});
@@ -431,7 +441,11 @@ function Composer({
     const body: Record<string, unknown> = { subject: subject.trim() };
     if (mode === "design") {
       body.blocks = blocks;
-      if (theme) body.theme = theme;
+      // An object, never a bare preset string: this endpoint validates `theme`
+      // as an array, so a string 422s and the campaign cannot be sent at all
+      // once a colour scheme has been chosen.
+      const themePayload = themeToWire(theme, themeOverrides);
+      if (themePayload) body.theme = themePayload;
     } else {
       body.body_html = bodyHtml;
     }
@@ -540,6 +554,8 @@ function Composer({
           subject={subject}
           blocks={blocks}
           theme={theme}
+          themeOverrides={themeOverrides}
+          onThemeOverridesChange={setThemeOverrides}
           onBlocksChange={(b) => { setBlocks(b); setError(null); }}
           onThemeChange={setTheme}
           blockErrors={blockErrors}

@@ -3,15 +3,18 @@
 import { useState } from "react";
 import { X, RefreshCw, AlertTriangle } from "lucide-react";
 import type { CampaignBlock } from "@/lib/admin-api";
+import { themeToWire, type CampaignThemeOverrides } from "@/lib/campaign-design";
 
 export default function SaveTemplateModal({
   blocks,
   theme,
+  themeOverrides,
   onClose,
   onSaved,
 }: {
   blocks: CampaignBlock[];
   theme: string;
+  themeOverrides?: CampaignThemeOverrides | null;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -33,7 +36,9 @@ export default function SaveTemplateModal({
           name: name.trim(),
           description: description.trim() || undefined,
           blocks,
-          theme: theme || undefined,
+          // An object, never a bare preset string — this endpoint validates
+          // `theme` as an array, so a string is a 422.
+          theme: themeToWire(theme, themeOverrides),
         }),
       });
       const json = await res.json().catch(() => ({}));
