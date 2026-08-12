@@ -924,9 +924,21 @@ export type CampaignTemplate = {
   name: string;
   description?: string | null;
   blocks: CampaignBlock[];
-  theme?: string | null;
+  theme?: CampaignThemeValue;
   /** Starters are built-in and can't be edited or deleted. */
   is_starter?: boolean;
+  /**
+   * Server-rendered email, byte-identical to what the import returned.
+   *
+   * Present on `GET /admin/campaign-templates/{id}` and on each starter — **not**
+   * on the list, which stays light. Render this rather than deriving a preview
+   * from `blocks`: the renderer is the only thing that knows the current block
+   * vocabulary, and the editor is routinely a deploy behind it.
+   */
+  preview_html?: string | null;
+  preview_text?: string | null;
+  /** Present on the list in place of `blocks`. */
+  block_count?: number | null;
 };
 
 /**

@@ -99,11 +99,17 @@ export default function CampaignDesigner({
           const hasBlockErrors =
             !!json?.errors?.blocks ||
             Object.keys(json?.errors ?? {}).some((k) => k.startsWith("blocks"));
-          setPreviewError(
-            res.status === 422 && hasBlockErrors
-              ? null
-              : (json.error ?? json.message ?? null),
-          );
+          if (res.status === 422 && hasBlockErrors) {
+            // Half-built: keep the last good render on screen, say nothing.
+            setPreviewError(null);
+          } else {
+            // The request itself was rejected. Drop the stale render — leaving
+            // the previous one up is what made a refused refresh look like a
+            // successful render of the wrong layout, which is exactly how a
+            // rejected `theme` payload got reported as an import bug.
+            setPreview(null);
+            setPreviewError(json.error ?? json.message ?? null);
+          }
           return;
         }
         setPreviewError(null);
@@ -135,8 +141,10 @@ export default function CampaignDesigner({
    */
   async function applyTemplate(t: CampaignTemplate) {
     setPicked(true);
+    // The card comes from the *list*, which carries `block_count` and no
+    // `blocks` (and no `preview_html`) to stay light. Starters carry both inline.
     let full = t;
-    if ((t.blocks?.length ?? 0) === 0 && !t.is_starter) {
+    if (((t.blocks?.length ?? 0) === 0 || !t.preview_html) && !t.is_starter) {
       try {
         const res  = await fetch(`/api/admin/campaign-templates/${t.id}`);
         const json = await res.json().catch(() => null);
@@ -148,6 +156,33 @@ export default function CampaignDesigner({
     const key = themeToKey(full.theme);
     if (key) onThemeChange(key);
     onThemeOverridesChange?.(themeOverridesOf(full.theme));
+    seedPreview(full.preview_html, full.preview_text);
+  }
+
+  /**
+   * Show the server's own render immediately.
+   *
+   * The debounced preview below would fetch an equivalent one within 700ms, but
+   * seeding buys three things: the correct layout appears instantly instead of
+   * after a round trip; it is byte-identical to what the import screen showed, so
+   * "it looked right on upload" is guaranteed rather than hoped for; and it is
+   * still right if the preview endpoint is unreachable.
+   *
+   * Set as `html` only, leaving `html_personalized` empty — the pane falls back
+   * to `html`, so merge tags show as literal tokens for the moment it takes the
+   * debounced fetch to return the personalised version. Better a correct layout
+   * with `[[FIRST_NAME|there]]` visible for 700ms than a blank pane.
+   */
+  function seedPreview(html?: string | null, text?: string | null) {
+    if (!html) return;
+    setPreview({
+      html,
+      html_personalized: "",
+      text: text ?? "",
+      subject_personalized: "",
+      unknown_merge_tags: [],
+    });
+    setPreviewError(null);
   }
 
   /**
@@ -175,6 +210,9 @@ export default function CampaignDesigner({
     // the imported theme to its preset alone (which this did at first) silently
     // repainted the design in house colours the moment it was previewed.
     onThemeOverridesChange?.(themeOverridesOf(result.theme));
+    // The same HTML the import screen just showed, carried straight over, so
+    // "Use this design" cannot look different from what was approved on upload.
+    seedPreview(result.preview_html, null);
     setPicked(true);
   }
 
