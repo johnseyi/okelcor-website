@@ -1,9 +1,34 @@
 # Okelcor Website — Progress Tracker
 
-**Last updated:** 2026-08-12 (session 77 — InDesign design import)  
-**Branch:** `main` — latest `6a39435` session-76 payments pass, **committed and pushed** (`9ce6116..6a39435`). Session 77 (InDesign import) is in the working tree, not yet committed. Previously `cfd4498` campaign editor autosave + in-place image upload. Previously `7a7344f` typography system — deployed and confirmed live on Vercel  
+**Last updated:** 2026-08-12 (sessions 76–79 — payments, InDesign import, campaign preview, behaviour analytics)  
+**Branch:** `main` — latest `c22499b`, **everything committed and pushed** (`9ce6116..c22499b`, seven commits). Nothing is sitting uncommitted except the two items in "Working tree" below.
+
+| Commit | What |
+|---|---|
+| `c22499b` | Sent-campaign viewer moved into an iframe; preview width stated in the UI |
+| `0e46cd1` | Customer behaviour analytics page |
+| `cdec44f` | Design preview seeded from the server's HTML; stale renders cleared |
+| `6cfecb2` | Note specifying the campaign blocks an imported design needs |
+| `148e0ea` | Campaign `theme` sent as an object, not a bare preset string |
+| `2920e90` | InDesign design import |
+| `6a39435` | Manual orders can be marked paid; EU certificate unblocked |
+
+Earlier: `cfd4498` campaign editor autosave + in-place image upload · `7a7344f` typography system — deployed and confirmed live on Vercel  
+
+**⚠️ Deploy dependencies — most of the above is inert until the API ships.** Backend `05f359e` + migration #32 (behaviour analytics), `d7b63a7` (responsive email CSS), `73dc368` (`preview_html` on templates), `4546cbe` (InDesign import), `4d050d0` + migration #31 (payment milestones). Each degrades cleanly on its own; none breaks anything by arriving late.  
 **Repo location:** `~/okelcor-website` — **the move off iCloud is done.** (Not `~/dev/okelcor-website` as planned, and not the `~/Documents/project/okelcor-website` this file claimed until 2026-08-11; the earlier `mv` failure notes below are history, kept for the copy-then-verify lesson.) **The first observable payoff: `eslint` and scoped `tsc` both complete in seconds again**, after failing to finish for two sessions.  
-**Build status (2026-08-11):** **Full `npm run build` passes — exit 0, compiled in 11s**, both new API routes registered. TypeScript 0 errors · **ESLint 0 errors / 0 warnings on the changed files — and ESLint completes again**, which it had not done for two sessions. The `~/Documents`/iCloud tooling collapse is over; the figures below it are historical. The stale "11 errors / 45 warnings" repo-wide count has **not** been re-measured — worth one full-repo run now that it is possible.
+**Build status (2026-08-12):** **Full `npm run build` passes — exit 0, compiled in 7.0s.** Every route added this session registered (`/admin/analytics/behaviour`, `/api/admin/analytics/behaviour`, `/api/admin/campaign-templates/import`, `/api/admin/orders/[id]/payment-milestones/request-deposit`, `/api/admin/trade-documents/upload-options`). TypeScript 0 errors · **ESLint 0 errors / 0 warnings on the changed files — and ESLint completes again**, which it had not done for two sessions. The `~/Documents`/iCloud tooling collapse is over; the figures below it are historical. The stale "11 errors / 45 warnings" repo-wide count has **not** been re-measured — worth one full-repo run now that it is possible.
+
+**Working tree — two deliberate leftovers, and the pre-existing clutter:**
+
+| Item | Status |
+|---|---|
+| `app/viz-check/page.tsx` | **Uncommitted on purpose** — a mock-data harness for eyeballing the behaviour-analytics layout. `npm run dev -- --port 3939`, open `/viz-check`, then delete it. See the backlog row |
+| A `next dev` on port **3939** | Was left running for that check. Kill it when done |
+| `.claude/settings.local.json` | Modified — accumulated permission allowlist from past sessions, unrelated to any feature. Never committed with feature work |
+| `contacts.csv` | **Still the real 188-row marketing list, untracked, in the repo root, with no `csv` rule in `.gitignore`** — one `git add -A` from being published permanently. Unchanged backlog item |
+| `email marketing image template.jpg` | The InDesign reference. Sent to backend directly rather than committed |
+| 15 screenshots + a `.webp` | July leftovers, referenced nowhere |
 
 <details><summary>Previous build status (historical — iCloud era)</summary>
 
@@ -1043,7 +1068,42 @@ trail, mirroring the DOC-5 order line-item revision pattern. Also asked what
 
 ## Session note — 2026-08-12
 
-**Shipped:** the InDesign design import (backend session 77). Detail in the Marketing table.
+**Shipped, in order:** the InDesign design import (backend session 77), the campaign
+`theme` payload fix, the block-vocabulary note, the server-rendered preview seed, the
+customer behaviour analytics page (session 79), and the sent-campaign viewer fix. Seven
+commits, `9ce6116..c22499b`, all pushed. Detail in the tables above.
+
+**The through-line of the day: four separate bug reports, none of which was where it
+looked.** Worth reading as a set, because the pattern repeated and the fixes for it are
+now structural rather than resolutions to be more careful.
+
+| Reported as | Actually |
+|---|---|
+| "the order marked itself paid" | `mark-paid` demanded `payment_method === 'bank_transfer'`, which no admin-created order has, so ticking paid on the creation form was the only route to a paid order |
+| "the imported design's images are in the wrong layout" | The renderer has no multi-column block at all — three stacked `image` blocks was the only output available. Entirely backend's; **no code changed on our side** |
+| "the preview shows the old layout" | The composer sent `theme` as a bare string, every endpoint validates it as an array, the 422 was swallowed as "normal while half-finished", and **the previous render stayed on screen** |
+| "the mobile preview isn't responsive" | Backend's own CSS, five bugs, fixed server-side. Both hypotheses about our side were already correct — but auditing every HTML surface found the sent-campaign viewer injecting a whole email document into a `<div>`, stripping every media query |
+
+**Three things made structurally impossible rather than promised against:**
+
+1. **A silenced error class hides things outside the class.** The preview swallowed *all*
+   422s to avoid nagging on every keystroke; that silence cost two weeks on the theme bug.
+   Now scoped to 422s that actually carry block errors, and a request-level rejection
+   clears the stale render instead of leaving it up looking like a successful one.
+2. **A report that omits the reader's screen state costs rounds.** The preview toggle was
+   in the UI the whole time. Each preview header now prints `Mobile · 375px`, so the fact
+   travels with any screenshot whether anyone thinks to include it or not.
+3. **Reading the source beats reading the note.** Four contract corrections this session
+   came from `~/dev/okelcor-api` rather than from the notes: `invalid_blocks` (undocumented),
+   `document_label`/`type_label` (the note named the wrong field; the controller accepts
+   both), the 20 MB upload cap (we rejected at 10), and the `analytics.view` role list.
+   Backend has acknowledged the notes being written from memory. Keep the API repo local.
+
+**One thing I could not verify, stated plainly:** the behaviour analytics page has never
+been *looked at* with data in it. Build, types, lint and the colour validator all pass, but
+the validator checks colour, not geometry. Three screenshot attempts failed —
+the Chrome extension appears to lack localhost permission — and no headless browser is
+installed. The harness is left in place for it. See the backlog row.
 
 **Both findings raised with backend were confirmed, and both are now closed.**
 
