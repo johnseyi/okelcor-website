@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { LayoutTemplate, RefreshCw, Trash2, FilePlus2, Star } from "lucide-react";
+import { LayoutTemplate, RefreshCw, Trash2, FilePlus2, FileArchive, Star } from "lucide-react";
 import type { CampaignTemplate } from "@/lib/admin-api";
 
 /**
@@ -82,6 +82,7 @@ export default function TemplatePicker({
   onPick,
   onStartBlank,
   onDelete,
+  onImport,
 }: {
   starters: CampaignTemplate[];
   saved: CampaignTemplate[];
@@ -89,6 +90,8 @@ export default function TemplatePicker({
   onPick: (t: CampaignTemplate) => void;
   onStartBlank: () => void;
   onDelete: (t: CampaignTemplate) => void;
+  /** Opens the InDesign import. Omitted, the entry point simply isn't offered. */
+  onImport?: () => void;
 }) {
   if (loading) {
     return (
@@ -129,6 +132,28 @@ export default function TemplatePicker({
             ))}
           </div>
         </div>
+      )}
+
+      {/* Bringing a design in from InDesign. Sits here because that is where a
+          marketer decides what to start from — and once imported it becomes an
+          ordinary saved design, appearing in the row above. */}
+      {onImport && (
+        <button
+          type="button"
+          onClick={onImport}
+          className="flex w-full items-start gap-3 rounded-xl border border-dashed border-black/[0.14] bg-[#fafafa] p-4 text-left transition hover:border-[#f4511e]/50 hover:bg-[#f4511e]/[0.03]"
+        >
+          <FileArchive size={16} className="mt-0.5 shrink-0 text-[#5c5e62]" />
+          <span>
+            <span className="block text-[0.83rem] font-bold text-[#171a20]">
+              Import a design from InDesign
+            </span>
+            <span className="mt-0.5 block text-[0.75rem] leading-snug text-[#5c5e62]">
+              Upload the exported folder, zipped. The pictures, words, order and colours come
+              across as a starting point you finish here — no developer needed.
+            </span>
+          </span>
+        </button>
       )}
 
       <button

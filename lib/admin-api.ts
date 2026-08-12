@@ -929,6 +929,36 @@ export type CampaignTemplate = {
   is_starter?: boolean;
 };
 
+/**
+ * Result of importing an InDesign HTML export as a campaign template.
+ *
+ * `saved: false` is a dry run — nothing was written and `template_id` is absent.
+ * `theme` arrives as an object here (`{ preset, text_color, … }`) rather than the
+ * bare preset key the composer uses; put it through `themeToKey()`.
+ *
+ * `warnings` are written for the marketer, not the developer, and must be shown.
+ */
+export type CampaignImportResult = {
+  saved: boolean;
+  template_id?: number;
+  name?: string;
+  blocks: CampaignBlock[];
+  theme?: CampaignThemeValue;
+  media?: CampaignImportMedia[];
+  warnings?: string[];
+  source?: { document?: string; text_frames?: number; images_seen?: number };
+  /** The real rendered email — ready to put straight in a sandboxed iframe. */
+  preview_html?: string;
+};
+
+export type CampaignImportMedia = {
+  media_id: number;
+  url: string;
+  width?: number | null;
+  height?: number | null;
+  filename?: string | null;
+};
+
 export type CampaignPreview = {
   html: string;
   html_personalized: string;

@@ -3,12 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Palette, Save, RefreshCw, AlertTriangle, LayoutTemplate } from "lucide-react";
 import type {
-  CampaignBlock, CampaignDesign, CampaignPreview, CampaignTemplate,
+  CampaignBlock, CampaignDesign, CampaignImportResult, CampaignPreview, CampaignTemplate,
 } from "@/lib/admin-api";
 import { normaliseCampaignDesign } from "@/lib/campaign-design";
+import { themeToKey } from "@/hooks/use-campaign-autosave";
 import BlockEditor from "./block-editor";
 import CampaignPreviewPane from "./campaign-preview";
 import TemplatePicker, { useCampaignTemplates } from "./template-picker";
+import InDesignImport from "./indesign-import";
 import TestSend from "./test-send";
 import SaveTemplateModal from "./save-template-modal";
 
@@ -37,6 +39,7 @@ export default function CampaignDesigner({
   const [designLoading, setLoading] = useState(true);
   const [pickedStart, setPicked]    = useState(false);
   const [showSave, setShowSave]     = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [mobile, setMobile]         = useState(false);
 
   const [preview, setPreview]             = useState<CampaignPreview | null>(null);
@@ -106,6 +109,28 @@ export default function CampaignDesigner({
     setPicked(true);
   }
 
+  /**
+   * An imported design is an ordinary template from here on, so it goes through
+   * the same path as any other. Two differences worth noting:
+   *
+   * - its `theme` arrives as an object (`{ preset, text_color, … }`) rather than
+   *   the bare preset key the composer uses, hence `themeToKey`. Only the preset
+   *   is applied: the importer has already replaced an illegible recovered
+   *   palette with the house theme, and reinstating the export's own colours is
+   *   exactly how you end up sending white text on a white page.
+   * - the templates list is refreshed either way, so a design saved but not used
+   *   now is waiting under "Your saved designs" rather than needing a reload.
+   */
+  function applyImported(result: CampaignImportResult, useNow: boolean) {
+    setShowImport(false);
+    templates.refresh();
+    if (!useNow) return;
+    onBlocksChange(result.blocks ?? []);
+    const key = themeToKey(result.theme);
+    if (key) onThemeChange(key);
+    setPicked(true);
+  }
+
   async function deleteTemplate(t: CampaignTemplate) {
     if (!confirm(`Delete the saved design "${t.name}"?`)) return;
     await fetch(`/api/admin/campaign-templates/${t.id}`, { method: "DELETE" });
@@ -139,14 +164,20 @@ export default function CampaignDesigner({
   // Never open on a blank canvas.
   if (blocks.length === 0 && !pickedStart) {
     return (
-      <TemplatePicker
-        starters={templates.starters}
-        saved={templates.saved}
-        loading={templates.loading}
-        onPick={applyTemplate}
-        onStartBlank={() => setPicked(true)}
-        onDelete={deleteTemplate}
-      />
+      <>
+        <TemplatePicker
+          starters={templates.starters}
+          saved={templates.saved}
+          loading={templates.loading}
+          onPick={applyTemplate}
+          onStartBlank={() => setPicked(true)}
+          onDelete={deleteTemplate}
+          onImport={() => setShowImport(true)}
+        />
+        {showImport && (
+          <InDesignImport onClose={() => setShowImport(false)} onImported={applyImported} />
+        )}
+      </>
     );
   }
 
