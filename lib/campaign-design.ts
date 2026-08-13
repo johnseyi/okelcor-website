@@ -16,6 +16,7 @@ import type {
 
 const FIELD_TYPES: CampaignFieldType[] = [
   "text", "textarea", "select", "number", "url", "image_url", "text_list", "link_list",
+  "group_list",
 ];
 
 function asRecord(v: unknown): Record<string, unknown> {
@@ -76,6 +77,22 @@ function normaliseField(v: unknown): CampaignFieldSpec | null {
     max: num(r.max) ?? num(r.maximum),
     placeholder: str(r.placeholder) ?? str(r.example),
     help: str(r.help) ?? str(r.hint) ?? str(r.description),
+    // A presentation hint only. Passed through verbatim rather than validated
+    // against a known list, because the renderer already falls back to the
+    // plain control for anything it doesn't recognise — validating here would
+    // only move the same fallback earlier while making a new hint a deploy.
+    control: str(r.control) ?? str(r.widget) ?? str(r.ui),
+    // A group's entry fields are the same shape as a block's own, flattened
+    // recursively server-side — so this is the same function calling itself,
+    // and a group nested inside a group needs no extra code. `fields` is
+    // accepted as a spelling only for a group, where it can't collide with a
+    // block spec's own key.
+    itemFields: type === "group_list"
+      ? asArray(r.item_fields ?? r.itemFields ?? r.fields)
+          .map(normaliseField)
+          .filter((f): f is CampaignFieldSpec => f !== null)
+      : undefined,
+    maxItems: num(r.max_items) ?? num(r.maxItems),
   };
 }
 
@@ -215,7 +232,11 @@ export function blankBlock(spec: CampaignBlockSpec): CampaignBlock {
   const block: CampaignBlock = { type: spec.type };
   for (const f of spec.fields) {
     if (f.default !== undefined) block[f.name] = f.default;
-    else if (f.type === "text_list" || f.type === "link_list") block[f.name] = [];
+    // A group starts empty rather than with one blank entry: the server drops
+    // an entirely empty row, so a pre-seeded one would be invisible work.
+    else if (f.type === "text_list" || f.type === "link_list" || f.type === "group_list") {
+      block[f.name] = [];
+    }
     else if (f.type === "select") block[f.name] = f.options[0]?.value ?? "";
     else if (f.type === "number") block[f.name] = f.min ?? 0;
     else block[f.name] = "";

@@ -9,9 +9,28 @@ import { blankBlock } from "@/lib/campaign-design";
 import BlockField from "./block-field";
 
 /**
+ * Row-key source. Module scope rather than a ref so it can be read during
+ * render without reaching into a ref, and so two editors on one page can't
+ * collide. Ids need only be unique and stable, never meaningful.
+ */
+let idSeq = 0;
+const freshIds = (n: number) => Array.from({ length: n }, () => `blk${idSeq++}`);
+
+/**
  * Vertical block list. Drag-to-reorder plus up/down arrows — the arrows are
  * the ones that matter: they're keyboard-reachable and don't fail on a
  * trackpad, and reordering is how a non-technical author fixes a layout.
+ *
+ * **Dragging is armed by the grip handle, never by the card.** `draggable` on
+ * the whole card is what made "highlighting text drags the block sideways": the
+ * HTML5 drag-and-drop spec suppresses native text selection inside a
+ * `draggable="true"` subtree, so a press-and-move starting in a text field was
+ * claimed as a block drag before a selection could begin. The pointer never
+ * highlighted anything and the card followed it instead — sideways, because it
+ * was a drag ghost rather than a layout shift.
+ *
+ * The card still carries `draggable` while the grip is held, so the drag image
+ * is the whole block rather than a lone icon.
  */
 export default function BlockEditor({
   blocks,
@@ -28,30 +47,69 @@ export default function BlockEditor({
 }) {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
+  const [armedIndex, setArmed] = useState<number | null>(null);
   const [adding, setAdding] = useState(false);
+
+  /**
+   * Stable React keys, held **beside** the blocks rather than on them.
+   *
+   * `blocks` is serialised verbatim to `preview`, `test-send`, the real send and
+   * the autosave draft, and it feeds autosave's dirty-tracking hash — so an `id`
+   * written onto a block object would travel to the server as an unknown field
+   * and mark a pristine campaign dirty. The ids therefore live in a parallel
+   * array that every structural change below updates in lockstep.
+   *
+   * Keying on the array index instead binds each row's local UI state — the
+   * image field's broken/picking flags, an open merge-tag menu — to a *position*
+   * rather than to a block. Delete block 2 of 5 and React reuses row 2's DOM for
+   * what is now a different block, so those flags stay behind on the wrong one.
+   */
+  const [ids, setIds] = useState<string[]>(() => freshIds(blocks.length));
+
+  // A length change we didn't make ourselves means the parent replaced the
+  // canvas wholesale — a template applied, an import used, a draft restored.
+  // Fresh ids are correct there: those genuinely are different blocks. This is
+  // React's documented "adjust state while rendering" pattern; it re-renders
+  // immediately, before anything is committed to the DOM.
+  if (ids.length !== blocks.length) setIds(freshIds(blocks.length));
 
   const specFor = (type: string) => specs.find((s) => s.type === type);
 
-  function move(from: number, to: number) {
-    if (to < 0 || to >= blocks.length || from === to) return;
-    const next = [...blocks];
-    const [item] = next.splice(from, 1);
-    next.splice(to, 0, item);
-    onChange(next);
+  /** Structural change: blocks and their ids move together, or neither does. */
+  function commit(nextBlocks: CampaignBlock[], nextIds: string[]) {
+    setIds(nextIds);
+    onChange(nextBlocks);
   }
 
+  function move(from: number, to: number) {
+    if (to < 0 || to >= blocks.length || from === to) return;
+    const next    = [...blocks];
+    const nextIds = [...ids];
+    const [item] = next.splice(from, 1);
+    const [id]   = nextIds.splice(from, 1);
+    next.splice(to, 0, item);
+    nextIds.splice(to, 0, id);
+    commit(next, nextIds);
+  }
+
+  // Not structural — same rows, same ids, so nothing is remounted mid-keystroke.
   function update(index: number, fieldName: string, value: unknown) {
     onChange(blocks.map((b, i) => (i === index ? { ...b, [fieldName]: value } : b)));
   }
 
   function remove(index: number) {
-    onChange(blocks.filter((_, i) => i !== index));
+    commit(
+      blocks.filter((_, i) => i !== index),
+      ids.filter((_, i) => i !== index),
+    );
   }
 
   function duplicate(index: number) {
-    const next = [...blocks];
+    const next    = [...blocks];
+    const nextIds = [...ids];
     next.splice(index + 1, 0, { ...blocks[index] });
-    onChange(next);
+    nextIds.splice(index + 1, 0, freshIds(1)[0]);
+    commit(next, nextIds);
   }
 
   return (
@@ -63,16 +121,26 @@ export default function BlockEditor({
 
         return (
           <div
-            key={i}
-            draggable
-            onDragStart={() => setDragIndex(i)}
+            key={ids[i]}
+            draggable={armedIndex === i}
+            onDragStart={(e) => {
+              // Belt and braces: even armed, a drag that began inside an
+              // editable field is a text selection the user is trying to make.
+              if ((e.target as HTMLElement)?.closest?.("input, textarea, select, [contenteditable]")) {
+                e.preventDefault();
+                return;
+              }
+              e.dataTransfer.effectAllowed = "move";
+              setDragIndex(i);
+            }}
             onDragOver={(e) => { e.preventDefault(); setOverIndex(i); }}
-            onDragEnd={() => { setDragIndex(null); setOverIndex(null); }}
+            onDragEnd={() => { setDragIndex(null); setOverIndex(null); setArmed(null); }}
             onDrop={(e) => {
               e.preventDefault();
               if (dragIndex !== null) move(dragIndex, i);
               setDragIndex(null);
               setOverIndex(null);
+              setArmed(null);
             }}
             className={[
               "rounded-xl border bg-white transition",
@@ -82,7 +150,25 @@ export default function BlockEditor({
             ].join(" ")}
           >
             <div className="flex items-center gap-2 border-b border-black/[0.06] px-3 py-2">
-              <GripVertical size={14} className="cursor-grab text-[#8c8f94]" />
+              {/*
+                The one place a drag may start. Arming on pointer-down and
+                disarming on pointer-up/drag-end means the card is draggable
+                only while the grip is actually held — everywhere else, and at
+                every other moment, text selects normally.
+
+                Not focusable on purpose: the up/down arrows are the keyboard
+                path to reordering and a handle that can be tabbed to but not
+                operated from the keyboard would be a worse promise than none.
+              */}
+              <span
+                onPointerDown={() => setArmed(i)}
+                onPointerUp={() => setArmed(null)}
+                title="Drag to reorder"
+                aria-hidden="true"
+                className="cursor-grab text-[#8c8f94] active:cursor-grabbing"
+              >
+                <GripVertical size={14} />
+              </span>
               <span className="text-[0.78rem] font-bold text-[#171a20]">
                 {spec?.label ?? block.type}
               </span>
@@ -139,6 +225,7 @@ export default function BlockEditor({
                     value={block[f.name]}
                     mergeTags={mergeTags}
                     onChange={(v) => update(i, f.name, v)}
+                    siblings={block}
                   />
                 ))
               ) : (

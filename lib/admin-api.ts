@@ -867,7 +867,7 @@ export type BulkEmailFilters = {
 /** Input control to render for a block field. */
 export type CampaignFieldType =
   | "text" | "textarea" | "select" | "number" | "url"
-  | "image_url" | "text_list" | "link_list";
+  | "image_url" | "text_list" | "link_list" | "group_list";
 
 export type CampaignSelectOption = { value: string; label: string };
 
@@ -882,6 +882,35 @@ export type CampaignFieldSpec = {
   max?: number;
   placeholder?: string;
   help?: string;
+  /**
+   * Presentation hint, e.g. `position_grid` on the banner's nine-value select.
+   *
+   * Deliberately a bare `string`, not a union: it is advice about how to *draw*
+   * a control, never about what the field means or what it sends. The renderer
+   * treats an unrecognised value as absent and falls back to the plain control
+   * for `type`, so the server can start sending a new hint at any time without
+   * a frontend deploy and without any risk of a dead field.
+   */
+  control?: string;
+  /**
+   * `group_list` only: the fields of a single entry.
+   *
+   * Served in exactly the same shape as a block's own `fields` — a list of
+   * objects each carrying `name` — and flattened recursively server-side, so
+   * the same normaliser and the same renderer handle both, at any depth. That
+   * sameness is the whole point of the field type: a container costs one
+   * renderer, not a parallel vocabulary.
+   */
+  itemFields?: CampaignFieldSpec[];
+  /**
+   * `group_list` only: server-declared ceiling on entries (24 for cards).
+   *
+   * There is deliberately no `minItems`. No field declares one and nothing
+   * enforces one server-side, so imposing a floor here would invent a rule the
+   * server doesn't share — the marketer would be blocked by the editor on
+   * something the send accepts.
+   */
+  maxItems?: number;
 };
 
 export type CampaignBlockSpec = {
