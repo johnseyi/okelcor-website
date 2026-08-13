@@ -1,7 +1,7 @@
 # Okelcor Website — Progress Tracker
 
-**Last updated:** 2026-08-13 (session 81 — banner block, position grid, editor drag fix)  
-**Branch:** `main` — latest `c22499b`, everything through session 79 committed and pushed (`9ce6116..c22499b`, seven commits). **Session 81's four changed files are uncommitted** — see the session note at the bottom.
+**Last updated:** 2026-08-13 (session 83 — operations board, dual sign-off, eBay split)  
+**Branch:** `main` — latest `663bb32` (session 81, pushed). **Session 83's changes are uncommitted** — see the session note at the bottom.
 
 | Commit | What |
 |---|---|
@@ -263,6 +263,58 @@ TypeScript 0 errors (scoped run — the full `tsc` still times out, see below) �
 > any market.
 
 > **Market normalisation gap (backend, not papered over here):** the backend slugifies (lowercase) a market value supplied directly (manual add/edit, the import selector), but **not** a market value embedded inside an imported CSV's own market/region/segment column — confirmed via an existing backend test. Filter queries (`BulkEmailService::recipientQuery`) don't normalise either. A CSV-embedded `"Asia"` and a manually-entered `"asia"` will show up as separate, non-matching markets. Flagged back to backend; frontend intentionally shows whatever `/markets` returns at face value rather than guessing a client-side fix for a server-side data-integrity issue.
+
+---
+
+### ✅ Admin Panel — Operations Board, Dual Sign-off, eBay Split (2026-08-13)
+
+Backend session 83 (`657049d`, four migrations, nine endpoints, one new role).
+Everything additive — no existing endpoint changed shape. Built in backend's
+stated priority order.
+
+| Feature | Notes |
+|---|---|
+| **Operations board** — `/admin/operations` | The finance director's grid: one row per channel, seven columns, served `total` row. **Nothing is summed, converted or recomputed here** — the three things most likely to be reported as bugs are all deliberate and each is labelled *in place* rather than left to be rediscovered: `total.clients` is not the sum of the rows (one buyer on two channels is one client), `amount` is EUR with other currencies listed beneath and never converted, and `invoice_variance` is rendered as the finding it is — non-zero gets a colour **and** a sign **and** an icon, and links through to the reconciliation carrying the period it was showing. `definitions` render verbatim as header tooltips plus a disclosure; paraphrasing them would reintroduce exactly the ambiguity they were written to end. `finance_recording_available: false` prints "not switched on yet", never `0` — a structural zero and a real one start different arguments |
+| **In-transit queue** — `/admin/orders/in-transit` | `orders?in_transit=1`. Status and payment filters deliberately not offered: `in_transit` is already defined as a payment-and-dispatch state server-side, so a second status filter on top can only produce empty lists that look like bugs. **The "documents sent?" column backend suggested is not built, because the data isn't there** — see the finding below |
+| **Dual sign-off panel** — order detail, Documents tab | All four `status` values render distinctly; `not_required` says the order predates the rule, since an empty panel would read as "nobody has signed yet" — a different and more alarming statement. One button or none, never two disabled ones. 403 and 409 are told apart in the UI ("Not your signature to give" vs "Not right now") because entitlement is checked per slot in the service rather than by route middleware. History behind a disclosure. Sits on the Documents tab rather than its own: the thing it gates is a document |
+| **eBay split** | Orders page now asks for `channel=normal`; new `/admin/orders/ebay` asks for `channel=ebay`. Built on `/admin/orders`, **not** the existing `/admin/ebay/orders`, which sits behind `ebay.manage` and would 403 every order manager who works these orders. `meta.channel_counts.ebay` drives a banner on the Orders page — a filter the user didn't set and can't see is worse than the mixed list it replaced, so the count travels with the split and says where the orders went |
+| **Finance invoices** — `/admin/finance-invoices` | Table, entry form, edit/delete, and the reconciliation behind a tab. `amount_mismatch` gets **its own section**, not just a count: two systems holding the same invoice at different money is a worse finding than one holding it alone, and it is invisible from the board. `order_known_here: false` is labelled "not an order here" rather than hidden — that row is exactly the one worth recording. Duplicate `external_number` lands as a field error, where it belongs |
+| **Role picker — all nine roles** | Was a hardcoded four-value subset, which matched reality rather than intent: `admin_users.role` was a MySQL ENUM that could store only those four, so offering the rest would have produced a save that failed. The column is now a plain string, so the five it had been silently refusing are assignable. Driven off `ALL_ROLES` so the list cannot drift from the permission map again |
+| **Documents: gates became overridable, not dead ends** | The three payment-stage gates rendered a disabled `<span>` — a refusal with no way forward. They are now pressable, the **server** decides, and a 409 carrying `overridable: true` opens a confirm dialog with a required reason (`override_gate` + `override_reason`). The gates exist for a real reason — session 76, a buyer e-mailed about a deposit nobody asked for — but a refusal the accountable person cannot override just moves the work outside the system, where nothing is recorded at all. Sending an `order_confirmation` now also handles `409 signoff_incomplete` as its own state: nothing is broken, two people simply have to sign first |
+| **`signoffs_withdrawn` toast** | Any edit that moves the order total revokes both signatures server-side whether or not anything is shown. Amber, dismissible, does **not** auto-hide — it reports something that already happened and needs redoing |
+| New: `lib/admin-proxy.ts` | Shared base URL / token / pass-through for the six new proxies. **Forwards the upstream status untouched**, which the whole session depends on: a proxy that flattens 403 and 409 into 500 makes "role problem" and "state problem" indistinguishable |
+
+> **Two contract findings, both from reading `~/dev/okelcor-api` rather than the note.**
+>
+> **1. `you_may_sign` is not on the order detail payload.** The note says the block is
+> embedded "so the order page needs no second request" *and* "drive the button off
+> `you_may_sign`" — but that field is added only in `AdminOrderSignoffController:39`;
+> the shared `state()` the order detail calls (`AdminOrderController:820`) does not
+> include it. **Nor can it be derived client-side:** `canSign()` compares
+> `admin_user_id` to enforce the two-different-people rule, and the slots carry a
+> display *name*. So the panel paints from the embedded block (instant, all four
+> states, no spinner) and fetches `/signoffs` for the single question of which button
+> to offer. **Asked of backend: add `you_may_sign` to `state()` and the second request
+> disappears.** Withdrawal is different and *is* decided here — `OrderSignoffService:291`
+> checks the slot permission or `orders.signoff_bypass` and nothing else, and the slot
+> carries its `permission`, so the same check can be made from the same facts.
+>
+> **2. The order *list* row carries no document state.** The note suggests the
+> in-transit queue take a "documents sent?" column "from the existing `trade_documents`
+> payload" — but `formatOrderList()` (`AdminOrderController:785`) returns no such
+> field; documents are on the *detail* payload only. Building it would mean one request
+> per row. **Not faked, and not silently dropped:** the queue says plainly that the list
+> doesn't carry document state. **Asked of backend: one field on the list row** — a
+> count, or `last_document_sent_at` — would make the column real.
+
+> **`orders.view` diverges from the backend, in both directions.** Backend grants it to
+> `super_admin, admin, order_manager, sales_manager, **finance**`; this repo had
+> `… **support**` and no finance. **`finance` was added — the sign-off feature depends
+> on it**, since a finance admin must reach the order page to sign. **`support` was
+> left**: removing it takes Orders away from a role that has it in the UI today, which
+> is a product decision rather than a typo, and it is *already* a live divergence
+> (support is shown orders the server would 403). Same shape as the `analytics.view`
+> finding still open below. Worth settling both in one pass.
 
 ---
 
@@ -1066,6 +1118,46 @@ trail, mirroring the DOC-5 order line-item revision pattern. Also asked what
 | **`contacts.csv` sitting in the repo root** | **High (data)** | The real 188-row marketing list — company names and e-mail addresses. Untracked and **deliberately not committed**: pushing it publishes real contact data to GitHub permanently, and a later scrub can't fully undo that. Add it to `.gitignore` (there is currently no `csv` rule) and keep the file outside the repo |
 | Repo-root junk — 15 screenshots + a `.webp` | Low | Untracked leftovers from a July session, referenced nowhere. Delete or ignore |
 | **Verify ESLint once the repo is off iCloud** | Medium | It has not completed on this machine for two sessions. The move is the fix; until it runs, the "11 pre-existing errors" figure is a stale claim, and this session's changes are unlinted |
+
+---
+
+## Session note — 2026-08-13 (session 83)
+
+**Shipped, uncommitted:** all six screens from backend's note, in their stated
+priority order — operations board, in-transit queue, sign-off panel, eBay page,
+finance invoices + reconciliation, and the nine-role picker — plus the two document
+changes (overridable generation gates, `signoff_incomplete` on send) and the
+`signoffs_withdrawn` toast. Ten new routes (four pages, six proxies). **Verified:**
+build exit 0, compiled in 7.5s, 104 pages, all ten routes registered · TypeScript 0
+errors · ESLint 0/0 · the board and all four sign-off states rendered and
+screenshotted against backend's payloads verbatim.
+
+**The note was in the API repo, not this one.** It said "in the repo root" and meant
+its own — the same shape as the campaign-autosave note in session 74. Worth
+remembering as the default: when a note is missing here, look in `~/dev/okelcor-api`
+before asking for it.
+
+**Reading the source found two things the note had wrong, and one it didn't mention.**
+Both findings are in the module section above. The one it didn't mention was the most
+consequential for this build: `orders.view` now includes `finance` server-side, which
+the note never says — and without it a finance admin could not have reached the order
+page to give the signature the whole feature exists to collect. **Three sessions
+running, the standing rule has paid: check the source before theorising.**
+
+**Where I declined to build what was asked, and why.** The in-transit queue was to
+carry a "documents sent?" column. The field isn't on the list row — only on the order
+detail — so the honest options were one request per row, or a column that asserts
+something it hasn't been told. It says instead that the list doesn't carry document
+state, and backend has been asked for one field. This is the same call as the
+behaviour-analytics funnel: **a screen may show less than was asked for, but it may
+not claim more than it knows.**
+
+**Looking at it again earned its place.** The board and the sign-off panel were
+screenshotted against backend's payloads before being called done, and the screenshot
+showed **Withdraw offered on every signed slot regardless of role** — a permissions
+puzzle of exactly the kind the `you_may_sign` instruction exists to prevent, in the
+one control that instruction doesn't cover. Types, lint and build were all green with
+it. Now gated on the slot's own `permission`, which the payload already carries.
 
 ---
 

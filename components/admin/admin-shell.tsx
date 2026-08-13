@@ -43,6 +43,7 @@ import {
   Images,
   Handshake,
   ReceiptText,
+  LayoutGrid,
   Search,
 } from "lucide-react";
 import { logoutAdmin } from "@/app/admin/actions";
@@ -82,6 +83,10 @@ const NAV_GROUPS: readonly NavGroup[] = [
     label: "Commerce",
     items: [
       { label: "Orders",          href: "/admin/orders",          icon: ShoppingCart,  section: "orders" },
+      { label: "In Transit",      href: "/admin/orders/in-transit", icon: Truck,        section: "orders" },
+      // Under `orders`, not `ebay`: the existing eBay section is admin-only,
+      // and these orders are worked by order managers.
+      { label: "eBay Orders",     href: "/admin/orders/ebay",     icon: ShoppingBag,   section: "orders" },
       { label: "Quote Requests",  href: "/admin/quotes",          icon: ClipboardList, section: "quotes" },
       { label: "Products",        href: "/admin/products",        icon: Package,       section: "products" },
       { label: "Logistics",       href: "/admin/logistics",       icon: Truck,         section: "logistics" },
@@ -132,6 +137,8 @@ const NAV_GROUPS: readonly NavGroup[] = [
   {
     label: "Insights",
     items: [
+      { label: "Operations",    href: "/admin/operations", icon: LayoutGrid, section: "operations" },
+      { label: "Finance Invoices", href: "/admin/finance-invoices", icon: ReceiptText, section: "finance" },
       { label: "Analytics",     href: "/admin/analytics", icon: BarChart2,  section: "analytics" },
       // Its own section, not "analytics": the roles the backend grants this
       // report to are not the ones our analytics section lists, and the two

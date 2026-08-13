@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   AlertTriangle, CheckCircle2, Download, ExternalLink, FilePlus2,
-  FileText, Loader2, Mail, Paperclip, Trash2, Upload, X,
+  FileText, Loader2, Mail, Paperclip, Trash2, Upload, X, Lock, ShieldAlert,
 } from "lucide-react";
 import type { TradeDocument } from "@/lib/admin-api";
 import { canDo } from "@/lib/admin-permissions";
@@ -192,6 +192,17 @@ export default function TradeDocumentsCard({
   const [packing,     setPacking]    = useState<GenerateState>(IDLE);
   const [delivery,    setDelivery]   = useState<GenerateState>(IDLE);
 
+  // Payment-stage gate hit on generation, with the server's own wording.
+  const [gateBlock, setGateBlock] = useState<{
+    endpoint: string;
+    setState: (s: GenerateState) => void;
+    label: string;
+    message: string;
+  } | null>(null);
+  const [overrideReason, setOverrideReason] = useState("");
+  const [gateError, setGateError] = useState<string | null>(null);
+  const [gateBusy, setGateBusy] = useState(false);
+
   // Download state
   const [downloading, setDownloading] = useState<number | null>(null);
 
@@ -282,21 +293,65 @@ export default function TradeDocumentsCard({
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
+  /**
+   * Generate a document.
+   *
+   * The payment-stage gates are now decided by the server, not guessed at here,
+   * and a refusal is no longer a dead end: a 409 carrying `overridable: true`
+   * opens a confirm dialog asking for a reason, and the same call is repeated
+   * with `override_gate`. The gates exist for a real reason — a buyer was once
+   * e-mailed about a deposit nobody had asked him for — but a refusal the
+   * accountable person cannot override just moves the work outside the system,
+   * where nothing is recorded at all.
+   */
   async function generateDoc(
     endpoint: string,
     setState: (s: GenerateState) => void,
     label: string,
+    override?: { reason: string },
   ) {
     setState({ loading: true, error: null });
     try {
-      const res  = await fetch(endpoint, { method: "POST" });
-      const json = await res.json().catch(() => ({})) as { data?: TradeDocument; message?: string };
+      const res  = await fetch(endpoint, {
+        method: "POST",
+        ...(override
+          ? {
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ override_gate: true, override_reason: override.reason }),
+            }
+          : {}),
+      });
+      const json = await res.json().catch(() => ({})) as {
+        data?: TradeDocument; message?: string; code?: string; overridable?: boolean;
+      };
+
       if (res.ok && json.data) {
         setDocuments((prev) => [...prev, json.data!]);
         setState(IDLE);
-      } else {
-        setState({ loading: false, error: json.message ?? `Failed to generate ${label}. Please try again.` });
+        setGateBlock(null);
+        setOverrideReason("");
+        if (override) setToast(`Generated with an override — the reason is recorded on the order.`);
+        return;
       }
+
+      // The escape hatch, offered rather than described.
+      if (res.status === 409 && json.overridable === true) {
+        setState(IDLE);
+        setGateBlock({
+          endpoint, setState, label,
+          message: json.message ?? `This ${label} is blocked at the current payment stage.`,
+        });
+        return;
+      }
+
+      // Asked to override without saying why.
+      if (res.status === 422 && json.code === "override_reason_required") {
+        setState(IDLE);
+        setGateError("A reason is required to override the payment-stage check.");
+        return;
+      }
+
+      setState({ loading: false, error: json.message ?? `Failed to generate ${label}. Please try again.` });
     } catch {
       setState({ loading: false, error: "Network error. Please try again." });
     }
@@ -348,7 +403,26 @@ export default function TradeDocumentsCard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const json = await res.json().catch(() => ({})) as { data?: { sent_at?: string }; message?: string };
+      const json = await res.json().catch(() => ({})) as {
+        data?: { sent_at?: string }; message?: string; code?: string;
+      };
+
+      // The sign-off gate fires here as well as on send-acceptance-request —
+      // without this route the control was one route deep and the confirmation
+      // could be e-mailed straight from this list. Told apart from an ordinary
+      // failure because nothing is broken: two people simply have to sign first.
+      if (res.status === 409 && json.code === "signoff_incomplete") {
+        setSendModal((prev) => prev
+          ? {
+              ...prev,
+              loading: false,
+              error: json.message
+                ?? "This order confirmation needs both signatures before it can be sent.",
+            }
+          : null,
+        );
+        return;
+      }
 
       if (res.ok) {
         const sentAt = json.data?.sent_at ?? new Date().toISOString();
@@ -548,13 +622,16 @@ export default function TradeDocumentsCard({
               )}
               {!hasCommercialInv && (
                 commercialGated ? (
-                  <span
-                    title={commercialGateReason}
-                    className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-full border border-purple-200 bg-purple-50 px-3 py-1.5 text-[0.75rem] font-semibold text-purple-700 opacity-40"
+                  // Gated, not forbidden. Still pressable: the server answers with
+                  // a 409 that names the reason and offers the override.
+                  <button type="button"
+                    title={`${commercialGateReason} You can override this with a reason.`}
+                    onClick={() => generateDoc(`/api/admin/orders/${orderId}/trade-documents/commercial-invoice`, setCommercial, "commercial invoice")}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-[0.75rem] font-semibold text-amber-800 transition hover:bg-amber-100"
                   >
-                    <FilePlus2 size={13} strokeWidth={2} />
+                    <Lock size={11} strokeWidth={2.5} />
                     Generate Commercial Invoice
-                  </span>
+                  </button>
                 ) : (
                   <button type="button" disabled={commercial.loading}
                     onClick={() => generateDoc(`/api/admin/orders/${orderId}/trade-documents/commercial-invoice`, setCommercial, "commercial invoice")}
@@ -567,13 +644,16 @@ export default function TradeDocumentsCard({
               )}
               {!hasPacking && (
                 packingGated ? (
-                  <span
-                    title={packingGateReason}
-                    className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-[0.75rem] font-semibold text-blue-700 opacity-40"
+                  // Gated, not forbidden. Still pressable: the server answers with
+                  // a 409 that names the reason and offers the override.
+                  <button type="button"
+                    title={`${packingGateReason} You can override this with a reason.`}
+                    onClick={() => generateDoc(`/api/admin/orders/${orderId}/trade-documents/packing-list`, setPacking, "packing list")}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-[0.75rem] font-semibold text-amber-800 transition hover:bg-amber-100"
                   >
-                    <FilePlus2 size={13} strokeWidth={2} />
+                    <Lock size={11} strokeWidth={2.5} />
                     Generate Packing List
-                  </span>
+                  </button>
                 ) : (
                   <button type="button" disabled={packing.loading}
                     onClick={() => generateDoc(`/api/admin/orders/${orderId}/trade-documents/packing-list`, setPacking, "packing list")}
@@ -586,13 +666,16 @@ export default function TradeDocumentsCard({
               )}
               {!hasDeliveryNote && (
                 deliveryGated ? (
-                  <span
-                    title={deliveryGateReason}
-                    className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-full border border-teal-200 bg-teal-50 px-3 py-1.5 text-[0.75rem] font-semibold text-teal-700 opacity-40"
+                  // Gated, not forbidden. Still pressable: the server answers with
+                  // a 409 that names the reason and offers the override.
+                  <button type="button"
+                    title={`${deliveryGateReason} You can override this with a reason.`}
+                    onClick={() => generateDoc(`/api/admin/orders/${orderId}/trade-documents/delivery-note`, setDelivery, "delivery note")}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-[0.75rem] font-semibold text-amber-800 transition hover:bg-amber-100"
                   >
-                    <FilePlus2 size={13} strokeWidth={2} />
+                    <Lock size={11} strokeWidth={2.5} />
                     Generate Delivery Note
-                  </span>
+                  </button>
                 ) : (
                   <button type="button" disabled={delivery.loading}
                     onClick={() => generateDoc(`/api/admin/orders/${orderId}/trade-documents/delivery-note`, setDelivery, "delivery note")}
@@ -1079,6 +1162,71 @@ export default function TradeDocumentsCard({
                   Cancel
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Payment-stage gate: confirm + reason, never a dead end ── */}
+      {gateBlock && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-5">
+            <div className="mb-2 flex items-start gap-2">
+              <ShieldAlert size={18} className="mt-0.5 shrink-0 text-amber-600" />
+              <div className="min-w-0">
+                <h4 className="text-[0.95rem] font-bold text-[#171a20]">
+                  Generate this {gateBlock.label} anyway?
+                </h4>
+                {/* The server's own words. It knows which stage is missing. */}
+                <p className="mt-1 text-[0.8rem] leading-snug text-[#5c5e62]">{gateBlock.message}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setGateBlock(null); setOverrideReason(""); setGateError(null); }}
+                className="ml-auto text-[#8c8f94] transition hover:text-[#171a20]"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <label className="mb-1 mt-3 block text-[0.78rem] font-semibold text-[#5c5e62]">
+              Why is this needed now? <span className="text-[#E85C1A]">*</span>
+            </label>
+            <textarea
+              value={overrideReason}
+              onChange={(e) => { setOverrideReason(e.target.value); setGateError(null); }}
+              rows={3}
+              placeholder="e.g. Customer's bank needs it to release the transfer"
+              className="w-full rounded-lg border border-black/[0.10] px-3 py-2 text-[0.83rem] focus:border-[#E85C1A] focus:outline-none"
+            />
+            <p className="mt-1 text-[0.72rem] text-[#8c8f94]">
+              Recorded against the order, with your name.
+            </p>
+            {gateError && <p className="mt-1.5 text-[0.78rem] text-red-600">{gateError}</p>}
+
+            <div className="mt-3 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => { setGateBlock(null); setOverrideReason(""); setGateError(null); }}
+                className="rounded-lg px-3 py-2 text-[0.83rem] font-semibold text-[#5c5e62]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={gateBusy || !overrideReason.trim()}
+                onClick={async () => {
+                  if (!gateBlock) return;
+                  setGateBusy(true);
+                  const { endpoint, setState, label } = gateBlock;
+                  await generateDoc(endpoint, setState, label, { reason: overrideReason.trim() });
+                  setGateBusy(false);
+                }}
+                className="flex items-center gap-1.5 rounded-lg bg-amber-600 px-4 py-2 text-[0.83rem] font-semibold text-white transition hover:bg-amber-700 disabled:opacity-50"
+              >
+                {gateBusy ? <Loader2 size={13} className="animate-spin" /> : <Lock size={12} strokeWidth={2.5} />}
+                Generate with reason
+              </button>
             </div>
           </div>
         </div>

@@ -25,6 +25,16 @@ type Props = {
   currentPaymentStatus: string;
   currentQ: string;
   currentPage: number;
+  /**
+   * Where this table's own links point. The eBay and in-transit queues are the
+   * same list under a different server-side filter, so they reuse this table
+   * rather than forking it — but their filter lives in the route, not the query
+   * string, so paging and searching must stay on their own page.
+   */
+  basePath?: string;
+  /** Replaces the "no orders" copy, which is misleading on a filtered queue. */
+  emptyHeading?: string;
+  emptyDescription?: string;
 };
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -98,6 +108,7 @@ function shortDate(iso: string): string {
 
 export default function OrdersTable({
   orders, meta, currentStatus, currentPaymentStatus, currentQ, currentPage,
+  basePath = "/admin/orders", emptyHeading, emptyDescription,
 }: Props) {
   const router = useRouter();
   const [q, setQ] = useState(currentQ);
@@ -118,7 +129,7 @@ export default function OrdersTable({
     if (qVal.trim())                                    params.set("q",              qVal.trim());
     if (pageVal > 1)                                    params.set("page",           String(pageVal));
     const qs = params.toString();
-    return `/admin/orders${qs ? `?${qs}` : ""}`;
+    return `${basePath}${qs ? `?${qs}` : ""}`;
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -207,8 +218,11 @@ export default function OrdersTable({
                   <td colSpan={7}>
                     <EmptyState
                       icon={ShoppingCart}
-                      heading="No orders found"
-                      description="Orders will appear here once customers place them, or try adjusting your filters."
+                      heading={emptyHeading ?? "No orders found"}
+                      description={
+                        emptyDescription ??
+                        "Orders will appear here once customers place them, or try adjusting your filters."
+                      }
                       compact
                     />
                   </td>

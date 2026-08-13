@@ -6,6 +6,7 @@ import {
   Activity, AlertCircle, AlertOctagon, AlertTriangle, ArrowRight,
   CheckCircle2, ChevronDown, ChevronRight, Copy, FileWarning,
   Landmark, Lock, Loader2, Mail, MapPin, Plus, Pencil, RotateCcw, ShoppingBag, Trash2, UserCheck,
+  ShieldAlert, X,
 } from "lucide-react";
 import { SITE_URL } from "@/lib/constants";
 import { updateOrderStatus, cancelOrder, deleteOrder, addShipmentEvent, updateShipmentEvent, deleteShipmentEvent } from "@/app/admin/orders/actions";
@@ -14,6 +15,7 @@ import { canDo } from "@/lib/admin-permissions";
 import { ORDER_CURRENCIES, formatMoney } from "@/lib/currency";
 import TradeDocumentsCard from "@/components/admin/trade-documents-card";
 import PaymentMilestonesCard from "@/components/admin/payment-milestones-card";
+import OrderSignoffCard from "@/components/admin/order-signoff-card";
 import TrackShipmentControl from "@/components/admin/tracking/track-shipment-control";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -569,6 +571,18 @@ export default function OrderDetail({
 
   const [revisionRequired, setRevisionRequired] = useState(order.financials_revision_required ?? false);
 
+  /**
+   * Surfaced when an edit withdrew standing sign-off signatures.
+   *
+   * Moving the total automatically revokes every signature: approving €10,000
+   * and then sending a confirmation for €10,500 is worse than no approval at
+   * all, because it carries evidence that two people agreed to it. That happens
+   * server-side whether or not anything is shown here — so the only question is
+   * whether the person who caused it finds out now or when someone asks why the
+   * confirmation won't send.
+   */
+  const [signoffToast, setSignoffToast] = useState<string | null>(null);
+
   // Derived
   const customerAcceptancePending = order.customer_acceptance_status === "pending";
   const customerRejected          = order.customer_acceptance_status === "rejected";
@@ -695,6 +709,7 @@ export default function OrderDetail({
         else setItemModalError((json.message as string) ?? "Failed to save item.");
         return;
       }
+      noteWithdrawnSignoffs(json);
       closeItemModal();
       router.refresh();
     } catch {
@@ -703,6 +718,19 @@ export default function OrderDetail({
       setItemModalLoading(false);
     }
   };
+
+
+  /** `signoffs_withdrawn` rides on any response that moved the order total. */
+  function noteWithdrawnSignoffs(json: Record<string, unknown>) {
+    const data = (json.data ?? json) as Record<string, unknown> | undefined;
+    const n = Number(data?.signoffs_withdrawn ?? json.signoffs_withdrawn ?? 0);
+    if (!Number.isFinite(n) || n <= 0) return;
+    setSignoffToast(
+      (data?.message as string | undefined)
+        ?? (json.message as string | undefined)
+        ?? `${n} sign-off signature${n === 1 ? "" : "s"} withdrawn because the order total changed.`,
+    );
+  }
 
   const handleDeleteItem = async () => {
     if (!deleteItemTarget) return;
@@ -724,6 +752,7 @@ export default function OrderDetail({
         else setDeleteItemError((json.message as string) ?? "Failed to remove item.");
         return;
       }
+      noteWithdrawnSignoffs(json);
       setDeleteItemTarget(null);
       setDeleteItemReason("");
       router.refresh();
@@ -1764,16 +1793,19 @@ export default function OrderDetail({
           TAB: DOCUMENTS
       ══════════════════════════════════════════════════════════════════════ */}
       {activeTab === "documents" && (
-        <TradeDocumentsCard
-          orderId={order.id}
-          initialDocuments={order.trade_documents ?? []}
-          adminRole={adminRole}
-          customerEmail={order.customer_email}
-          financialsRevisionPending={revisionRequired}
-          customerAcceptancePending={customerAcceptancePending}
-          paymentStage={order.payment_stage ?? null}
-          orderStatus={order.status}
-        />
+        <div className="flex flex-col gap-5">
+          <OrderSignoffCard orderId={order.id} initial={order.signoff ?? null} />
+          <TradeDocumentsCard
+            orderId={order.id}
+            initialDocuments={order.trade_documents ?? []}
+            adminRole={adminRole}
+            customerEmail={order.customer_email}
+            financialsRevisionPending={revisionRequired}
+            customerAcceptancePending={customerAcceptancePending}
+            paymentStage={order.payment_stage ?? null}
+            orderStatus={order.status}
+          />
+        </div>
       )}
 
       {/* ══════════════════════════════════════════════════════════════════════
@@ -2309,6 +2341,21 @@ export default function OrderDetail({
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {signoffToast && (
+        <div className="fixed bottom-6 right-6 z-50 flex max-w-md items-start gap-2 rounded-xl bg-amber-600 px-4 py-3 text-[0.83rem] font-semibold text-white shadow-lg">
+          <ShieldAlert size={16} className="mt-0.5 shrink-0" />
+          <p className="leading-snug">{signoffToast}</p>
+          <button
+            type="button"
+            onClick={() => setSignoffToast(null)}
+            aria-label="Dismiss"
+            className="ml-1 shrink-0 opacity-80 transition hover:opacity-100"
+          >
+            <X size={14} />
+          </button>
         </div>
       )}
 

@@ -163,6 +163,64 @@ export type AdminOrder = {
   created_at: string;
   /** "website" (default) or "ebay" */
   source?: string | null;
+  /**
+   * Sales channel, derived server-side from `source` and never stored — "a
+   * second column saying the same thing is a column that can disagree with it".
+   * Present on both the list row and the detail payload.
+   */
+  channel?: "normal" | "ebay" | string | null;
+  /** Paid and dispatched, not yet delivered — the cue that documents need sending. */
+  in_transit?: boolean | null;
+};
+
+/** One half of an order confirmation's dual sign-off. */
+export type OrderSignoffSlot = {
+  slot: "ops" | "finance" | string;
+  label: string;
+  signed: boolean;
+  signed_by?: string | null;
+  signed_role?: string | null;
+  signed_at?: string | null;
+  note?: string | null;
+  permission?: string | null;
+  roles?: string[] | null;
+};
+
+export type OrderSignoffHistoryEntry = {
+  slot: string;
+  label?: string | null;
+  signed_by?: string | null;
+  signed_at?: string | null;
+  note?: string | null;
+  revoked?: boolean | null;
+  revoked_by?: string | null;
+  revoked_at?: string | null;
+  revoke_reason?: string | null;
+};
+
+/**
+ * Sign-off state for an order confirmation.
+ *
+ * Served two ways with **one difference that matters**: `GET /admin/orders/{id}`
+ * embeds this block (so the panel renders with no second request), but
+ * `you_may_sign` is added only by `GET /admin/orders/{id}/signoffs`
+ * (`AdminOrderSignoffController:39` — the shared `state()` does not include it).
+ * It cannot be derived on the client either: the entitlement check compares
+ * `admin_user_id` for the two-different-people rule, and the slots carry a
+ * display name, not an id. So the panel paints from the embedded block and
+ * fetches the dedicated endpoint only to decide which button to offer.
+ */
+export type OrderSignoffState = {
+  required: boolean;
+  complete: boolean;
+  /** `not_required` means the order predates the rule — not the same as `awaiting`. */
+  status: "not_required" | "awaiting" | "partial" | "complete" | string;
+  signed_count?: number;
+  slots: OrderSignoffSlot[];
+  history?: OrderSignoffHistoryEntry[];
+  /** Only on GET /orders/{id}/signoffs. Slots *this* admin may sign right now. */
+  you_may_sign?: string[];
+  available?: boolean;
 };
 
 export type AdminOrderItem = {
@@ -241,6 +299,8 @@ export type EbaySyncResult = {
 };
 
 export type AdminOrderFull = AdminOrder & {
+  /** Dual sign-off state, embedded so the order page needs no second request. */
+  signoff?: OrderSignoffState | null;
   phone?: string;
   company_name?: string;
   country?: string;
@@ -1207,3 +1267,111 @@ export type PartnerSalesTotals = {
   pieces: number;
   entries: number;
 }[];
+
+/* ─── Operations board & finance reconciliation (Session 83) ─────────────────
+   The finance director's grid: one row per sales channel, seven columns, plus
+   the invoice gap between what this system issued and what sevDesk raised. */
+
+export type OperationsChannelRow = {
+  channel: "normal" | "ebay" | "all" | string;
+  label: string;
+  orders_sent: number;
+  /** EUR only — see `amount_other_currencies`. Nothing is converted. */
+  amount: number;
+  currency: string;
+  /**
+   * Amounts booked in other currencies, listed rather than converted: at
+   * today's rate a historic month's revenue would change every time the board
+   * is opened.
+   */
+  amount_other_currencies?: { currency: string; amount: number; orders: number }[] | null;
+  /** Distinct buyers. NOT summable across rows — see `OperationsSummary.total`. */
+  clients: number;
+  orders_confirmed: number;
+  website_invoices: number;
+  finance_invoices: number;
+  /** The point of the two invoice columns. Non-zero must be visually distinct. */
+  invoice_variance: number;
+  in_transit: number;
+};
+
+export type OperationsSummary = {
+  period: { from: string; to: string; label: string };
+  channels: OperationsChannelRow[];
+  /**
+   * The "All channels" row — **not** the sum of the channel rows. One buyer who
+   * ordered on eBay and on the website is one client; adding the rows reports
+   * two. Served, never computed here.
+   */
+  total: OperationsChannelRow;
+  /**
+   * Column definitions written for the reader. Rendered verbatim as tooltips:
+   * seven figures two departments will argue over are worthless if "orders
+   * sent" means something different to the reader than to the query.
+   */
+  definitions?: Record<string, string> | null;
+};
+
+export type OperationsSummaryMeta = {
+  /**
+   * False until the finance migration runs. The finance column is then a
+   * structural zero, not a real one — say "not switched on yet", never "0".
+   */
+  finance_recording_available?: boolean;
+  channels?: string[];
+};
+
+/** A row finance typed in from sevDesk. Not an integration, on purpose. */
+export type FinanceInvoice = {
+  id: number;
+  external_number: string;
+  issued_on: string;
+  order_ref?: string | null;
+  invoice_number?: string | null;
+  amount?: number | null;
+  currency?: string | null;
+  channel?: string | null;
+  notes?: string | null;
+  /**
+   * `order_ref` is deliberately not validated against our orders — an invoice
+   * finance cannot match to an order here is exactly the row worth recording.
+   */
+  order_known_here?: boolean | null;
+  matched?: boolean | null;
+  created_at?: string | null;
+};
+
+export type InvoiceReconciliation = {
+  available: boolean;
+  reason?: string | null;
+  counts: {
+    website_invoices: number;
+    finance_invoices: number;
+    matched: number;
+    only_here: number;
+    only_in_finance: number;
+    /** Two systems holding the same invoice at different money. */
+    amount_mismatch: number;
+  };
+  matched: {
+    order_ref?: string | null;
+    our_invoice?: string | null;
+    finance_invoice?: string | null;
+    our_amount?: number | null;
+    finance_amount?: number | null;
+    amount_matches?: boolean | null;
+  }[];
+  only_here: {
+    invoice_number?: string | null;
+    order_ref?: string | null;
+    amount?: number | null;
+    issued_at?: string | null;
+  }[];
+  only_in_finance: {
+    external_number?: string | null;
+    order_ref?: string | null;
+    order_known_here?: boolean | null;
+    amount?: number | null;
+    issued_on?: string | null;
+  }[];
+};

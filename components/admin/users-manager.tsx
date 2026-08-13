@@ -4,12 +4,24 @@ import { useState, useTransition } from "react";
 import { Plus, Pencil, Trash2, X, AlertCircle, CheckCircle2, Mail, RefreshCcw, AlertTriangle } from "lucide-react";
 import { createUser, updateUser, deleteUser, resendCredentials } from "@/app/admin/users/actions";
 import type { AdminUser } from "@/lib/admin-api";
-import { ROLE_LABELS, ROLE_COLORS } from "@/lib/admin-permissions";
+import { ALL_ROLES, ROLE_LABELS, ROLE_COLORS } from "@/lib/admin-permissions";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-// Roles available for assignment via this UI (subset of ALL_ROLES).
-const ROLES = ["super_admin", "admin", "editor", "order_manager"] as const;
+/**
+ * Every role the system has.
+ *
+ * This was a four-value subset, which matched reality rather than intent: the
+ * `admin_users.role` column was a MySQL ENUM that could only store those four,
+ * so offering the others would have produced a save that failed. The column is
+ * now a plain string validated against the backend's own ROLES list, so the
+ * five it had been silently refusing — finance, sales_manager, support,
+ * content_manager, viewer — can be assigned. `finance` in particular has to be
+ * assignable or the finance half of order sign-off can never be given.
+ *
+ * Driven off ALL_ROLES so this list cannot drift from the permission map again.
+ */
+const ROLES = ALL_ROLES;
 
 function formatDate(dt: string | null): string {
   if (!dt) return "Never";

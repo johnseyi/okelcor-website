@@ -8,6 +8,7 @@ import {
 } from "@/lib/admin-api";
 import OrdersTable from "@/components/admin/orders-table";
 import OrdersCsvActions from "@/components/admin/orders-csv-actions";
+import ChannelNotice from "@/components/admin/channel-notice";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Orders" };
@@ -35,7 +36,12 @@ export default async function AdminOrdersPage({
     if (e instanceof AdminUnauthorizedError) redirect("/admin/login");
   }
 
-  const params: Record<string, string | number> = { per_page: 20 };
+  // eBay orders are shown on their own page. The API still defaults to `all`
+  // on purpose — flipping the default server-side would have dropped eBay
+  // orders from every other consumer of this endpoint, including the ops
+  // mobile app, which is a data change dressed up as a feature. So the split
+  // is asked for here, explicitly, by the one screen that wants it.
+  const params: Record<string, string | number> = { per_page: 20, channel: "normal" };
   if (status && status !== "all")                   params.status         = status;
   if (payment_status && payment_status !== "all")   params.payment_status = payment_status;
   if (q?.trim())                                    params.q              = q.trim();
@@ -64,6 +70,14 @@ export default async function AdminOrdersPage({
         </div>
         <OrdersCsvActions />
       </div>
+
+      <ChannelNotice
+        count={
+          typeof (meta.channel_counts as { ebay?: number } | undefined)?.ebay === "number"
+            ? (meta.channel_counts as { ebay: number }).ebay
+            : null
+        }
+      />
 
       <OrdersTable
         orders={orders}

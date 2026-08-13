@@ -4,6 +4,7 @@ export const ALL_ROLES = [
   "super_admin",
   "admin",
   "order_manager",
+  "finance",
   "sales_manager",
   "content_manager",
   "support",
@@ -17,10 +18,14 @@ export type AdminRole = (typeof ALL_ROLES)[number];
 // Mirrors backend ROLE_ACCESS table.
 
 export const ROLE_ACCESS: Record<string, string[]> = {
-  super_admin:     ["dashboard", "products", "orders", "quotes", "articles", "hero_slides", "promotions", "fet", "brands", "categories", "media", "settings", "users", "supplier", "customers", "ebay", "analytics", "behaviour", "chats", "security", "eu_declarations", "logistics", "system_health", "crm", "marketing", "partners"],
-  admin:           ["dashboard", "products", "orders", "quotes", "articles", "hero_slides", "promotions", "fet", "brands", "categories", "media", "settings", "users", "supplier", "customers", "ebay", "analytics", "behaviour", "chats", "security", "eu_declarations", "logistics", "system_health", "crm", "marketing", "partners"],
-  order_manager:   ["dashboard", "orders", "quotes", "supplier", "eu_declarations", "logistics", "crm", "marketing", "partners", "behaviour"],
-  sales_manager:   ["dashboard", "orders", "quotes", "customers", "analytics", "logistics", "crm"],
+  super_admin:     ["operations", "finance", "dashboard", "products", "orders", "quotes", "articles", "hero_slides", "promotions", "fet", "brands", "categories", "media", "settings", "users", "supplier", "customers", "ebay", "analytics", "behaviour", "chats", "security", "eu_declarations", "logistics", "system_health", "crm", "marketing", "partners"],
+  admin:           ["operations", "finance", "dashboard", "products", "orders", "quotes", "articles", "hero_slides", "promotions", "fet", "brands", "categories", "media", "settings", "users", "supplier", "customers", "ebay", "analytics", "behaviour", "chats", "security", "eu_declarations", "logistics", "system_health", "crm", "marketing", "partners"],
+  order_manager:   ["dashboard", "orders", "quotes", "supplier", "eu_declarations", "logistics", "crm", "marketing", "partners", "behaviour", "operations", "finance"],
+  // Reconciliation and the finance half of order sign-off. Deliberately narrow:
+  // this role exists to hold one half of a separation of duties, so handing it
+  // the rest of the panel would defeat the point of splitting it out.
+  finance:         ["dashboard", "orders", "operations", "finance"],
+  sales_manager:   ["dashboard", "orders", "quotes", "customers", "analytics", "logistics", "crm", "operations"],
   content_manager: ["dashboard", "articles", "hero_slides", "promotions", "fet", "brands", "media"],
   support:         ["dashboard", "orders", "quotes", "customers", "chats", "logistics"],
   editor:          ["dashboard", "articles", "hero_slides", "promotions", "fet", "media", "behaviour"],
@@ -34,6 +39,12 @@ export function canAccess(role: string, section: string): boolean {
 // ── Path → section mapping (shell route guard + middleware) ────────────────────
 
 export const PATH_SECTION: Record<string, string> = {
+  "/admin/operations":      "operations",
+  "/admin/finance-invoices": "finance",
+  // Before "/admin/orders": PATH_SECTION is matched with startsWith() and the
+  // first entry wins, so the more specific prefix must come first.
+  "/admin/orders/in-transit": "orders",
+  "/admin/orders/ebay":      "orders",
   "/admin/products":        "products",
   "/admin/orders":          "orders",
   "/admin/quotes":          "quotes",
@@ -81,10 +92,30 @@ const PERMISSION_ROLES: Record<string, string[]> = {
   "security.manage":       ["super_admin"],   // events log, adoption table, 2FA notices
 
   // Orders
-  "orders.view":                          ["super_admin", "admin", "order_manager", "sales_manager", "support"],
+  // NOTE: the backend grants `orders.view` to finance and NOT to support
+  // (AdminPermissions.php:37). `finance` is added here because the sign-off
+  // feature depends on it — a finance admin must reach the order page to sign.
+  // `support` is left in place: removing it would take Orders away from a role
+  // that has it in the UI today, which is a product decision, not a typo. It is
+  // already a live divergence — support is shown orders the server would 403.
+  // Flagged in PROGRESS.md alongside the same-shaped `analytics.view` finding.
+  "orders.view":                          ["super_admin", "admin", "order_manager", "sales_manager", "support", "finance"],
   "orders.update":                        ["super_admin", "admin", "order_manager"],
   "orders.delete":                        ["super_admin"],
   "orders.approve_financial_revision":    ["super_admin", "admin"],
+
+  // Dual sign-off on an order confirmation. Copied verbatim from
+  // AdminPermissions.php:52-59. `admin` deliberately holds NEITHER half: a
+  // control one administrator can satisfy alone is not a separation of duties.
+  // These gate *display* only — entitlement to sign is decided by the server's
+  // `you_may_sign`, which also enforces the two-different-people rule.
+  "orders.signoff_ops":                   ["super_admin", "order_manager"],
+  "orders.signoff_finance":               ["super_admin", "finance"],
+  "orders.signoff_bypass":                ["super_admin"],
+
+  // Finance-system (sevDesk) invoice recording + reconciliation.
+  "finance.view":                         ["super_admin", "admin", "finance", "order_manager"],
+  "finance.manage":                       ["super_admin", "admin", "finance"],
 
   // Payments
   "payments.mark_paid":        ["super_admin", "admin", "order_manager"],
@@ -184,6 +215,7 @@ export const ROLE_LABELS: Record<string, string> = {
   super_admin:     "Super Admin",
   admin:           "Admin",
   order_manager:   "Orders",
+  finance:         "Finance",
   sales_manager:   "Sales",
   content_manager: "Content",
   support:         "Support",
@@ -196,6 +228,7 @@ export const ROLE_BADGE_COLORS: Record<string, string> = {
   super_admin:     "bg-gray-900 text-white",
   admin:           "bg-blue-100 text-blue-700",
   order_manager:   "bg-amber-100 text-amber-700",
+  finance:         "bg-indigo-100 text-indigo-700",
   sales_manager:   "bg-cyan-100 text-cyan-700",
   content_manager: "bg-violet-100 text-violet-700",
   support:         "bg-teal-100 text-teal-700",
@@ -208,6 +241,7 @@ export const ROLE_COLORS: Record<string, string> = {
   super_admin:     "bg-purple-100 text-purple-700",
   admin:           "bg-blue-100 text-blue-700",
   order_manager:   "bg-amber-100 text-amber-700",
+  finance:         "bg-indigo-100 text-indigo-700",
   sales_manager:   "bg-cyan-100 text-cyan-700",
   content_manager: "bg-violet-100 text-violet-700",
   support:         "bg-teal-100 text-teal-700",
