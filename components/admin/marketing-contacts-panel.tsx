@@ -423,6 +423,26 @@ function ImportCard({
   const [error, setError]           = useState<string | null>(null);
   const [dragging, setDragging]     = useState(false);
 
+  /**
+   * Markets applied by the import, de-duplicated before anything is said about
+   * them.
+   *
+   * Backend fixed a duplicate at source (`cd595d9` — importing the Wix export
+   * *into* the `wix` market returned `["wix","wix"]`) and now asserts both the
+   * uniqueness and the first-position ordering by test. This is kept anyway
+   * because it is not a guess about data: rendering the same market twice
+   * produces the sentence "imported into wix and also added to Wix", which is
+   * false on its face, and one `Set` makes that unsayable rather than
+   * unlikely. Deliberately unlike the market-normalisation gap, where a
+   * client-side fix *would* have been a guess about what two differently-cased
+   * values mean and was left alone.
+   *
+   * Deduping before the length check also means a duplicate makes the panel
+   * fall silent — which is the correct outcome, since one market is nothing to
+   * explain.
+   */
+  const appliedMarkets = [...new Set(result?.markets_applied ?? [])];
+
   function pickFile(f: File) {
     const ext = f.name.split(".").pop()?.toLowerCase();
     if (ext !== "csv" && ext !== "txt") {
@@ -560,6 +580,53 @@ function ImportCard({
             <span>Subscribed</span><span className="font-semibold">{result.subscribed.toLocaleString()}</span>
             <span>Unsubscribed</span><span className="font-semibold">{result.unsubscribed.toLocaleString()}</span>
           </div>
+          {/*
+            An extra market the operator didn't pick.
+
+            Without this the screen says "1,720 imported" and a market nobody
+            asked for appears in the list, which reads as something having gone
+            wrong. Two things have to be said, not just one: the contacts did
+            not *move* — the chosen market is still primary and a row showing
+            only the primary looks unchanged, which is correct — and a source
+            market is not a place, so a campaign addressed to it reaches people
+            in every country.
+          */}
+          {appliedMarkets.length > 1 && (
+            <div className="mt-2 rounded-lg border border-emerald-300 bg-white p-2.5 text-emerald-800">
+              <p className="font-semibold">
+                {result.source_detected
+                  ? `Recognised as a ${marketLabel(result.source_detected)} export`
+                  : "Added to more than one market"}
+              </p>
+              <p className="mt-0.5 leading-snug">
+                Imported into{" "}
+                <strong className="font-semibold">{marketLabel(appliedMarkets[0])}</strong>
+                {" — still their market — and also added to "}
+                {appliedMarkets.slice(1).map((m, i, arr) => (
+                  <Fragment key={m}>
+                    <strong className="font-semibold">{marketLabel(m)}</strong>
+                    {i < arr.length - 2 ? ", " : i === arr.length - 2 ? " and " : ""}
+                  </Fragment>
+                ))}
+                .
+              </p>
+              <p className="mt-1 text-[0.78rem] leading-snug text-emerald-700">
+                Nothing was moved. {marketLabel(appliedMarkets[0])}
+                {" is still each contact\u2019s primary market, so their rows look unchanged."}
+                {result.source_detected && (
+                  <>
+                    {" "}
+                    <strong className="font-semibold">
+                      {marketLabel(result.source_detected)}
+                    </strong>{" "}
+                    is where they came from, not where they are — a campaign sent to it
+                    reaches people in every country.
+                  </>
+                )}
+              </p>
+            </div>
+          )}
+
           {result.errors.length > 0 && (
             <div className="mt-2 rounded-lg bg-amber-50 p-2 text-amber-700">
               <p className="font-semibold">Warnings ({result.errors.length})</p>

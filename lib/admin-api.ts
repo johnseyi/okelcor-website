@@ -838,6 +838,20 @@ export type MarketingContactImportResult = {
   unsubscribed: number;
   subscribed: number;
   errors: string[];
+  /**
+   * The file was recognised as an export from a known platform — `"wix"` today,
+   * `null` for an ordinary CSV. Typed as a widened string so a second source
+   * added server-side surfaces instead of being narrowed away.
+   */
+  source_detected?: "wix" | string | null;
+  /**
+   * Every market the contacts were put in, **chosen market first**.
+   *
+   * That order is load-bearing: the first entry stays each contact's primary
+   * market, so nothing appears to have been relocated. Always present — an
+   * ordinary import returns the one market that was picked.
+   */
+  markets_applied?: string[] | null;
 };
 
 /**

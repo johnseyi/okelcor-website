@@ -252,6 +252,39 @@ Claude should follow these workflow rules:
 * Avoid breaking working sections
 * Keep styling consistent with the design system
 * Review changes after implementation
+* **Look at any UI you changed before calling it done** — see below
+
+## Look at the UI before calling it done
+
+A passing build is not evidence that a screen is right. `tsc`, ESLint and
+`next build` cannot see a label colliding with a chart axis, a control offered
+to someone who cannot use it, or a space JSX silently swallowed between an
+expression and the text after it. Each of those shipped green and was caught
+only by rendering the page and looking at it.
+
+**Chrome renders headlessly with no extension and no extra install:**
+
+```bash
+npm run dev -- --port 3939
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+  --headless --disable-gpu --hide-scrollbars --window-size=1400,900 \
+  --screenshot=/tmp/check.png http://localhost:3939/<route>
+```
+
+Add `--enable-logging=stderr --v=0 --virtual-time-budget=6000 --dump-dom` to
+capture the page's console as well. (The Chrome *extension* cannot reach
+localhost — it fails with "Frame with ID 0 is showing error page" on both
+hostnames, and only the user can grant it that permission. Headless Chrome
+needs none of it.)
+
+Where a component is internal or its state is not reachable from props, mount
+it in a throwaway `app/<name>-check/page.tsx` harness with realistic payloads —
+including the degraded and empty cases, which are what ships first while the
+API is still being deployed. **Delete the harness before committing**, and
+revert any temporary `export` added to reach the component.
+
+Verify against the rendered output, not the source: JSX whitespace and
+conditional rendering both differ from what the file appears to say.
 
 ---
 
