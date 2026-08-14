@@ -106,6 +106,10 @@ const PERMISSION_ROLES: Record<string, string[]> = {
   "orders.view":                          ["super_admin", "admin", "order_manager", "sales_manager", "support", "finance"],
   "orders.update":                        ["super_admin", "admin", "order_manager"],
   "orders.delete":                        ["super_admin"],
+  // Copied verbatim from AdminPermissions.php:47. Narrower than `orders.view`
+  // on purpose: `support` can read the report and cannot export it, so the
+  // Export button is hidden for them rather than left to 403.
+  "orders.export":                        ["super_admin", "admin", "order_manager", "sales_manager", "finance"],
   "orders.approve_financial_revision":    ["super_admin", "admin"],
 
   // Dual sign-off on an order confirmation. Copied verbatim from

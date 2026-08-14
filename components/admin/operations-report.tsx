@@ -4,10 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import {
   ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend,
 } from "recharts";
-import { ArrowUpRight, ArrowDownRight, Minus, Loader2, Table2, Info } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Minus, Loader2, Table2, Info, Download } from "lucide-react";
 import type { OperationsReport } from "@/lib/admin-api";
 import { CHART_INK, SERIES, fullNumber } from "@/lib/behaviour-analytics";
 import { formatMoney } from "@/lib/currency";
+import { useAdminPermissions } from "@/hooks/use-admin-permissions";
 
 /**
  * The transaction report.
@@ -35,17 +36,31 @@ const GRANULARITIES = [
 
 type Row = Record<string, string | number>;
 
-/** Rebuild recharts rows from the served parallel arrays — a transpose, not an aggregation. */
-function toRows(report: OperationsReport, metrics: string[]): Row[] {
+/**
+ * Transpose the served parallel arrays into recharts rows — **not** an
+ * aggregation: every value comes from `series` exactly as sent.
+ *
+ * Each entry names the dataset by `metric` *and* `channel`, which is the order
+ * the datasets are filtered in: pick the measure, then pick whose it is.
+ * `channel` defaults to `all`, which is also the only channel present when the
+ * report was asked for one specific channel.
+ */
+function toRows(
+  report: OperationsReport,
+  picks: { key: string; metric: string; channel?: string }[],
+): Row[] {
   const labels = report.series?.labels ?? [];
   const sets = report.series?.datasets ?? [];
   return labels.map((label, i) => {
     const row: Row = { label };
-    for (const m of metrics) {
-      const ds = sets.find((d) => d.metric === m);
+    for (const p of picks) {
+      const want = p.channel ?? "all";
+      const ds = sets.find(
+        (d) => d.metric === p.metric && (d.channel ?? "all") === want,
+      );
       // Empty periods arrive as zeros and are plotted as zeros. Dropping them
       // makes "we sold nothing in July" and "July is missing" look identical.
-      row[m] = ds?.data?.[i] ?? 0;
+      row[p.key] = ds?.data?.[i] ?? 0;
     }
     return row;
   });
@@ -205,6 +220,16 @@ export default function OperationsReportPanel({
   const [unavailable, setUnavailable] = useState<string | null>(null);
   const [granularity, setGranularity] = useState("month");
   const [showTable, setShowTable] = useState(false);
+  /** "combined" plots the served `all` series; "split" compares the channels. */
+  const [channelView, setChannelView] = useState<"combined" | "split">("combined");
+
+  // Narrower than reading the report: `support` can see this page and cannot
+  // export, so the control is absent rather than present and 403ing. `can()`
+  // rather than `canDo(role, …)` because it also returns false while the role
+  // is still being read, which is the documented guard against a flash of a
+  // control the user turns out not to have.
+  const { can } = useAdminPermissions();
+  const canExport = can("orders.export");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -250,10 +275,40 @@ export default function OperationsReportPanel({
     );
   }
 
-  const orderRows  = toRows(report, ["orders_sent", "orders_confirmed"]);
-  const amountRows = toRows(report, ["amount"]);
-  const clientRows = toRows(report, ["clients"]);
+  // Only offered when the server actually split the channels. Asked for one
+  // channel, `channel_split` is false and there is nothing to compare.
+  const canSplit = report.channel_split === true;
+  const split = canSplit && channelView === "split";
+
   const has = (m: string) => (report.series?.datasets ?? []).some((d) => d.metric === m);
+
+  /**
+   * One chart per measure, always at most two series.
+   *
+   * Combined: the two order counts together — same unit, the comparison that
+   * matters, and exactly the pair the palette was validated for. Split: each
+   * measure gets its own chart of website vs eBay, which keeps every chart to
+   * two series and never puts money and counts on one axis.
+   */
+  const CHANNEL_SERIES = [
+    { key: "normal", name: "Website", color: SERIES.searches },
+    { key: "ebay",   name: "eBay",    color: SERIES.empty },
+  ];
+
+  const byChannel = (metric: string) => ({
+    rows: toRows(report, CHANNEL_SERIES.map((c) => ({
+      key: c.key, metric, channel: c.key,
+    }))),
+    lines: CHANNEL_SERIES.map((c) => ({ key: c.key, name: c.name, color: c.color })),
+  });
+
+  const exportHref = (() => {
+    const p = new URLSearchParams({ granularity });
+    if (from) p.set("from", from);
+    if (to) p.set("to", to);
+    if (channel && channel !== "all") p.set("channel", channel);
+    return `/api/admin/operations/report/export?${p}`;
+  })();
 
   return (
     <div className="space-y-4">
@@ -274,6 +329,25 @@ export default function OperationsReportPanel({
             </button>
           ))}
         </div>
+        {canSplit && (
+          <div className="flex gap-1 border-l border-black/[0.10] pl-2">
+            {([["combined", "Combined"], ["split", "Website vs eBay"]] as const).map(([v, label]) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setChannelView(v)}
+                className={`rounded-full px-3 py-1.5 text-[0.78rem] font-semibold transition ${
+                  channelView === v
+                    ? "bg-[#171a20] text-white"
+                    : "bg-[#f0f2f5] text-[#5c5e62] hover:bg-[#e5e7eb]"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
         <button
           type="button"
           onClick={() => setShowTable((v) => !v)}
@@ -281,15 +355,59 @@ export default function OperationsReportPanel({
         >
           <Table2 size={13} /> {showTable ? "Hide" : "Show"} table
         </button>
+
+        {canExport && (
+          // A real link, not a fetch: the response is a streamed attachment and
+          // the browser saves it. Carries the current filter state, so the file
+          // matches the screen it was taken from.
+          <a
+            href={exportHref}
+            className="flex items-center gap-1.5 rounded-full bg-[#171a20] px-3.5 py-1.5 text-[0.78rem] font-semibold text-white transition hover:bg-black"
+          >
+            <Download size={13} /> Export CSV
+          </a>
+        )}
       </div>
 
       <ChangeTiles report={report} />
 
+      {split ? (
+        <>
+          {(["orders_sent", "orders_confirmed", "amount", "clients"] as const)
+            .filter(has)
+            .map((metric) => {
+              const { rows, lines } = byChannel(metric);
+              const money = metric === "amount";
+              const TITLES: Record<string, string> = {
+                orders_sent: "Orders sent", orders_confirmed: "Orders confirmed",
+                amount: "Amount (EUR)", clients: "Clients",
+              };
+              return (
+                <div key={metric} className={panel}>
+                  <h3 className="mb-2 text-[0.85rem] font-bold text-[#171a20]">
+                    {TITLES[metric]} — website vs eBay
+                  </h3>
+                  <Chart rows={rows} lines={lines} money={money} />
+                  {metric === "clients" && report.note && (
+                    <p className="mt-2 flex items-start gap-1.5 text-[0.72rem] leading-snug text-[#8c8f94]">
+                      <Info size={12} className="mt-0.5 shrink-0" />
+                      {report.note}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+        </>
+      ) : (
+      <>
       {(has("orders_sent") || has("orders_confirmed")) && (
         <div className={panel}>
           <h3 className="mb-2 text-[0.85rem] font-bold text-[#171a20]">Orders</h3>
           <Chart
-            rows={orderRows}
+            rows={toRows(report, [
+              { key: "orders_sent", metric: "orders_sent" },
+              { key: "orders_confirmed", metric: "orders_confirmed" },
+            ])}
             lines={[
               { key: "orders_sent",      name: "Orders sent",      color: SERIES.searches },
               { key: "orders_confirmed", name: "Orders confirmed", color: SERIES.empty },
@@ -304,7 +422,7 @@ export default function OperationsReportPanel({
               without inventing a relationship between them. */}
           <h3 className="mb-2 text-[0.85rem] font-bold text-[#171a20]">Amount (EUR)</h3>
           <Chart
-            rows={amountRows}
+            rows={toRows(report, [{ key: "amount", metric: "amount" }])}
             lines={[{ key: "amount", name: "Amount", color: SERIES.bar }]}
             money
           />
@@ -315,7 +433,7 @@ export default function OperationsReportPanel({
         <div className={panel}>
           <h3 className="mb-2 text-[0.85rem] font-bold text-[#171a20]">Clients</h3>
           <Chart
-            rows={clientRows}
+            rows={toRows(report, [{ key: "clients", metric: "clients" }])}
             lines={[{ key: "clients", name: "Clients", color: SERIES.bar }]}
           />
           {report.note && (
@@ -325,6 +443,8 @@ export default function OperationsReportPanel({
             </p>
           )}
         </div>
+      )}
+      </>
       )}
 
       {/* The table twin, so no value is reachable only by hovering. */}

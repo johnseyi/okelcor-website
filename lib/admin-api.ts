@@ -169,8 +169,20 @@ export type AdminOrder = {
    * Present on both the list row and the detail payload.
    */
   channel?: "normal" | "ebay" | string | null;
-  /** Paid and dispatched, not yet delivered — the cue that documents need sending. */
+  /**
+   * **Meaning changed in session 87.** This was `shipped` only; it now covers
+   * the whole fulfilment window — `confirmed`, `processing` or `shipped`, still
+   * requiring payment far enough along and still stopping at `delivered`. The
+   * count jumped on deploy by design: trade documents get issued *before* a
+   * container leaves as often as after, so a queue that only appeared once an
+   * order was dispatched showed the work after the moment to do it had passed.
+   */
   in_transit?: boolean | null;
+  /**
+   * Which half of that window. `ready_to_ship` is paperwork-and-status work;
+   * `in_transit` is chase-the-carrier work. Null when the order is in neither.
+   */
+  fulfilment_stage?: "ready_to_ship" | "in_transit" | null;
 };
 
 /** One half of an order confirmation's dual sign-off. */
@@ -1306,7 +1318,11 @@ export type OperationsChannelRow = {
   finance_invoices: number;
   /** The point of the two invoice columns. Non-zero must be visually distinct. */
   invoice_variance: number;
+  /** The whole fulfilment window — see `AdminOrder.in_transit` for the change. */
   in_transit: number;
+  /** The two halves of it, so the pre-session-87 figure is still readable. */
+  ready_to_ship?: number | null;
+  shipped?: number | null;
 };
 
 export type OperationsSummary = {
@@ -1486,6 +1502,13 @@ export type OperationsReportChange = {
 export type OperationsReport = {
   period: { from: string; to: string };
   granularity: "day" | "week" | "month" | string;
+  /**
+   * True when no specific channel was asked for. **Branch on it** — when a
+   * channel *is* requested this is false, `periods` carry no `channels` key and
+   * only `channel: "all"` datasets come back. Three datasets per metric where
+   * two are empty is a legend full of lines that aren't there.
+   */
+  channel_split?: boolean | null;
   periods: {
     key: string;
     label: string;
@@ -1494,6 +1517,13 @@ export type OperationsReport = {
     amount: number;
     currency?: string | null;
     clients: number;
+    /** Present only when `channel_split` is true. */
+    channels?: Record<string, {
+      orders_sent: number;
+      orders_confirmed: number;
+      amount: number;
+      clients: number;
+    }> | null;
   }[];
   change?: OperationsReportChange | null;
   totals?: {
@@ -1511,7 +1541,13 @@ export type OperationsReport = {
    */
   series?: {
     labels: string[];
-    datasets: { metric: string; label: string; data: number[] }[];
+    datasets: {
+      metric: string;
+      /** `all` | `normal` | `ebay`. Filter by metric first, then by channel. */
+      channel?: string | null;
+      label: string;
+      data: number[];
+    }[];
   } | null;
   note?: string | null;
 };

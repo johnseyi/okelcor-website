@@ -1,7 +1,7 @@
 # Okelcor Website — Progress Tracker
 
-**Last updated:** 2026-08-14 (session 86 — clients drill-down, transaction report, invoice register)  
-**Branch:** `main` — latest `5c3f941` (session 85, pushed). Session 86 is committed on top; see the session note at the bottom.
+**Last updated:** 2026-08-14 (session 87 — eBay in the report, report export, fulfilment queue)  
+**Branch:** `main` — latest `d2c9886` (session 86, pushed). **Session 87 is uncommitted** — see the session note at the bottom.
 
 | Commit | What |
 |---|---|
@@ -264,6 +264,32 @@ TypeScript 0 errors (scoped run — the full `tsc` still times out, see below) �
 > any market.
 
 > **Market normalisation gap (backend, not papered over here):** the backend slugifies (lowercase) a market value supplied directly (manual add/edit, the import selector), but **not** a market value embedded inside an imported CSV's own market/region/segment column — confirmed via an existing backend test. Filter queries (`BulkEmailService::recipientQuery`) don't normalise either. A CSV-embedded `"Asia"` and a manually-entered `"asia"` will show up as separate, non-matching markets. Flagged back to backend; frontend intentionally shows whatever `/markets` returns at face value rather than guessing a client-side fix for a server-side data-integrity issue.
+
+---
+
+### ✅ Admin Panel — eBay in the Report, Report Export, Fulfilment Queue (2026-08-14)
+
+Backend session 87 (`f25ca2a`, no migration, one new route). **One number
+already on screen changed meaning**, which is the part worth reading.
+
+| Feature | Notes |
+|---|---|
+| **Website vs eBay in the report** | Each metric now has three datasets (`all`/`normal`/`ebay`), so datasets are selected by **metric first, then channel** — `toRows()` takes `{metric, channel}` pairs rather than bare metric names. A **Combined / Website vs eBay** toggle appears only when the server actually split the channels: `channel_split` is false when one channel was requested, and offering the comparison then would draw a legend full of lines that aren't there. In split view each metric gets its own chart of website vs eBay — **still exactly two series per chart**, so money and counts never share an axis and every chart stays inside the validated two-colour pair |
+| **Report export** — `orders.export`, not `orders.view` | A real `<a href>`, not a fetch: the response is a streamed attachment. Carries the current filter state so the file matches the screen it was taken from. **Hidden for `support`**, who can read the report and cannot export it — verified by rendering the page under both roles rather than reasoned about. Gated with the hook's own `can()` rather than `canDo(role, …)`, because `can()` also returns false while the role cookie is still being read, which is the documented guard against a flash of a control the user turns out not to have |
+| **"In transit" changed meaning — and the board keeps the old figure readable** | It meant `shipped`; it now covers the whole fulfilment window. The count jumped on deploy **by design** — documents get issued before a container leaves as often as after, so a queue that only appeared after dispatch showed the work after the moment to do it had passed. The board gained **Ready to ship** and **Shipped** columns beside it, so the pre-change number is still there; `DEFINITIONS` was rewritten server-side and these render as tooltips, so the column explains its own new meaning with **no copy change on this side** |
+| **The queue is two sections, not one list** | `/admin/orders/in-transit` (nav: "Fulfilment Queue") now fetches `?fulfilment_stage=ready_to_ship` and `?fulfilment_stage=in_transit` separately. They are different jobs — *raise the paperwork and move the status* against *this is on the water, chase the carrier* — and one list containing both gets worked in the wrong order. Ready-to-ship is first and accented: it is the half that used not to appear at all. Rebuilt as a lean `FulfilmentQueue` rather than reusing `OrdersTable`, because a work list is not a browsable index — no search, and no status/payment filters, since `fulfilment_stage` is already defined in terms of both and a second filter on top can only produce empty lists that look like bugs |
+
+> **A false claim caught before it shipped.** The queue was written with
+> `sort: "oldest"` and copy reading "Oldest first, because the queue is worked
+> from the back" — which is how a queue *should* be ordered. The orders list has
+> no `sort` parameter at all: it is `orderByDesc('created_at')`, hardcoded
+> (`AdminOrderController:45`). The parameter was silently ignored and the
+> sentence was simply untrue. Corrected to say newest first, which is what it
+> does. **Deliberately not sorted client-side** — that would reorder the 25 rows
+> already fetched and label the result "oldest" while the genuinely oldest orders
+> sat on page two, which is a worse lie than the one being fixed.
+> **Asked of backend: a `sort` parameter on the orders list**, so a queue can be
+> worked from the end that matters.
 
 ---
 
@@ -1150,6 +1176,39 @@ trail, mirroring the DOC-5 order line-item revision pattern. Also asked what
 | **`contacts.csv` sitting in the repo root** | **High (data)** | The real 188-row marketing list — company names and e-mail addresses. Untracked and **deliberately not committed**: pushing it publishes real contact data to GitHub permanently, and a later scrub can't fully undo that. Add it to `.gitignore` (there is currently no `csv` rule) and keep the file outside the repo |
 | Repo-root junk — 15 screenshots + a `.webp` | Low | Untracked leftovers from a July session, referenced nowhere. Delete or ignore |
 | **Verify ESLint once the repo is off iCloud** | Medium | It has not completed on this machine for two sessions. The move is the fix; until it runs, the "11 pre-existing errors" figure is a stale claim, and this session's changes are unlinted |
+
+---
+
+## Session note — 2026-08-14 (session 87)
+
+**Shipped, uncommitted:** the channel split in the report, the CSV export, the
+two new board columns, and the fulfilment queue rebuilt as two sections. One new
+proxy. **Verified:** build exit 0 (7.2s, 104 pages) · TypeScript 0 errors ·
+ESLint 0/0 · board, report (both channel views) and queue rendered and
+screenshotted, and the export button checked under **two roles** — present for
+`order_manager`, absent for `support`.
+
+**The most useful thing this session was a sentence I nearly shipped.** The queue
+said "Oldest first, because the queue is worked from the back" and passed
+`sort: "oldest"`. The orders list has no sort parameter — it is
+`orderByDesc('created_at')`, hardcoded — so the parameter did nothing and the
+sentence was false. It would have read as a considered decision rather than a
+mistake, which is what makes that class of error expensive: nobody checks a claim
+the UI states confidently. Fixed by saying what it actually does, and by *not*
+sorting the fetched page client-side, which would have produced a more
+convincing version of the same lie.
+
+**Two design constraints from the note held under pressure and are worth keeping
+stated.** Branching on `channel_split` rather than assuming `channels` exists is
+what stops an empty legend when one channel is requested. And keeping every chart
+to two series — one metric per chart in split view — is what stopped the obvious
+"plot all three channels of everything" from turning into a dual-axis chart.
+
+**Rendering found two smaller things.** The granularity and channel toggles sat
+adjacent and read as one row of five buttons with two apparently-active pills; a
+hairline divider now separates them. And the export button could only be
+confirmed by setting the role cookie in the harness and looking twice — which is
+also how the `support` exclusion got verified rather than assumed.
 
 ---
 

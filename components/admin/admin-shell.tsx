@@ -84,7 +84,7 @@ const NAV_GROUPS: readonly NavGroup[] = [
     label: "Commerce",
     items: [
       { label: "Orders",          href: "/admin/orders",          icon: ShoppingCart,  section: "orders" },
-      { label: "In Transit",      href: "/admin/orders/in-transit", icon: Truck,        section: "orders" },
+      { label: "Fulfilment Queue", href: "/admin/orders/in-transit", icon: Truck,       section: "orders" },
       // Under `orders`, not `ebay`: the existing eBay section is admin-only,
       // and these orders are worked by order managers.
       { label: "eBay Orders",     href: "/admin/orders/ebay",     icon: ShoppingBag,   section: "orders" },

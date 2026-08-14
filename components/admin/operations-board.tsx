@@ -39,6 +39,12 @@ const COLUMNS: Column[] = [
   { key: "orders_confirmed", label: "Orders confirmed", def: "orders_confirmed" },
   { key: "website_invoices", label: "Our invoices",     def: "website_invoices" },
   { key: "finance_invoices", label: "Finance invoices", def: "finance_invoices" },
+  // Session 87 split the fulfilment window in two. `in_transit` now covers the
+  // whole of it and its count jumped on deploy — these two make the old figure
+  // still readable, and `definitions` (rendered as tooltips) explains the new
+  // meaning without a copy change here.
+  { key: "ready_to_ship",    label: "Ready to ship",    def: "ready_to_ship" },
+  { key: "shipped",          label: "Shipped",          def: "shipped" },
   { key: "in_transit",       label: "In transit",       def: "in_transit" },
 ];
 
@@ -82,6 +88,20 @@ function Cell({
           className="rounded px-1 text-[0.83rem] font-semibold tabular-nums text-[#171a20] underline decoration-[#E85C1A]/40 decoration-2 underline-offset-4 transition hover:decoration-[#E85C1A]"
         >
           {row.clients ?? 0}
+        </Link>
+      </td>
+    );
+  }
+
+  if (col.key === "ready_to_ship" && (row.ready_to_ship ?? 0) > 0) {
+    return (
+      <td className="px-3 py-2.5 text-right">
+        <Link
+          href="/admin/orders/in-transit"
+          title="Paid and confirmed, not yet dispatched — the paperwork queue."
+          className="rounded px-1 text-[0.83rem] font-semibold tabular-nums text-[#171a20] underline decoration-[#E85C1A]/40 decoration-2 underline-offset-4 transition hover:decoration-[#E85C1A]"
+        >
+          {row.ready_to_ship}
         </Link>
       </td>
     );
