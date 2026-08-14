@@ -44,6 +44,7 @@ import {
   Handshake,
   ReceiptText,
   LayoutGrid,
+  LineChart,
   Search,
 } from "lucide-react";
 import { logoutAdmin } from "@/app/admin/actions";
@@ -138,6 +139,7 @@ const NAV_GROUPS: readonly NavGroup[] = [
     label: "Insights",
     items: [
       { label: "Operations",    href: "/admin/operations", icon: LayoutGrid, section: "operations" },
+      { label: "Transaction Report", href: "/admin/operations/report", icon: LineChart, section: "operations" },
       { label: "Finance Invoices", href: "/admin/finance-invoices", icon: ReceiptText, section: "finance" },
       { label: "Analytics",     href: "/admin/analytics", icon: BarChart2,  section: "analytics" },
       // Its own section, not "analytics": the roles the backend grants this

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   Plus, Loader2, X, Trash2, Pencil, AlertTriangle, Link2Off, Scale, CheckCircle2,
+  Paperclip, Download, Lock, FileWarning,
 } from "lucide-react";
 import type { FinanceInvoice, InvoiceReconciliation } from "@/lib/admin-api";
 import { formatMoney } from "@/lib/currency";
@@ -23,6 +24,25 @@ const INPUT =
 const LABEL = "mb-1 block text-[0.75rem] font-semibold text-[#5c5e62]";
 
 type Tab = "invoices" | "reconciliation";
+
+/**
+ * Both sides of the comparison now live in one table, so which side a row is on
+ * has to be legible at a glance. `okelcor` is deliberately labelled "Ours" — the
+ * point of the register is that these are the two things being compared, and
+ * "Okelcor" beside "sevDesk" reads as two vendors rather than as us and them.
+ */
+const SYSTEM_LABEL: Record<string, string> = {
+  sevdesk: "sevDesk",
+  okelcor: "Ours",
+  upload:  "Uploaded",
+  other:   "Other",
+};
+
+const systemLabel = (v?: string | null) =>
+  (v && SYSTEM_LABEL[v]) ?? (v ? v.replace(/_/g, " ") : "—");
+
+/** Falls back only if the server didn't say — never overrides what it did say. */
+const FALLBACK_MANUAL_SYSTEMS = ["sevdesk", "upload", "other"];
 
 function Counts({ rec }: { rec: InvoiceReconciliation }) {
   const c = rec.counts;
@@ -224,10 +244,11 @@ const BLANK = {
 };
 
 function InvoiceForm({
-  editing, onDone, onCancel,
+  editing, manualSystems, onDone, onCancel,
 }: {
   editing: FinanceInvoice | null;
-  onDone: () => void;
+  manualSystems: string[];
+  onDone: (message?: string | null) => void;
   onCancel: () => void;
 }) {
   const [form, setForm] = useState(() =>
@@ -244,6 +265,8 @@ function InvoiceForm({
         }
       : BLANK,
   );
+  const [system, setSystem] = useState<string>(editing?.system ?? manualSystems[0] ?? "sevdesk");
+  const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [error, setError] = useState<string | null>(null);
@@ -267,17 +290,37 @@ function InvoiceForm({
     if (form.channel)               body.channel        = form.channel;
     if (form.notes.trim())          body.notes          = form.notes.trim();
 
+    body.system = system;
+
     try {
-      const res = await fetch(
-        editing ? `/api/admin/finance-invoices/${editing.id}` : "/api/admin/finance-invoices",
-        {
-          method: editing ? "PATCH" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        },
-      );
+      // Multipart only when there is a file — finance has the PDF in front of
+      // them while typing the number, so attaching it is part of the same act
+      // rather than a second step that gets skipped.
+      let res: Response;
+      if (!editing && file) {
+        const fd = new FormData();
+        for (const [k, v] of Object.entries(body)) fd.append(k, String(v));
+        fd.append("file", file);
+        res = await fetch("/api/admin/finance-invoices", { method: "POST", body: fd });
+      } else {
+        res = await fetch(
+          editing ? `/api/admin/finance-invoices/${editing.id}` : "/api/admin/finance-invoices",
+          {
+            method: editing ? "PATCH" : "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          },
+        );
+      }
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
+        // Editing an auto-registered row is refused with an explanation worth
+        // showing verbatim: the row follows the document, and deleting it would
+        // only mean it comes back next time that invoice is saved.
+        if (res.status === 409 && json.code === "auto_registered") {
+          setError(json.message ?? "This row is maintained automatically and can't be edited here.");
+          return;
+        }
         // A duplicate external_number comes back as a 422 on that field, not a
         // database error — it is the one entry that would make the two sides of
         // the board agree when they do not, so it lands on the field itself.
@@ -285,7 +328,10 @@ function InvoiceForm({
         setError(json.message ?? json.error ?? "Could not save this invoice.");
         return;
       }
-      onDone();
+      // The record can save while the file fails — a 201 that still carries a
+      // message. Passed up rather than swallowed, because "saved" and "saved
+      // without the document you attached" are different outcomes.
+      onDone(typeof json.message === "string" ? json.message : null);
     } catch {
       setError("Could not reach the server.");
     } finally {
@@ -354,7 +400,40 @@ function InvoiceForm({
           <label className={LABEL}>Notes</label>
           <input value={form.notes} onChange={(e) => set("notes", e.target.value)} className={INPUT} />
         </div>
+        <div>
+          <label className={LABEL}>Recorded from</label>
+          {/*
+            Driven off `meta.manual_systems`, which is exactly the set the server
+            accepts. `okelcor` is absent on purpose and rejected with a 422 if
+            sent: it would put a number on our side of the comparison that
+            nothing on our side actually issued.
+          */}
+          <select value={system} onChange={(e) => setSystem(e.target.value)} className={INPUT}>
+            {manualSystems.map((v) => (
+              <option key={v} value={v}>{systemLabel(v)}</option>
+            ))}
+          </select>
+        </div>
       </div>
+
+      {!editing && (
+        <div className="mt-3">
+          <label className={LABEL}>
+            <Paperclip size={11} className="mr-1 inline" />
+            The sevDesk document (optional)
+          </label>
+          <input
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png"
+            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            className="block w-full text-[0.8rem] text-[#5c5e62] file:mr-3 file:rounded-full file:border-0 file:bg-[#f0f2f5] file:px-3 file:py-1.5 file:text-[0.78rem] file:font-semibold file:text-[#171a20] hover:file:bg-[#e5e7eb]"
+          />
+          <p className="mt-1 text-[0.68rem] text-[#8c8f94]">
+            PDF, JPG or PNG · max 20 MB. Attached in the same step, so there is no second
+            one to forget.
+          </p>
+        </div>
+      )}
 
       {error && Object.keys(fieldErrors).length === 0 && (
         <p className="mt-2 text-[0.78rem] text-red-600">{error}</p>
@@ -394,6 +473,13 @@ export default function FinanceInvoicesPanel({
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<FinanceInvoice | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
+  const [systems, setSystems] = useState<string[]>([]);
+  const [manualSystems, setManualSystems] = useState<string[]>(FALLBACK_MANUAL_SYSTEMS);
+  const [system, setSystem] = useState<string>("all");
+  const [hasFile, setHasFile] = useState<string>("all");
+  const [notice, setNotice] = useState<string | null>(null);
+  const [rowError, setRowError] = useState<string | null>(null);
+  const [attaching, setAttaching] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -402,6 +488,8 @@ export default function FinanceInvoicesPanel({
       if (from) p.set("from", from);
       if (to) p.set("to", to);
       if (channel && channel !== "all") p.set("channel", channel);
+      if (system !== "all") p.set("system", system);
+      if (hasFile !== "all") p.set("has_file", hasFile);
       const res = await fetch(`/api/admin/finance-invoices?${p}`);
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -410,23 +498,62 @@ export default function FinanceInvoicesPanel({
       } else {
         setUnavailable(null);
         setRows(Array.isArray(json.data) ? json.data : []);
+        // Both lists are served. Driving the tabs and the create dropdown off
+        // them means a system added server-side needs no frontend deploy.
+        const m = json.meta ?? {};
+        if (Array.isArray(m.systems)) setSystems(m.systems as string[]);
+        if (Array.isArray(m.manual_systems) && m.manual_systems.length > 0) {
+          setManualSystems(m.manual_systems as string[]);
+        }
       }
     } catch {
       setUnavailable("Could not reach the server.");
     } finally {
       setLoading(false);
     }
-  }, [from, to, channel]);
+  }, [from, to, channel, system, hasFile]);
 
   useEffect(() => { void load(); }, [load]);
 
   async function remove(id: number) {
     setDeleting(id);
+    setRowError(null);
     try {
-      await fetch(`/api/admin/finance-invoices/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/finance-invoices/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        // Shown verbatim: the message explains that the row follows the
+        // document, which is the part that stops someone trying again.
+        setRowError(
+          json.message
+            ?? (res.status === 409
+              ? "This row is maintained automatically and can't be deleted here."
+              : "Could not delete this invoice."),
+        );
+        return;
+      }
       await load();
     } finally {
       setDeleting(null);
+    }
+  }
+
+  /** Attach or replace the document on an existing row. */
+  async function attach(id: number, f: File) {
+    setAttaching(id);
+    setRowError(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", f);
+      const res = await fetch(`/api/admin/finance-invoices/${id}/file`, { method: "POST", body: fd });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setRowError(json.message ?? "Could not attach that file.");
+        return;
+      }
+      await load();
+    } finally {
+      setAttaching(null);
     }
   }
 
@@ -462,11 +589,88 @@ export default function FinanceInvoicesPanel({
         <Reconciliation from={from} to={to} channel={channel} />
       ) : (
         <>
+          {/*
+            The two sides of the comparison, split.
+            Mixing finance's entries and our own in one table is how you stop
+            being able to see the comparison the register exists to make.
+          */}
+          {systems.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button" onClick={() => setSystem("all")}
+                className={`rounded-full px-3 py-1 text-[0.78rem] font-semibold transition ${
+                  system === "all" ? "bg-[#171a20] text-white" : "bg-[#f0f2f5] text-[#5c5e62] hover:bg-[#e5e7eb]"
+                }`}
+              >
+                All
+              </button>
+              {systems.map((sys) => (
+                <button
+                  key={sys} type="button" onClick={() => setSystem(sys)}
+                  className={`rounded-full px-3 py-1 text-[0.78rem] font-semibold transition ${
+                    system === sys ? "bg-[#171a20] text-white" : "bg-[#f0f2f5] text-[#5c5e62] hover:bg-[#e5e7eb]"
+                  }`}
+                >
+                  {systemLabel(sys)}
+                </button>
+              ))}
+
+            </div>
+          )}
+
+          {/* Finance's work queue — independent of the system tabs, so it is
+              still reachable on a server that doesn't serve `meta.systems`. */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setHasFile((v) => (v === "no" ? "all" : "no"))}
+              className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-[0.78rem] font-semibold transition ${
+                hasFile === "no"
+                  ? "bg-amber-100 text-amber-900"
+                  : "bg-[#f0f2f5] text-[#5c5e62] hover:bg-[#e5e7eb]"
+              }`}
+            >
+              <FileWarning size={12} /> Missing document
+            </button>
+            {hasFile === "no" && (
+              <span className="text-[0.72rem] text-[#8c8f94]">
+                Rows with no sevDesk document attached.
+              </span>
+            )}
+          </div>
+
+          {notice && (
+            <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[0.8rem] text-amber-900">
+              <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+              <p className="flex-1">{notice}</p>
+              <button type="button" onClick={() => setNotice(null)} className="shrink-0 opacity-70 hover:opacity-100">
+                <X size={13} />
+              </button>
+            </div>
+          )}
+
+          {rowError && (
+            <div className="flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-[0.8rem] text-slate-700">
+              <Lock size={14} className="mt-0.5 shrink-0" />
+              <p className="flex-1">{rowError}</p>
+              <button type="button" onClick={() => setRowError(null)} className="shrink-0 opacity-70 hover:opacity-100">
+                <X size={13} />
+              </button>
+            </div>
+          )}
+
           {(adding || editing) && (
             <InvoiceForm
               editing={editing}
+              manualSystems={manualSystems}
               onCancel={() => { setAdding(false); setEditing(null); }}
-              onDone={() => { setAdding(false); setEditing(null); void load(); }}
+              onDone={(message) => {
+                setAdding(false); setEditing(null);
+                // A 201 that still carries a message means the record saved and
+                // the file did not. Not a plain success, so not shown as one.
+                if (message) setNotice(message);
+                void load();
+              }}
             />
           )}
 
@@ -481,7 +685,9 @@ export default function FinanceInvoicesPanel({
             </div>
           ) : rows.length === 0 ? (
             <div className="rounded-2xl border border-black/[0.06] bg-white p-8 text-center text-[0.83rem] text-[#8c8f94]">
-              Nothing recorded for this period yet.
+              {system !== "all" || hasFile !== "all"
+                ? "Nothing matches these filters in this period."
+                : "Nothing recorded for this period yet."}
             </div>
           ) : (
             <div className="overflow-hidden rounded-2xl border border-black/[0.06] bg-white">
@@ -495,6 +701,8 @@ export default function FinanceInvoicesPanel({
                       <th className={th}>Our invoice</th>
                       <th className={`${th} text-right`}>Amount</th>
                       <th className={th}>Channel</th>
+                      <th className={th}>Recorded from</th>
+                      <th className={th}>Document</th>
                       <th className={th} />
                     </tr>
                   </thead>
@@ -519,20 +727,80 @@ export default function FinanceInvoicesPanel({
                         <td className={`${td} font-mono`}>{r.invoice_number ?? "—"}</td>
                         <td className={`${td} text-right tabular-nums`}>{formatMoney(r.amount, r.currency)}</td>
                         <td className={`${td} capitalize`}>{r.channel ?? "—"}</td>
+                        <td className={td}>
+                          <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[0.65rem] font-bold ${
+                            r.system === "okelcor"
+                              ? "bg-[#fff0e8] text-[#7c3a15]"
+                              : "bg-slate-100 text-slate-700"
+                          }`}>
+                            {systemLabel(r.system)}
+                          </span>
+                          {/* Written by the system, following the document. */}
+                          {r.auto_registered && (
+                            <span
+                              title="Maintained automatically from the invoice this system issued."
+                              className="ml-1 inline-flex items-center gap-1 text-[0.62rem] font-bold text-[#8c8f94]"
+                            >
+                              <Lock size={8} /> auto
+                            </span>
+                          )}
+                        </td>
+                        <td className={td}>
+                          {r.has_file ? (
+                            <a
+                              href={`/api/admin/finance-invoices/${r.id}/download`}
+                              title={r.file_name ?? "Download"}
+                              className="inline-flex items-center gap-1 text-[0.75rem] font-semibold text-[#E85C1A] hover:underline"
+                            >
+                              <Download size={11} /> Download
+                            </a>
+                          ) : canManage && !r.auto_registered ? (
+                            <label className="inline-flex cursor-pointer items-center gap-1 text-[0.75rem] font-semibold text-[#5c5e62] hover:text-[#171a20]">
+                              {attaching === r.id
+                                ? <Loader2 size={11} className="animate-spin" />
+                                : <Paperclip size={11} />}
+                              Attach
+                              <input
+                                type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden"
+                                onChange={(e) => {
+                                  const f = e.target.files?.[0];
+                                  if (f) void attach(r.id, f);
+                                  e.target.value = "";
+                                }}
+                              />
+                            </label>
+                          ) : (
+                            // No download button when there is nothing attached:
+                            // the endpoint 404s, and a button that always fails
+                            // teaches people to distrust the ones that work.
+                            <span className="text-[0.75rem] text-[#c9cdd1]">—</span>
+                          )}
+                        </td>
                         <td className={`${td} text-right`}>
                           {canManage && (
-                            <div className="flex justify-end gap-0.5">
-                              <button type="button" onClick={() => { setEditing(r); setAdding(false); }}
-                                      title="Edit"
-                                      className="rounded-lg p-1.5 text-[#5c5e62] transition hover:bg-[#f0f2f5] hover:text-[#171a20]">
-                                <Pencil size={13} />
-                              </button>
-                              <button type="button" onClick={() => remove(r.id)} disabled={deleting === r.id}
-                                      title="Delete"
-                                      className="rounded-lg p-1.5 text-[#5c5e62] transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40">
-                                {deleting === r.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
-                              </button>
-                            </div>
+                            r.auto_registered ? (
+                              // Read-only. PATCH and DELETE both 409 here, so the
+                              // controls are absent rather than present-and-failing.
+                              <span
+                                title="This row follows the invoice this system issued. Deleting it would only mean it reappears next time that invoice is saved."
+                                className="inline-flex items-center gap-1 text-[0.7rem] font-semibold text-[#8c8f94]"
+                              >
+                                <Lock size={10} /> Automatic
+                              </span>
+                            ) : (
+                              <div className="flex justify-end gap-0.5">
+                                <button type="button" onClick={() => { setEditing(r); setAdding(false); }}
+                                        title="Edit"
+                                        className="rounded-lg p-1.5 text-[#5c5e62] transition hover:bg-[#f0f2f5] hover:text-[#171a20]">
+                                  <Pencil size={13} />
+                                </button>
+                                <button type="button" onClick={() => remove(r.id)} disabled={deleting === r.id}
+                                        title="Delete"
+                                        className="rounded-lg p-1.5 text-[#5c5e62] transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40">
+                                  {deleting === r.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                                </button>
+                              </div>
+                            )
                           )}
                         </td>
                       </tr>

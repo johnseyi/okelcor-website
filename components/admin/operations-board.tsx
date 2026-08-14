@@ -53,11 +53,12 @@ function OtherCurrencies({ row }: { row: OperationsChannelRow }) {
 }
 
 function Cell({
-  row, col, financeAvailable,
+  row, col, financeAvailable, clientsHref,
 }: {
   row: OperationsChannelRow;
   col: Column;
   financeAvailable: boolean;
+  clientsHref: string;
 }) {
   // A structural zero is not a real one. "0 invoices raised" and "we are not
   // recording them yet" are different statements, and the first is the one
@@ -66,6 +67,22 @@ function Cell({
     return (
       <td className="px-3 py-2.5 text-right text-[0.78rem] italic text-[#8c8f94]">
         not switched on yet
+      </td>
+    );
+  }
+
+  // The figure opens. It was the ask, and it is also the only way anyone can
+  // check the number without asking a developer to run a query — which is
+  // exactly the position two departments arguing over a board should not be in.
+  if (col.key === "clients") {
+    return (
+      <td className="px-3 py-2.5 text-right">
+        <Link
+          href={`${clientsHref}&channel=${row.channel}`}
+          className="rounded px-1 text-[0.83rem] font-semibold tabular-nums text-[#171a20] underline decoration-[#E85C1A]/40 decoration-2 underline-offset-4 transition hover:decoration-[#E85C1A]"
+        >
+          {row.clients ?? 0}
+        </Link>
       </td>
     );
   }
@@ -135,6 +152,8 @@ export default function OperationsBoard({
   const period = summary.period;
   const reconcileHref =
     `/admin/finance-invoices?tab=reconciliation&from=${period?.from ?? ""}&to=${period?.to ?? ""}`;
+  const clientsHref =
+    `/admin/operations/clients?from=${period?.from ?? ""}&to=${period?.to ?? ""}`;
 
   const rows = summary.channels ?? [];
   const anyOtherCurrency = [...rows, summary.total].some(
@@ -181,7 +200,10 @@ export default function OperationsBoard({
                     {row.label}
                   </td>
                   {COLUMNS.map((c) => (
-                    <Cell key={c.key} row={row} col={c} financeAvailable={financeAvailable} />
+                    <Cell
+                      key={c.key} row={row} col={c}
+                      financeAvailable={financeAvailable} clientsHref={clientsHref}
+                    />
                   ))}
                   <VarianceCell
                     row={row}
@@ -202,6 +224,7 @@ export default function OperationsBoard({
                       row={summary.total}
                       col={c}
                       financeAvailable={financeAvailable}
+                      clientsHref={clientsHref}
                     />
                   ))}
                   <VarianceCell
@@ -229,7 +252,7 @@ export default function OperationsBoard({
         <p>
           <strong className="font-semibold text-[#5c5e62]">All channels</strong> counts clients
           once. A buyer who ordered on both the website and eBay is one client, so this row is
-          not the sum of the rows above it.
+          not the sum of the rows above it. Any client figure opens the list behind it.
         </p>
         {anyOtherCurrency && (
           <p>

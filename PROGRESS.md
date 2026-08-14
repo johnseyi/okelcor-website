@@ -1,7 +1,7 @@
 # Okelcor Website — Progress Tracker
 
-**Last updated:** 2026-08-14 (session 85 — Wix contact audience)  
-**Branch:** `main` — latest `9aa1c15` (session 83, pushed). **Session 85's two-file change is uncommitted** — see the session note at the bottom.
+**Last updated:** 2026-08-14 (session 86 — clients drill-down, transaction report, invoice register)  
+**Branch:** `main` — latest `5c3f941` (session 85, pushed). Session 86 is committed on top; see the session note at the bottom.
 
 | Commit | What |
 |---|---|
@@ -264,6 +264,37 @@ TypeScript 0 errors (scoped run — the full `tsc` still times out, see below) �
 > any market.
 
 > **Market normalisation gap (backend, not papered over here):** the backend slugifies (lowercase) a market value supplied directly (manual add/edit, the import selector), but **not** a market value embedded inside an imported CSV's own market/region/segment column — confirmed via an existing backend test. Filter queries (`BulkEmailService::recipientQuery`) don't normalise either. A CSV-embedded `"Asia"` and a manually-entered `"asia"` will show up as separate, non-matching markets. Flagged back to backend; frontend intentionally shows whatever `/markets` returns at face value rather than guessing a client-side fix for a server-side data-integrity issue.
+
+---
+
+### ✅ Admin Panel — Clients Drill-down, Transaction Report, Invoice Register (2026-08-14)
+
+Backend session 86 (`54c508b`, one additive migration, five endpoints). Extends
+what session 83 built; the board and reconciliation needed no change.
+
+| Feature | Notes |
+|---|---|
+| **The board's Clients figure opens** — `/admin/operations/clients` | Every client figure is now a link, including the All-channels one. `meta.total` is guaranteed equal to the board's figure by a backend test, so this page is the *check* on that number rather than a second opinion about it — which is why nothing is filtered or counted client-side beyond what the query asked for. **`has_account: false` is rendered as a labelled state, not a missing link:** plenty of confirmed orders belong to buyers who never registered, `customer_id` is null for those, and a customer link would 404 — so the e-mail is shown as the identity and the link is simply absent. Per-client drawer shows their orders, with `totals.in_transit` given its own accented tile since it is the only actionable figure there (those are the orders needing documents). A 404 `no_orders_in_period` is rendered as the real state it is — "they exist, just not in this window" — rather than an empty table |
+| **Transaction report** — `/admin/operations/report` | `series` is fed in **as served** and never rebuilt from `periods`: two places that aggregate are two places that can disagree about a number the business is reading. `change` renders as stat tiles above the charts, `periods` as a table below (behind a "Show table" toggle, so no value is reachable only by hovering). **`percent: null` off a zero baseline renders "new", never "+100%"** — a change from nothing is undefined, not large. Empty periods are plotted **as zeros**, because a dropped bucket makes "we sold nothing in June" and "June is missing" look identical. `totals.clients` is labelled as counted across the whole range, so its being smaller than the column sum reads as intended rather than as a bug |
+| **Charts: one unit per chart, never a shared axis** | `amount` is money and the rest are counts. A dual axis is the single most misleading thing a chart can do — two lines crossing implies a relationship that exists only because of how the two scales were chosen. Drawn as small multiples instead: orders sent vs confirmed together (same unit, the comparison that matters, and **exactly the two-series pair the palette was validated for**), amount alone, clients alone. Palette re-validated rather than assumed: `#E85C1A,#2a78d6` on `#ffffff` — lightness PASS · chroma PASS · CVD ΔE 26.3 · normal-vision ΔE 34.2 · contrast PASS. Legend only when there is more than one series |
+| **Finance can attach the sevDesk PDF** | File input is on the **create form**, not only the row: finance has the PDF in front of them while typing the number, and a separate "now attach it" step is one that gets skipped. Multipart when a file rides along, JSON otherwise. **A 201 that still carries a message is not shown as a plain success** — the record saved and the file didn't, which is a different outcome. `has_file=no` is a one-click "Missing document" queue, deliberately outside the system tabs so it survives a server that doesn't serve `meta.systems`. No download control when `has_file` is false, since that endpoint 404s and a button that always fails teaches people to distrust the ones that work |
+| **Both sides of the comparison in one register** | Rows now carry `system` and `auto_registered`. **Auto-registered rows render read-only** — the edit and delete controls are absent rather than present-and-failing, and a 409 that arrives anyway shows the server's message verbatim, because it explains that the row follows the document and deleting it would only mean it reappears. The create dropdown is driven off **`meta.manual_systems`**, so `okelcor` is never offered (sending it is a deliberate 422 — it would put a number on our side that nothing on our side issued). System tabs are driven off `meta.systems`, so a new system needs no frontend deploy; `okelcor` is labelled **"Ours"** rather than "Okelcor", since beside "sevDesk" the brand name reads as a second vendor rather than as us |
+
+> **Two chart defects found by rendering the page, both invisible to every check.**
+> **(1) The lines were not drawn at all.** Recharts animates a line in from
+> `stroke-dasharray: 0`, and the paths sat at frame zero — correct geometry,
+> nothing visible. In a real browser rAF finishes it, so this is *mostly* a
+> screenshot artefact, but not only: a chart in a background tab renders empty
+> until it is focused. `isAnimationActive={false}` on a reporting surface costs
+> nothing and makes the figures present the moment the panel is.
+> **⚠️ `components/admin/behaviour-analytics.tsx` has the same latent issue** and
+> was deliberately not changed in this pass — it is outside this session's scope
+> — but it is worth one line when that page is next touched, and it compounds the
+> standing backlog item that the page has never been looked at with data in it.
+> **(2) Smoothed curves were asserting values that don't exist.** `type="monotone"`
+> through discrete monthly buckets draws a shape between them; around the zero
+> month it turned "4 orders, then none, then 4" into a gentle decline that never
+> happened. Now `type="linear"`.
 
 ---
 
@@ -1119,6 +1150,41 @@ trail, mirroring the DOC-5 order line-item revision pattern. Also asked what
 | **`contacts.csv` sitting in the repo root** | **High (data)** | The real 188-row marketing list — company names and e-mail addresses. Untracked and **deliberately not committed**: pushing it publishes real contact data to GitHub permanently, and a later scrub can't fully undo that. Add it to `.gitignore` (there is currently no `csv` rule) and keep the file outside the repo |
 | Repo-root junk — 15 screenshots + a `.webp` | Low | Untracked leftovers from a July session, referenced nowhere. Delete or ignore |
 | **Verify ESLint once the repo is off iCloud** | Medium | It has not completed on this machine for two sessions. The move is the fix; until it runs, the "11 pre-existing errors" figure is a stale claim, and this session's changes are unlinted |
+
+---
+
+## Session note — 2026-08-14 (session 86)
+
+**Shipped:** the clients drill-down, the transaction report and its charts, the
+invoice register changes, and file attachment on finance invoices. Seven new
+routes (two pages, five proxies). **Verified:** build exit 0 (6.8s, 104 pages,
+all seven routes registered) · TypeScript 0 errors · ESLint 0/0 · the board,
+report and clients list rendered and screenshotted against backend's payloads,
+including a zero period and a null-percent change.
+
+**The new rule earned itself again, twice, in the same screenshot.** The charts
+rendered with axes, gridlines, legend and correctly-scaled domains — and no
+lines. The paths were in the DOM with correct geometry and
+`stroke-dasharray="0px 703.55px"`: recharts' entry animation, frozen at frame
+zero. Types, lint and build were all green. Fixing it also removed a real
+user-facing case, not just a screenshot one — a chart in a background tab renders
+empty until focused. Looking again at the fixed version showed the second defect:
+smoothing through discrete monthly buckets, which around the empty month drew a
+decline that never happened.
+
+**Checked before building, not after.** `?system=` takes a single value
+(`AdminFinanceInvoiceController:34`, a plain string used in a `where`), which
+decided the tabs; and **both** `meta.systems` and `meta.manual_systems` are
+served, which meant the tabs and the create dropdown could each be driven off the
+server rather than hardcoded. Neither was in the note.
+
+**One judgement worth recording, because it overrode the obvious reading of the
+ask.** The report's `series` carries four datasets and the natural thing is to
+plot them together. `amount` is money and the rest are counts, so that means a
+second y-axis — and two lines crossing on a dual axis implies a relationship that
+exists only because of how the scales were picked. They are small multiples
+instead: the two order counts share a chart because they share a unit and a
+meaning, and are also exactly the two-series pair the palette was validated for.
 
 ---
 

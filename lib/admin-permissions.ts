@@ -39,6 +39,10 @@ export function canAccess(role: string, section: string): boolean {
 // ── Path → section mapping (shell route guard + middleware) ────────────────────
 
 export const PATH_SECTION: Record<string, string> = {
+  // Before "/admin/operations": PATH_SECTION is matched with startsWith() and
+  // the first entry wins, so the more specific prefixes must come first.
+  "/admin/operations/clients": "operations",
+  "/admin/operations/report":  "operations",
   "/admin/operations":      "operations",
   "/admin/finance-invoices": "finance",
   // Before "/admin/orders": PATH_SECTION is matched with startsWith() and the

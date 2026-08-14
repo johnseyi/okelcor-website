@@ -1353,6 +1353,33 @@ export type FinanceInvoice = {
   order_known_here?: boolean | null;
   matched?: boolean | null;
   created_at?: string | null;
+
+  /**
+   * Which system raised it. `okelcor` rows are written by this API when it
+   * issues a tax invoice, or a commercial invoice / proforma to a customer —
+   * that second case was the real gap, since it is an invoice as far as the
+   * customer is concerned but had no row on either side of the reconciliation.
+   *
+   * **The board and the reconciliation still count only finance's manual
+   * entries**, so neither needed changing: counting our own auto-registered
+   * rows as finance's would make the variance read zero however far apart the
+   * two systems actually were.
+   */
+  system?: "sevdesk" | "okelcor" | "upload" | "other" | string | null;
+  /**
+   * Written by the system, following the document behind it. **Read-only** —
+   * PATCH and DELETE return 409 `auto_registered`, and deleting one would only
+   * mean it reappears the next time that invoice is saved.
+   */
+  auto_registered?: boolean | null;
+  source_type?: string | null;
+  source_id?: number | null;
+
+  /** The sevDesk PDF, when finance attached one. */
+  has_file?: boolean | null;
+  file_name?: string | null;
+  file_size?: number | null;
+  uploaded_at?: string | null;
 };
 
 export type InvoiceReconciliation = {
@@ -1388,4 +1415,103 @@ export type InvoiceReconciliation = {
     amount?: number | null;
     issued_on?: string | null;
   }[];
+};
+
+
+/* ─── Operations: clients drill-down & transaction report (Session 86) ───── */
+
+export type OperationsClient = {
+  /** The identity. A buyer who never registered has this and nothing else. */
+  email: string;
+  name?: string | null;
+  country?: string | null;
+  orders_count: number;
+  amount: number;
+  currency?: string | null;
+  other_currency_orders?: number | null;
+  first_order_at?: string | null;
+  last_order_at?: string | null;
+  channels?: string[] | null;
+  /**
+   * Null for a buyer with no account — which is normal, not an error: plenty of
+   * confirmed orders belong to people who never registered. **Never render a
+   * customer link when this is null**; the page would 404.
+   */
+  customer_id?: number | null;
+  company?: string | null;
+  buyer_tier?: string | null;
+  onboarding_status?: string | null;
+  has_account?: boolean | null;
+};
+
+export type OperationsClientOrder = {
+  order_ref: string;
+  channel?: string | null;
+  status?: string | null;
+  payment_status?: string | null;
+  total?: number | null;
+  currency?: string | null;
+  created_at?: string | null;
+  in_transit?: boolean | null;
+};
+
+export type OperationsClientDetail = {
+  client: OperationsClient;
+  totals: {
+    orders_count: number;
+    amount: number;
+    currency?: string | null;
+    /** The actionable one: orders of theirs that need trade documents sent. */
+    in_transit: number;
+  };
+  orders: OperationsClientOrder[];
+};
+
+export type OperationsReportChange = {
+  from?: string | null;
+  to?: string | null;
+  metrics: Record<string, {
+    previous: number;
+    current: number;
+    delta: number;
+    /**
+     * **Null off a zero baseline** — a change from nothing is undefined, not
+     * large. Render "—" or "new", never "+100%", which reads as a fact.
+     */
+    percent: number | null;
+    direction?: "up" | "down" | "flat" | string | null;
+  }>;
+};
+
+export type OperationsReport = {
+  period: { from: string; to: string };
+  granularity: "day" | "week" | "month" | string;
+  periods: {
+    key: string;
+    label: string;
+    orders_sent: number;
+    orders_confirmed: number;
+    amount: number;
+    currency?: string | null;
+    clients: number;
+  }[];
+  change?: OperationsReportChange | null;
+  totals?: {
+    orders_sent?: number;
+    orders_confirmed?: number;
+    amount?: number;
+    /** Not the sum of the client column — one buyer over two months is one client. */
+    clients?: number;
+    periods?: number;
+  } | null;
+  /**
+   * Already shaped for a chart: parallel arrays on a shared label axis. Fed
+   * straight in and never rebuilt from `periods` — two places that aggregate
+   * are two places that can disagree about a number the business is reading.
+   */
+  series?: {
+    labels: string[];
+    datasets: { metric: string; label: string; data: number[] }[];
+  } | null;
+  note?: string | null;
 };
