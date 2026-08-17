@@ -1,10 +1,12 @@
 # Okelcor Website — Progress Tracker
 
-**Last updated:** 2026-08-14 (session 87 — eBay in the report, report export, fulfilment queue)  
-**Branch:** `main` — latest `2ea8e45`, **everything committed and pushed**. Nothing is uncommitted except the items in "Working tree" below.
+**Last updated:** 2026-08-17 (session 89 — the contribution ledger)  
+**Branch:** `main` — **everything committed and pushed**. Nothing is uncommitted except the items in "Working tree" below.
 
 | Commit | What |
 |---|---|
+| _(this session)_ | My Contribution — recorded work beside self-reported work, kept apart on purpose |
+| `579fcd7` | PROGRESS.md brought current for sessions 81–87 |
 | `2ea8e45` | eBay beside the website in the report · CSV export · fulfilment queue split in two |
 | `d2c9886` | Clients figure opens · transaction report + charts · invoice register split |
 | `5c3f941` | Wix source market named on the import result · "look at the UI" made a standing rule |
@@ -1180,6 +1182,69 @@ trail, mirroring the DOC-5 order line-item revision pattern. Also asked what
 | Proposal PDF document (AN number) | Medium | Backend to generate; frontend to display |
 | **`contacts.csv` sitting in the repo root** | **High (data)** | The real 188-row marketing list — company names and e-mail addresses. Untracked and **deliberately not committed**: pushing it publishes real contact data to GitHub permanently, and a later scrub can't fully undo that. Add it to `.gitignore` (there is currently no `csv` rule) and keep the file outside the repo |
 | Repo-root junk — 15 screenshots + a `.webp` | Low | Untracked leftovers from a July session, referenced nowhere. Delete or ignore |
+
+---
+
+## Session note — 2026-08-17 (session 89)
+
+**My Contribution** — the frontend for the staff contribution ledger. Backend
+`431aced` + migration #38 + 10 routes; **inert until that deploys**, and the
+page says so rather than showing an empty state that reads as "you have done
+nothing".
+
+### The one rule the screen exists to hold
+
+**Recorded work and self-reported work are never one number.** The API keeps
+them in two tables, returns them as two objects and offers no combined total.
+This screen holds the same line, and does it visually rather than in a label
+somebody has to read: recorded work sits in a solid panel with a green check and
+green bars; self-reported work sits in a **dashed** panel with the orange accent,
+before and after anyone verifies it. Every entry in the logged list keeps the
+dashed treatment permanently — a verified entry is still a claim a manager agreed
+with, not something the system observed.
+
+| Piece | Notes |
+|---|---|
+| `app/admin/contribution/page.tsx` | New route. Sidebar item sits beside **My Work** with `section: null` — **no role gate, deliberately.** Every role holds `staff.self` on the API because nothing may be measured about a person that the person cannot open; gating the nav would lock someone out of their own record. |
+| `components/admin/staff-ledger.tsx` | Person picker (only when `meta.can_view_team`), date range, the two summary panels, and two tabs — Recorded and Logged. |
+| `components/admin/staff-contribution-form.tsx` | The log-work modal. File rides along on create in one request, same reason as the finance-invoice upload: people have the artifact in front of them and a separate "now attach it" step gets skipped. |
+| 7 proxy routes under `app/api/admin/staff/` | Status codes forwarded untouched — 403 `staff_view_team_required`, 409 `already_reviewed`, 422 `self_review` each drive a different message, and a proxy that flattened them to 500 would make all three unreadable. |
+| Types in `lib/admin-api.ts` | **No union type combining the two shapes**, on purpose — that is the first place the separation would erode. |
+
+### Two things the UI copy does deliberately
+
+`minutes` is optional and the field says so out loud (*"Leave blank — this isn't
+a timesheet"*). A blank number field otherwise reads as one you forgot rather
+than one you were never asked for, and quietly turning a contribution log into a
+timesheet changes the product's reception entirely.
+
+**"Days with activity" is labelled as context, not a score**, in the hint under
+the figure. It answers "was this a full month or a fortnight of leave" — which is
+what every other count on the page needs to mean anything — and would be read as
+a productivity metric without the sentence.
+
+Buttons are driven by the API's own `can_edit` / `can_review` per row rather than
+by `status` plus a permission guess, so the two cannot drift.
+
+### Verified by rendering it, not by a green build
+
+Mounted in a throwaway `/ledger-check` harness with realistic payloads and
+screenshotted headless in three states — the Recorded tab, the Logged tab
+(verified / awaiting-review / rejected entries together), and the
+**not-deployed** panel, which is the state that actually ships first. Harness
+deleted and the temporarily-flipped default tab reverted before committing. The
+dev server was killed afterwards — session 85's stale-render trap.
+
+**Build:** `npm run build` exit 0, compiled in 6.9s. TypeScript **0 errors**,
+ESLint **0 errors / 0 warnings** on every changed file. 8 new routes registered
+(1 page, 7 proxies).
+
+### Not built
+
+Scorecards, the AI-written monthly report and the skills/bus-factor map are
+phases 3–5 and wait on a business answer: whether any of this ever touches pay.
+A visibility tool can be approximate; one that decides money needs an appeals
+route.
 
 ---
 

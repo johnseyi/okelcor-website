@@ -1551,3 +1551,100 @@ export type OperationsReport = {
   } | null;
   note?: string | null;
 };
+
+// ── Staff contribution ledger (session 89) ───────────────────────────────────
+//
+// Two shapes, kept apart on purpose. `StaffActivity` is work the API watched
+// happen; `StaffContribution` is work the person entered. There is deliberately
+// no type that combines them, and no field anywhere that totals both — the
+// promise made to the team is that observed and self-entered work never merge
+// into one figure, and a union type here would be the first place that erodes.
+
+export type StaffActivity = {
+  id: number;
+  category: string;
+  category_label: string;
+  action: string;
+  action_label: string;
+  /** `order` | `trade_document` | `customer` | `campaign` | `finance_invoice` | `partner_sale` */
+  subject_type: string | null;
+  subject_id: number | null;
+  subject_label: string | null;
+  occurred_at: string | null;
+  metadata: Record<string, string | number | null> | null;
+  /** Always true. Stated per row so a contribution can never be rendered as one. */
+  verified: true;
+};
+
+export type StaffMember = {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  is_active: boolean;
+  is_self: boolean;
+};
+
+export type StaffCategoryCount = {
+  category: string;
+  label: string;
+  total: number;
+};
+
+export type StaffSummary = {
+  admin_user: { id: number; name: string; role: string };
+  from: string;
+  to: string;
+  recorded: {
+    total: number;
+    by_category: StaffCategoryCount[];
+    top_actions: { action: string; label: string; total: number }[];
+    /**
+     * Distinct days with any recorded activity. Not a productivity measure and
+     * must not be labelled as one — it answers "was this a normal month or a
+     * fortnight of leave", which is the context every other count needs.
+     */
+    active_days: number;
+  };
+  self_reported: {
+    /** False until migration #38 runs. Hide the panel rather than showing zeros. */
+    available: boolean;
+    total: number;
+    verified: number;
+    pending: number;
+    rejected: number;
+    by_category: StaffCategoryCount[];
+  };
+  note: string;
+};
+
+export type StaffContributionStatus = "pending" | "verified" | "rejected";
+
+export type StaffContribution = {
+  id: number;
+  category: string;
+  category_label: string;
+  title: string;
+  description: string | null;
+  performed_on: string;
+  minutes: number | null;
+  link: string | null;
+  has_file: boolean;
+  file_name: string | null;
+  file_size: number | null;
+  has_evidence: boolean;
+  status: StaffContributionStatus;
+  review_note: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  logged_by: { id: number; name: string | null; role: string | null };
+  created_at: string | null;
+  /** Always true, including once verified. A countersigned claim is still a claim. */
+  self_reported: true;
+  /**
+   * Computed by the API for this viewer. Drive the buttons off these rather
+   * than off `status` plus a permission guess — otherwise the two drift.
+   */
+  can_edit: boolean;
+  can_review: boolean;
+};

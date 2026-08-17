@@ -46,6 +46,7 @@ import {
   LayoutGrid,
   LineChart,
   Search,
+  BadgeCheck,
 } from "lucide-react";
 import { logoutAdmin } from "@/app/admin/actions";
 import { canAccess, PATH_SECTION, ROLE_LABELS, ROLE_BADGE_COLORS } from "@/lib/admin-permissions";
@@ -76,6 +77,11 @@ const NAV_GROUPS: readonly NavGroup[] = [
     items: [
       { label: "Dashboard",     href: "/admin",               icon: LayoutDashboard, section: "dashboard" },
       { label: "My Work",       href: "/admin/my-work",       icon: ClipboardCheck,  section: null },
+      // `section: null` — no role gate, and that is the design rather than an
+      // oversight. Every role holds `staff.self` on the API, because nothing may
+      // be measured about a person that the person cannot open. Gating this item
+      // would lock somebody out of their own record.
+      { label: "My Contribution", href: "/admin/contribution", icon: BadgeCheck,    section: null },
       { label: "Inbox",         href: "/admin/inbox",         icon: Inbox,           section: "crm" },
       { label: "Notifications", href: "/admin/notifications", icon: Bell,            section: null },
     ],
