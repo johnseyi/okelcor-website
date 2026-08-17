@@ -47,150 +47,20 @@ import {
   LineChart,
   Search,
   BadgeCheck,
+  X,
 } from "lucide-react";
 import { logoutAdmin } from "@/app/admin/actions";
 import { canAccess, PATH_SECTION, ROLE_LABELS, ROLE_BADGE_COLORS } from "@/lib/admin-permissions";
 import CrispNotifier from "@/components/admin/crisp-notifier";
 import NotificationsBell from "@/components/admin/notifications-bell";
 import InsightsBell from "@/components/admin/insights-bell";
+import CommandPalette from "@/components/admin/command-palette";
+import { NAV_GROUPS, getAdminBreadcrumb, type NavItem } from "@/lib/admin-nav";
 
 // ── Navigation ────────────────────────────────────────────────────────────────
 // Grouped into labelled sections for a clean, scannable sidebar. Each group hides
 // automatically when a role can't access any of its items. `section: null` items
 // are always visible.
-
-type NavItem = {
-  label: string;
-  href: string;
-  icon: typeof LayoutDashboard;
-  section: string | null;
-};
-
-type NavGroup = {
-  label: string | null; // null = no header (top-level overview group)
-  items: readonly NavItem[];
-};
-
-const NAV_GROUPS: readonly NavGroup[] = [
-  {
-    label: null,
-    items: [
-      { label: "Dashboard",     href: "/admin",               icon: LayoutDashboard, section: "dashboard" },
-      { label: "My Work",       href: "/admin/my-work",       icon: ClipboardCheck,  section: null },
-      // `section: null` — no role gate, and that is the design rather than an
-      // oversight. Every role holds `staff.self` on the API, because nothing may
-      // be measured about a person that the person cannot open. Gating this item
-      // would lock somebody out of their own record.
-      { label: "My Contribution", href: "/admin/contribution", icon: BadgeCheck,    section: null },
-      { label: "Inbox",         href: "/admin/inbox",         icon: Inbox,           section: "crm" },
-      { label: "Notifications", href: "/admin/notifications", icon: Bell,            section: null },
-    ],
-  },
-  {
-    label: "Commerce",
-    items: [
-      { label: "Orders",          href: "/admin/orders",          icon: ShoppingCart,  section: "orders" },
-      { label: "Fulfilment Queue", href: "/admin/orders/in-transit", icon: Truck,       section: "orders" },
-      // Under `orders`, not `ebay`: the existing eBay section is admin-only,
-      // and these orders are worked by order managers.
-      { label: "eBay Orders",     href: "/admin/orders/ebay",     icon: ShoppingBag,   section: "orders" },
-      { label: "Quote Requests",  href: "/admin/quotes",          icon: ClipboardList, section: "quotes" },
-      { label: "Products",        href: "/admin/products",        icon: Package,       section: "products" },
-      { label: "Logistics",       href: "/admin/logistics",       icon: Truck,         section: "logistics" },
-      { label: "EU Declarations", href: "/admin/eu-declarations", icon: FileCheck,     section: "eu_declarations" },
-    ],
-  },
-  {
-    label: "Customers & CRM",
-    items: [
-      { label: "Customers",          href: "/admin/customers",              icon: ContactRound,  section: "customers" },
-      { label: "Customer Approvals", href: "/admin/customer-approvals",     icon: UserCheck,     section: "customers" },
-      { label: "Follow-ups",         href: "/admin/crm/follow-ups",         icon: BellRing,      section: "crm" },
-      { label: "Data Quality",       href: "/admin/customers/data-quality", icon: ScanLine,      section: "customers" },
-      { label: "Live Chats",         href: "/admin/chats",                  icon: MessageSquare, section: "chats" },
-    ],
-  },
-  {
-    label: "Content",
-    items: [
-      { label: "Articles",    href: "/admin/articles",    icon: FileText,  section: "articles" },
-      { label: "Hero Slides", href: "/admin/hero-slides", icon: Layers,    section: "hero_slides" },
-      { label: "Promotions",  href: "/admin/promotions",  icon: Megaphone, section: "promotions" },
-      { label: "FET Engines", href: "/admin/fet",         icon: Zap,       section: "fet" },
-      { label: "Brands",      href: "/admin/brands",      icon: Star,      section: "brands" },
-      { label: "Media Library", href: "/admin/media",       icon: Images,    section: "media" },
-    ],
-  },
-  {
-    label: "Marketing",
-    items: [
-      { label: "Contacts",   href: "/admin/marketing/contacts",  icon: Mail, section: "marketing" },
-      { label: "Campaigns",  href: "/admin/marketing/campaigns", icon: Send, section: "marketing" },
-    ],
-  },
-  {
-    label: "Partner Sales",
-    items: [
-      { label: "Partners",      href: "/admin/partners",      icon: Handshake,  section: "partners" },
-      { label: "Reported Sales", href: "/admin/partner-sales", icon: ReceiptText, section: "partners" },
-    ],
-  },
-  {
-    label: "Sales Channels",
-    items: [
-      { label: "eBay", href: "/admin/ebay", icon: ShoppingBag, section: "ebay" },
-    ],
-  },
-  {
-    label: "Insights",
-    items: [
-      { label: "Operations",    href: "/admin/operations", icon: LayoutGrid, section: "operations" },
-      { label: "Transaction Report", href: "/admin/operations/report", icon: LineChart, section: "operations" },
-      { label: "Finance Invoices", href: "/admin/finance-invoices", icon: ReceiptText, section: "finance" },
-      { label: "Analytics",     href: "/admin/analytics", icon: BarChart2,  section: "analytics" },
-      // Its own section, not "analytics": the roles the backend grants this
-      // report to are not the ones our analytics section lists, and the two
-      // pages read different data sources.
-      { label: "Customer Behaviour", href: "/admin/analytics/behaviour", icon: Search, section: "behaviour" },
-      { label: "Supplier Intel", href: "/admin/supplier", icon: TrendingUp, section: "supplier" },
-    ],
-  },
-  {
-    label: "System",
-    items: [
-      { label: "Security",      href: "/admin/security",      icon: ShieldAlert, section: "security" },
-      { label: "System Health", href: "/admin/system-health", icon: Activity,    section: "system_health" },
-      { label: "Users",         href: "/admin/users",         icon: Users,       section: "users" },
-      { label: "Settings",      href: "/admin/settings",      icon: Settings,    section: "settings" },
-    ],
-  },
-];
-
-// Flat list of every nav item — used by the breadcrumb resolver.
-const ALL_NAV_ITEMS: readonly NavItem[] = NAV_GROUPS.flatMap((g) => g.items);
-
-// ── Breadcrumb ────────────────────────────────────────────────────────────────
-
-function getAdminBreadcrumb(pathname: string): { parent: { label: string; href: string } | null; current: string } {
-  const sorted = [...ALL_NAV_ITEMS].sort((a, b) => b.href.length - a.href.length);
-
-  const best = sorted.find(({ href }) =>
-    href === "/admin" ? pathname === "/admin" : pathname.startsWith(href)
-  );
-
-  if (!best) return { parent: null, current: "Admin" };
-
-  const remainder = pathname.slice(best.href.length).replace(/^\//, "");
-  if (!remainder) return { parent: null, current: best.label };
-
-  const lastSeg = remainder.split("/").pop() ?? "";
-  let subLabel: string;
-  if (lastSeg === "new") subLabel = "New";
-  else if (lastSeg === "trash") subLabel = "Trash";
-  else subLabel = lastSeg.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-
-  return { parent: { label: best.label, href: best.href }, current: subLabel };
-}
 
 // ROLE_LABELS and ROLE_BADGE_COLORS imported from lib/admin-permissions
 
@@ -222,12 +92,50 @@ function Sidebar({
   const isActive = (href: string) =>
     href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
 
-  // Filter items per role, then drop any group left with no visible items.
+  const [filter, setFilter] = useState("");
+  const [folded, setFolded] = useState<Record<string, boolean>>({});
+
+  // Remembered across visits. Someone who never touches Content should not have
+  // to fold it away every morning.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("admin_nav_folded");
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time localStorage hydration, same pattern as compare-context.tsx
+      if (raw) setFolded(JSON.parse(raw) as Record<string, boolean>);
+    } catch {
+      /* a corrupt preference is not worth an error — start expanded */
+    }
+  }, []);
+
+  const toggleGroup = (label: string) => {
+    setFolded((prev) => {
+      const next = { ...prev, [label]: !prev[label] };
+      try {
+        localStorage.setItem("admin_nav_folded", JSON.stringify(next));
+      } catch {
+        /* private mode; the fold just will not persist */
+      }
+      return next;
+    });
+  };
+
+  const q = filter.trim().toLowerCase();
+
+  // A fold is ignored while the filter is in use. Typing a search and getting
+  // no result because the match sits inside a group you collapsed last week is
+  // the worst failure this control could have.
+  const isFolded = (label: string) => !q && Boolean(folded[label]);
+
+  // Filter items per role, then by the search box, then drop any group left
+  // with nothing in it.
   const visibleGroups = NAV_GROUPS
     .map((group) => ({
       ...group,
       items: group.items.filter(
-        ({ section }) => section === null || !role || canAccess(role, section)
+        (item) =>
+          (item.section === null || !role || canAccess(role, item.section)) &&
+          (!q ||
+            `${item.label} ${item.href} ${item.keywords ?? ""}`.toLowerCase().includes(q)),
       ),
     }))
     .filter((group) => group.items.length > 0);
@@ -259,21 +167,71 @@ function Sidebar({
         )}
       </div>
 
+      {/* Filter — hidden when collapsed, where there is no room for it and the
+          Cmd+K palette is the better tool anyway. */}
+      {!collapsed && (
+        <div className="shrink-0 px-2.5 pt-3">
+          <div className="relative">
+            <Search
+              size={13}
+              className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-white/35"
+            />
+            <input
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              placeholder="Filter menu…"
+              aria-label="Filter the menu"
+              className="w-full rounded-lg border border-white/[0.08] bg-white/[0.04] py-1.5 pl-7 pr-7 text-[0.78rem] text-white outline-none transition placeholder:text-white/30 focus:border-[#E85C1A]/60 focus:bg-white/[0.07]"
+            />
+            {filter && (
+              <button
+                type="button"
+                onClick={() => setFilter("")}
+                aria-label="Clear filter"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-white/40 transition hover:text-white"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
+          <p className="mt-1.5 px-0.5 text-[0.62rem] text-white/25">
+            or press <kbd className="font-sans font-semibold text-white/45">⌘K</kbd> to jump anywhere
+          </p>
+        </div>
+      )}
+
       {/* Nav links */}
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2.5 py-4 [scrollbar-width:thin]">
+        {visibleGroups.length === 0 && (
+          <p className="px-3 py-6 text-center text-[0.78rem] text-white/35">
+            Nothing matches “{filter}”.
+          </p>
+        )}
         {visibleGroups.map((group, gi) => (
           <div key={group.label ?? `group-${gi}`} className={gi > 0 ? "mt-5" : undefined}>
-            {/* Group header — label when expanded, divider when collapsed */}
+            {/* Group header — a fold toggle when expanded, a divider when the
+                sidebar is collapsed to icons. */}
             {group.label && !collapsed && (
-              <p className="mb-1.5 px-3 text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-white/30">
-                {group.label}
-              </p>
+              <button
+                type="button"
+                onClick={() => toggleGroup(group.label as string)}
+                aria-expanded={!isFolded(group.label as string)}
+                className="mb-1.5 flex w-full items-center gap-1 rounded px-3 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-white/30 transition hover:text-white/60"
+              >
+                <span className="flex-1 text-left">{group.label}</span>
+                <ChevronRight
+                  size={11}
+                  className={`transition-transform ${isFolded(group.label as string) ? "" : "rotate-90"}`}
+                />
+              </button>
             )}
             {group.label && collapsed && gi > 0 && (
               <div className="mx-2 mb-2 border-t border-white/[0.08]" />
             )}
 
-            <div className="flex flex-col gap-0.5">
+            <div className={`flex flex-col gap-0.5 ${
+              group.label && !collapsed && isFolded(group.label) ? "hidden" : ""
+            }`}>
               {group.items.map(({ label, href, icon: Icon }) => {
                 const active = isActive(href);
                 const showBadge = label === "Live Chats" && pendingChats > 0;
@@ -449,6 +407,11 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           onClick={() => setSidebarOpen(false)}
         />
       )}
+
+      {/* Mounted once at shell level so Cmd+K works on every admin page —
+          which is the point. A palette that only exists on the dashboard is a
+          shortcut nobody builds the habit of using. */}
+      <CommandPalette role={role} />
 
       {/* ── Sidebar ── */}
       <aside

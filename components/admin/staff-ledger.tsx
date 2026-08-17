@@ -36,10 +36,13 @@ const STATUS_STYLES: Record<string, string> = {
   rejected: "bg-[#f3f4f6] text-[#5c5e62] ring-black/10",
 };
 
-export default function StaffLedger() {
+export default function StaffLedger({ initialAdminUserId }: { initialAdminUserId?: number }) {
   const [members, setMembers] = useState<StaffMember[]>([]);
   const [canViewTeam, setCanViewTeam] = useState(false);
-  const [subjectId, setSubjectId] = useState<number | null>(null);
+  // Seeded from the URL so the team report can link straight at one person.
+  // Without it that link lands on the reader's own record and silently shows
+  // the wrong month to somebody who thinks they clicked a name.
+  const [subjectId, setSubjectId] = useState<number | null>(initialAdminUserId ?? null);
 
   const [range, setRange] = useState(() => defaultRange());
   const [tab, setTab] = useState<Tab>("recorded");
@@ -137,7 +140,7 @@ export default function StaffLedger() {
             >
               {members.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.name}{m.is_self ? " (you)" : ` — ${prettyRole(m.role)}`}
+                  {m.name}{m.is_self ? " (you)" : ` — ${m.job_title}`}
                 </option>
               ))}
             </select>
@@ -168,6 +171,13 @@ export default function StaffLedger() {
           </span>
         )}
       </div>
+
+      {viewing && !isSelf && (
+        <p className="rounded-lg bg-[#f3f4f6] px-3 py-2 text-[0.82rem] text-[#5c5e62]">
+          Viewing <strong className="font-semibold text-[#171a20]">{viewing.name}</strong>
+          {viewing.job_title ? ` — ${viewing.job_title}` : ""}. They can see this same record themselves.
+        </p>
+      )}
 
       {toast && (
         <p className="rounded-lg bg-emerald-50 px-3 py-2 text-[0.82rem] text-emerald-900">{toast}</p>
@@ -739,6 +749,3 @@ function firstName(name?: string | null): string {
   return (name ?? "them").split(" ")[0];
 }
 
-function prettyRole(role: string): string {
-  return role.replace(/_/g, " ");
-}

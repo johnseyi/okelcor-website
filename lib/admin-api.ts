@@ -1580,6 +1580,12 @@ export type StaffMember = {
   id: number;
   name: string;
   email: string;
+  /**
+   * What the person does. Render this, not `role` — the role is a permission
+   * set, and two order managers plus the person running operations all hold
+   * `admin` because all three need customers, campaigns and quote requests.
+   */
+  job_title: string;
   role: string;
   is_active: boolean;
   is_self: boolean;
@@ -1592,7 +1598,7 @@ export type StaffCategoryCount = {
 };
 
 export type StaffSummary = {
-  admin_user: { id: number; name: string; role: string };
+  admin_user: { id: number; name: string; job_title: string; role: string };
   from: string;
   to: string;
   recorded: {
@@ -1647,4 +1653,40 @@ export type StaffContribution = {
    */
   can_edit: boolean;
   can_review: boolean;
+};
+
+/**
+ * A person in the team report.
+ *
+ * `job_title` is what to render. `role` is a permission set and describes
+ * nobody's job — two order managers and the person running operations all hold
+ * `admin`, because all three need customers, campaigns and quote requests.
+ * Show the role only where access is genuinely the subject.
+ */
+export type StaffReportPerson = {
+  admin_user_id: number;
+  name: string;
+  email: string;
+  job_title: string;
+  /** False when the title above is a fallback derived from the role. */
+  job_title_set: boolean;
+  role: string;
+  recorded: { total: number; by_category: StaffCategoryCount[] };
+  self_reported: { total: number; verified: number; pending: number; rejected: number };
+};
+
+export type StaffTeamReport = {
+  from: string;
+  to: string;
+  /** Alphabetical. There is no ranking here and none should be introduced. */
+  people: StaffReportPerson[];
+  totals: {
+    people: number;
+    people_with_activity: number;
+    recorded: number;
+    self_reported: number;
+    awaiting_review: number;
+  };
+  /** Travels with the payload because this report gets exported and forwarded. */
+  caveats: string[];
 };

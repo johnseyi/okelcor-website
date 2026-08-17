@@ -5,7 +5,8 @@
 
 | Commit | What |
 |---|---|
-| _(this session)_ | My Contribution — recorded work beside self-reported work, kept apart on purpose |
+| _(this session)_ | Job titles over roles · Team Contribution report · admin nav search + ⌘K palette |
+| `6bfe521` | My Contribution — recorded work beside self-reported work, kept apart on purpose |
 | `579fcd7` | PROGRESS.md brought current for sessions 81–87 |
 | `2ea8e45` | eBay beside the website in the report · CSV export · fulfilment queue split in two |
 | `d2c9886` | Clients figure opens · transaction report + charts · invoice register split |
@@ -1182,6 +1183,68 @@ trail, mirroring the DOC-5 order line-item revision pattern. Also asked what
 | Proposal PDF document (AN number) | Medium | Backend to generate; frontend to display |
 | **`contacts.csv` sitting in the repo root** | **High (data)** | The real 188-row marketing list — company names and e-mail addresses. Untracked and **deliberately not committed**: pushing it publishes real contact data to GitHub permanently, and a later scrub can't fully undo that. Add it to `.gitignore` (there is currently no `csv` rule) and keep the file outside the repo |
 | Repo-root junk — 15 screenshots + a `.webp` | Low | Untracked leftovers from a July session, referenced nowhere. Delete or ignore |
+
+---
+
+## Session note — 2026-08-17 (session 89b)
+
+Three asks: confirm everyone is recorded, stop describing people by their system
+role, and stop the sidebar becoming unusable as it grows. Backend `64fe4af` +
+migration #39.
+
+### Role is not a job — render `job_title`
+
+`admin_users.role` is a permission set. **Edinah and Yelzaveta are order
+managers holding `admin`** because they also need customers, campaigns and quote
+requests; **Victor runs operations on the same role**. Grouping anything by role
+files all three under "Admin" and describes none of them.
+
+Every payload naming a person now carries `job_title` alongside `role`. The
+person picker, the record header and the team table all render the job; `role`
+appears nowhere a person is being described. `job_title_set: false` renders a
+quiet *"(from role — not set)"* so a fallback is visibly a fallback rather than
+silently passing a permission off as a description.
+
+### Team Contribution — `/admin/contribution/team`
+
+| Piece | Notes |
+|---|---|
+| `components/admin/staff-team-report.tsx` | Everyone's period side by side, each name linking to `/admin/contribution?admin_user_id=N` (the personal page now reads that param). |
+| **No sort control, deliberately** | Rows stay alphabetical. A count of ledger rows is not a measure of value — one order manager's month can be sixty documents while another's is a single container negotiation that took three weeks. A sort-by-volume control would turn a record into a league table. |
+| Caveats rendered from the payload | Not written into the template: the same words go out in the monthly e-mail, and a caveat living on only one of the two is one half the readers never see. |
+| Gated on a new `staff_team` section | Mirrors the API's `staff.view_team` (super_admin, admin, order_manager). Listed **before** `/admin/contribution` in `PATH_SECTION`, which is matched with `startsWith` — the reverse order would resolve every visit to the ungated page. |
+
+### The menu problem
+
+Thirty-nine destinations across eight groups. The real difficulty was never that
+it looked bad — it is that finding "Finance Invoices" means remembering it lives
+under Insights rather than Commerce. Reorganising the groups only replaces one
+person's wrong guess with another's, so the fix was to make the taxonomy
+optional.
+
+| Piece | Notes |
+|---|---|
+| `lib/admin-nav.tsx` | **Nav extracted out of `admin-shell`.** The sidebar, the breadcrumb and the palette now read one list — three copies is three chances for a page to exist and be unreachable from one of them. |
+| `components/admin/command-palette.tsx` | ⌘K / Ctrl+K from any admin page. Mounted at shell level, because a palette that only exists on the dashboard is a shortcut nobody builds the habit of using. |
+| `keywords` per item | Matching on what people *type*, not on what a page is called: "invoice" finds Finance Invoices, "kpi" finds Dashboard and both Contribution pages, "staff" finds My Contribution. Verified by screenshot — "kpi" appears in no label and returns all three. |
+| Role-filtered results | The palette never offers a page that would bounce you to `/admin/unauthorized`. |
+| Sidebar filter box | Same match logic, for people who prefer the menu to the modal. |
+| Collapsible groups, remembered | `localStorage`, so someone who never opens Content stops folding it away every morning. **A fold is ignored while the filter is in use** — typing a search and getting nothing because the match sits in a group you collapsed last week is the worst failure this control could have. |
+
+### Verified by rendering it
+
+Screenshotted headless in a throwaway `/nav-check` harness: the team table with
+five real-shaped people (including the not-set fallback and a person with no
+activity), the palette matching a label, and the palette matching a keyword that
+appears in no label. Harness deleted, the temporarily-forced-open palette state
+reverted, dev server killed.
+
+**Build:** exit 0, compiled 10.0s. TypeScript **0 errors**. ESLint **0 errors on
+every file this session touched** — the 5 remaining errors in `components/admin/`
+are pre-existing (`crisp-notifier`, `hero-slides-manager`, `product-form`,
+`two-factor-status`) and were confirmed by file, not assumed. Two new lint errors
+I did introduce in the palette were fixed at the source rather than suppressed:
+the open/close reset moved out of an effect and behind a ref.
 
 ---
 

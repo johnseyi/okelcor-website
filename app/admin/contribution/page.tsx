@@ -4,7 +4,12 @@ import StaffLedger from "@/components/admin/staff-ledger";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "My Contribution" };
 
-export default function ContributionPage() {
+type SearchParams = Promise<{ admin_user_id?: string }>;
+
+export default async function ContributionPage({ searchParams }: { searchParams: SearchParams }) {
+  const { admin_user_id: adminUserId } = await searchParams;
+  const initial = adminUserId && /^\d+$/.test(adminUserId) ? Number(adminUserId) : undefined;
+
   return (
     <div className="p-6 md:p-8">
       <div className="mb-6">
@@ -17,7 +22,7 @@ export default function ContributionPage() {
         </p>
       </div>
 
-      <StaffLedger />
+      <StaffLedger initialAdminUserId={initial} />
     </div>
   );
 }

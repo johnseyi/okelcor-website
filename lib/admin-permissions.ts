@@ -18,9 +18,9 @@ export type AdminRole = (typeof ALL_ROLES)[number];
 // Mirrors backend ROLE_ACCESS table.
 
 export const ROLE_ACCESS: Record<string, string[]> = {
-  super_admin:     ["operations", "finance", "dashboard", "products", "orders", "quotes", "articles", "hero_slides", "promotions", "fet", "brands", "categories", "media", "settings", "users", "supplier", "customers", "ebay", "analytics", "behaviour", "chats", "security", "eu_declarations", "logistics", "system_health", "crm", "marketing", "partners"],
-  admin:           ["operations", "finance", "dashboard", "products", "orders", "quotes", "articles", "hero_slides", "promotions", "fet", "brands", "categories", "media", "settings", "users", "supplier", "customers", "ebay", "analytics", "behaviour", "chats", "security", "eu_declarations", "logistics", "system_health", "crm", "marketing", "partners"],
-  order_manager:   ["dashboard", "orders", "quotes", "supplier", "eu_declarations", "logistics", "crm", "marketing", "partners", "behaviour", "operations", "finance"],
+  super_admin:     ["operations", "finance", "dashboard", "products", "orders", "quotes", "articles", "hero_slides", "promotions", "fet", "brands", "categories", "media", "settings", "users", "supplier", "customers", "ebay", "analytics", "behaviour", "chats", "security", "eu_declarations", "logistics", "system_health", "crm", "marketing", "partners", "staff_team"],
+  admin:           ["operations", "finance", "dashboard", "products", "orders", "quotes", "articles", "hero_slides", "promotions", "fet", "brands", "categories", "media", "settings", "users", "supplier", "customers", "ebay", "analytics", "behaviour", "chats", "security", "eu_declarations", "logistics", "system_health", "crm", "marketing", "partners", "staff_team"],
+  order_manager:   ["dashboard", "orders", "quotes", "supplier", "eu_declarations", "logistics", "crm", "marketing", "partners", "behaviour", "operations", "finance", "staff_team"],
   // Reconciliation and the finance half of order sign-off. Deliberately narrow:
   // this role exists to hold one half of a separation of duties, so handing it
   // the rest of the panel would defeat the point of splitting it out.
@@ -41,6 +41,10 @@ export function canAccess(role: string, section: string): boolean {
 export const PATH_SECTION: Record<string, string> = {
   // Before "/admin/operations": PATH_SECTION is matched with startsWith() and
   // the first entry wins, so the more specific prefixes must come first.
+  // Before "/admin/contribution": PATH_SECTION is matched with startsWith(),
+  // so the team view has to be listed ahead of the personal one or every
+  // visit to it would resolve to the ungated page.
+  "/admin/contribution/team": "staff_team",
   "/admin/operations/clients": "operations",
   "/admin/operations/report":  "operations",
   "/admin/operations":      "operations",
