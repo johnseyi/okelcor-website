@@ -25,6 +25,10 @@ const CATEGORIES: { value: string; label: string; hint: string }[] = [
   { value: "trade_fair",     label: "Trade fair & events",    hint: "Stand duty, travel, follow-ups" },
   { value: "training",       label: "Training & learning",    hint: "A course, a certification, teaching someone" },
   { value: "internal",       label: "Internal & admin",       hint: "Process work, documentation, onboarding" },
+  // Design and technical work that leaves no commit behind. Commits themselves
+  // arrive automatically through `staff:import-commits` and appear under
+  // Recorded, not here.
+  { value: "development",    label: "Development & technical", hint: "An architecture decision, a spec, pairing on someone's bug" },
   { value: "other",          label: "Other",                  hint: "Anything the list above misses" },
 ];
 

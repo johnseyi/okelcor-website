@@ -5,6 +5,7 @@
 
 | Commit | What |
 |---|---|
+| _(this session)_ | Development & technical work now counted — commits, uploads, account admin |
 | _(this session)_ | Job titles over roles · Team Contribution report · admin nav search + ⌘K palette |
 | `6bfe521` | My Contribution — recorded work beside self-reported work, kept apart on purpose |
 | `579fcd7` | PROGRESS.md brought current for sessions 81–87 |
@@ -1183,6 +1184,35 @@ trail, mirroring the DOC-5 order line-item revision pattern. Also asked what
 | Proposal PDF document (AN number) | Medium | Backend to generate; frontend to display |
 | **`contacts.csv` sitting in the repo root** | **High (data)** | The real 188-row marketing list — company names and e-mail addresses. Untracked and **deliberately not committed**: pushing it publishes real contact data to GitHub permanently, and a later scrub can't fully undo that. Add it to `.gitignore` (there is currently no `csv` rule) and keep the file outside the repo |
 | Repo-root junk — 15 screenshots + a `.webp` | Low | Untracked leftovers from a July session, referenced nowhere. Delete or ignore |
+
+---
+
+## Session note — 2026-08-17 (session 89c)
+
+Backend `f296f5b`. **Almost no frontend work needed, and that is the point** —
+the two new ledger categories (`development`, `system`) arrive through
+`meta.categories` and `by_category`, which were served rather than hardcoded from
+the start. They render with no change.
+
+The gap: the ledger's seven sources were all business operations, so anyone who
+**builds** the system rather than operating it had an empty month. Commits are
+now imported from git; media uploads, eBay listing actions and account
+administration come from tables that were already attributed and already ignored.
+
+| Change | Notes |
+|---|---|
+| `development` added to the contribution form | "Development & technical" — for work that leaves no commit: an architecture decision, a spec, pairing on someone's bug. Commits are automatic and appear under **Recorded**, not here. |
+| Nothing else | Category filters, the summary bars, the team report's "busiest areas" chips and the digest table all read from the API's own lists. |
+
+**One thing worth knowing for later:** commit rows carry
+`subject_type: "commit"` with a **null `subject_id`**, because git has no integer
+key. `SubjectLink` already falls back to plain mono text when it cannot build an
+href, so nothing breaks. `metadata.sha` and `metadata.repo` are there if anyone
+wants to make them link out to GitHub — a frontend-only change whenever it is
+wanted.
+
+**Build:** exit 0, compiled 6.7s. TypeScript 0 errors, ESLint clean on the
+changed file.
 
 ---
 
