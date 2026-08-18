@@ -1762,6 +1762,11 @@ export default function OrderDetail({
               balanceDueEmailAt={order.balance_due_email_sent_at ?? null}
               balancePaidEmailAt={order.balance_paid_email_sent_at ?? null}
               shipmentReleasedEmailAt={order.shipment_released_email_sent_at ?? null}
+              // An order reads as paid through payment_status as well as
+              // through the stage. The card needs both to show what the
+              // customer is actually seeing, and to put both back.
+              paymentStatus={paymentStatus || (order.payment_status ?? null)}
+              paymentMethod={order.payment_method ?? null}
             />
           )}
 

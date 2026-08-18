@@ -133,6 +133,11 @@ const PERMISSION_ROLES: Record<string, string[]> = {
   "payments.mark_paid":        ["super_admin", "admin", "order_manager"],
   "payments.release_shipment": ["super_admin", "admin", "order_manager"],
   "payments.refund":           ["super_admin", "admin"],
+  // Putting a payment state back to what is true — the only backwards path
+  // through the milestone ladder. Same holders as mark_paid; kept on its own
+  // key because withdrawing a claim of payment and making one are different
+  // acts, even where they are the same people.
+  "payments.correct_state":    ["super_admin", "admin", "order_manager"],
 
   // Products
   "products.view":         ["super_admin", "admin", "editor", "order_manager"],

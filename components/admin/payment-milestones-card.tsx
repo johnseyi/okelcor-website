@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   AlertCircle, AlertTriangle, CheckCircle2,
-  Loader2, Mail, MailCheck, Send, X,
+  Loader2, Mail, MailCheck, Send, Undo2, X,
 } from "lucide-react";
 import { canDo } from "@/lib/admin-permissions";
 import { formatMoney } from "@/lib/currency";
@@ -172,6 +172,11 @@ export default function PaymentMilestonesCard({
   balanceDueEmailAt,
   balancePaidEmailAt,
   shipmentReleasedEmailAt,
+  // Session 90 — needed by the correction control: an order can read as paid
+  // through payment_status as well as through the stage, and putting only one
+  // of the two back leaves the customer still looking at "paid".
+  paymentStatus: initialPaymentStatus,
+  paymentMethod,
 }: {
   orderId: number;
   adminRole: string;
@@ -192,6 +197,9 @@ export default function PaymentMilestonesCard({
   balanceDueEmailAt?: string | null;
   balancePaidEmailAt?: string | null;
   shipmentReleasedEmailAt?: string | null;
+  paymentStatus?: string | null;
+  /** "stripe" means the gateway owns this payment and it cannot be hand-corrected. */
+  paymentMethod?: string | null;
 }) {
   const [stage,       setStage]       = useState<PaymentStage>(initialStage);
   // The deposit/balance split is now set either by generating a proforma or by
@@ -217,11 +225,27 @@ export default function PaymentMilestonesCard({
   });
   const [resendLoading, setResendLoading] = useState<PaymentStage | null>(null);
 
+  const [payStatus, setPayStatus] = useState(initialPaymentStatus ?? "pending");
+
   // Modal states
   const [modal,   setModal]   = useState<"deposit" | "balance_due" | "balance" | "release" | null>(null);
   const [note,    setNote]    = useState("");
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState<string | null>(null);
+
+  // ── Correction panel (Session 90) ─────────────────────────────────────────
+  // The order manager reported the same problem twice: an order showing as
+  // paid, the deposit not yet in, and nothing she could do about it. Session 76
+  // closed the paths that were advancing orders on their own; what stayed open
+  // is that every route through this ladder moves forward, so an order that
+  // landed wrong for any reason stayed wrong until a developer edited the
+  // database. This is the way back, and it is hers to use.
+  const [corrOpen,    setCorrOpen]    = useState(false);
+  const [corrStage,   setCorrStage]   = useState<PaymentStage>("pending_proforma");
+  const [corrReset,   setCorrReset]   = useState(true);
+  const [corrReason,  setCorrReason]  = useState("");
+  const [corrLoading, setCorrLoading] = useState(false);
+  const [corrError,   setCorrError]   = useState<string | null>(null);
 
   // ── Request-deposit form (pending_proforma only) ──────────────────────────
   // Generating a proforma no longer starts the ladder or e-mails anyone.
@@ -245,7 +269,25 @@ export default function PaymentMilestonesCard({
 
   const canMarkPaid = canDo(adminRole, "payments.mark_paid");
   const canRelease  = canDo(adminRole, "payments.release_shipment");
+  const canCorrect  = canDo(adminRole, "payments.correct_state");
   const stageIdx    = STAGE_INDEX[stage];
+
+  // Stripe writes its own payment state; a figure typed here would only
+  // disagree with the gateway until somebody noticed. The backend refuses
+  // these too — this just doesn't offer an action that would be refused.
+  const gatewayManaged = paymentMethod === "stripe";
+
+  // Somewhere this order is telling the customer he has paid. Either column
+  // can be the one doing it, which is why both are offered together.
+  const readsAsPaid = payStatus === "paid" || stageIdx >= STAGE_INDEX.deposit_paid;
+
+  // Only ever backwards: recording that money arrived belongs to the actions
+  // above, which notify the customer and record who confirmed it.
+  const correctableStages = (Object.keys(STAGE_INDEX) as PaymentStage[])
+    .filter((s) => STAGE_INDEX[s] < stageIdx);
+
+  const showCorrection = canCorrect && !gatewayManaged
+    && (correctableStages.length > 0 || payStatus === "paid");
 
   const closeModal = () => { setModal(null); setNote(""); setError(null); };
 
@@ -426,6 +468,68 @@ export default function PaymentMilestonesCard({
     if (ok) { setStage("shipment_released"); setReleasedAt(new Date().toISOString()); setReleaseNote(note); closeModal(); showActionToast(es); }
   }
 
+  async function handleCorrect() {
+    setCorrError(null);
+
+    if (corrReason.trim().length < 5) {
+      setCorrError("Say why in a few words. It goes on the order's record, and it is what makes this safe to do.");
+      return;
+    }
+
+    setCorrLoading(true);
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/payment-milestones/correct`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          payment_stage:        corrStage,
+          reset_payment_status: corrReset,
+          reason:               corrReason.trim(),
+        }),
+      });
+      const json = await res.json().catch(() => ({})) as {
+        message?: string;
+        code?: string;
+        data?: {
+          payment_stage?: PaymentStage;
+          payment_status?: string;
+          deposit_paid_at?: string | null;
+          balance_paid_at?: string | null;
+          shipment_released_at?: string | null;
+        };
+      };
+
+      if (!res.ok) {
+        const byCode: Record<string, string> = {
+          gateway_managed_payment:   "This order is paid through Stripe. Its payment state comes from the gateway and cannot be set by hand.",
+          use_the_milestone_actions: "This only puts a payment state back. To record that money has arrived, use the milestone buttons above — they notify the customer and record who confirmed it.",
+          nothing_to_correct:        "This order is already in that state. Nothing to change.",
+        };
+        setCorrError((json.code && byCode[json.code]) ?? json.message ?? "Could not correct the payment state. Please try again.");
+        return;
+      }
+
+      setStage(json.data?.payment_stage ?? corrStage);
+      setPayStatus(json.data?.payment_status ?? (corrReset ? "pending" : payStatus));
+      // The backend clears the dates for any stage it rolled back — a date
+      // saying the balance arrived is a claim, not a note, and leaving it
+      // behind would leave the claim standing.
+      setDepPaidAt(json.data?.deposit_paid_at ?? null);
+      setBalPaidAt(json.data?.balance_paid_at ?? null);
+      setReleasedAt(json.data?.shipment_released_at ?? null);
+      setCorrOpen(false);
+      setCorrReason("");
+      setToast({
+        message: json.message ?? "Payment state corrected. The customer was not notified.",
+        variant: "success",
+      });
+    } catch {
+      setCorrError("Network error. Please try again.");
+    } finally {
+      setCorrLoading(false);
+    }
+  }
+
   async function handleResendEmail(targetStage: PaymentStage) {
     setResendLoading(targetStage);
     try {
@@ -520,9 +624,24 @@ export default function PaymentMilestonesCard({
           <p className="text-[0.7rem] font-bold uppercase tracking-[0.15em] text-[#E85C1A]">
             Payment Milestones
           </p>
-          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.72rem] font-bold ${STAGE_BADGE[stage]}`}>
-            {STAGE_LABEL[stage]}
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* An order reads as paid through payment_status as well as through
+                the stage, and the two can disagree — which is how an order at
+                "Pending Proforma" was still telling the customer he had paid.
+                Show both, so what the buyer sees is never hidden behind the
+                one that happens to be on the ladder. */}
+            {payStatus === "paid" && (
+              <span
+                className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-[0.72rem] font-bold text-emerald-700"
+                title="The customer's portal shows this order as paid."
+              >
+                Marked paid
+              </span>
+            )}
+            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.72rem] font-bold ${STAGE_BADGE[stage]}`}>
+              {STAGE_LABEL[stage]}
+            </span>
+          </div>
         </div>
 
         {stage === "pending_proforma" ? (
@@ -793,6 +912,128 @@ export default function PaymentMilestonesCard({
               );
             })}
           </ol>
+        )}
+
+        {/* ── Correct the payment state (Session 90) ──────────────────────
+            Everything above moves an order forward. This is the only way
+            back, and it exists because "the website says he paid and he
+            hasn't" was reported twice with no answer either time except to
+            wait for a developer. Deliberately quiet — this is a repair, not
+            part of the normal run of an order — but always reachable. */}
+        {showCorrection && (
+          <div className="mt-5 border-t border-black/[0.06] pt-4">
+            {!corrOpen ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setCorrOpen(true);
+                  setCorrError(null);
+                  setCorrStage(correctableStages[0] ?? "pending_proforma");
+                  setCorrReset(payStatus === "paid");
+                }}
+                className="inline-flex items-center gap-1.5 text-[0.78rem] font-semibold text-[#5c5e62] underline-offset-2 transition hover:text-[#1a1a1a] hover:underline"
+              >
+                <Undo2 size={12} strokeWidth={2.2} />
+                {readsAsPaid
+                  ? "This isn't paid — correct the payment state"
+                  : "Correct the payment state"}
+              </button>
+            ) : (
+              <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <p className="text-[0.78rem] font-bold text-[#1a1a1a]">Correct the payment state</p>
+                  <button
+                    type="button"
+                    onClick={() => { setCorrOpen(false); setCorrError(null); }}
+                    disabled={corrLoading}
+                    className="text-[#9ca3af] transition hover:text-[#5c5e62] disabled:opacity-50"
+                  >
+                    <X size={15} strokeWidth={2} />
+                  </button>
+                </div>
+
+                <p className="mb-3 text-[0.78rem] leading-relaxed text-[#5c5e62]">
+                  Use this when the order shows a payment that has not arrived. It only
+                  moves the order <strong>back</strong> — to record money that has come
+                  in, use the buttons above. <strong>The customer is not e-mailed.</strong>
+                </p>
+
+                {correctableStages.length > 0 && (
+                  <div className="mb-3">
+                    <label htmlFor="corr-stage" className="mb-1 block text-[0.72rem] font-semibold text-[#5c5e62]">
+                      Put the order back to
+                    </label>
+                    <select
+                      id="corr-stage"
+                      value={corrStage}
+                      onChange={(e) => setCorrStage(e.target.value as PaymentStage)}
+                      className="h-9 rounded-lg border border-black/[0.1] bg-white px-3 text-[0.85rem] text-[#1a1a1a] outline-none transition focus:border-[#E85C1A]/50 focus:ring-2 focus:ring-[#E85C1A]/10"
+                    >
+                      {correctableStages.map((s) => (
+                        <option key={s} value={s}>{STAGE_LABEL[s]}</option>
+                      ))}
+                    </select>
+                    <p className="mt-1 text-[0.68rem] text-[#9ca3af]">
+                      Payment dates for the steps being undone are cleared. E-mails already
+                      sent stay on the record.
+                    </p>
+                  </div>
+                )}
+
+                {payStatus === "paid" && (
+                  <label className="mb-3 flex cursor-pointer items-start gap-2.5">
+                    <input
+                      type="checkbox"
+                      checked={corrReset}
+                      onChange={(e) => setCorrReset(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 accent-[#E85C1A]"
+                    />
+                    <span className="text-[0.8rem] text-[#1a1a1a]">
+                      Also mark the payment as not yet received
+                      <span className="mt-0.5 block text-[0.7rem] text-[#9ca3af]">
+                        This order is flagged paid. Leave this ticked unless the money
+                        really is in — it is the field the customer&apos;s portal reads.
+                      </span>
+                    </span>
+                  </label>
+                )}
+
+                <div className="mb-3">
+                  <label htmlFor="corr-reason" className="mb-1 block text-[0.72rem] font-semibold text-[#5c5e62]">
+                    Why <span className="font-normal text-[#9ca3af]">(required — goes on the order&apos;s record)</span>
+                  </label>
+                  <textarea
+                    id="corr-reason"
+                    value={corrReason}
+                    onChange={(e) => setCorrReason(e.target.value.slice(0, 500))}
+                    rows={2}
+                    placeholder="e.g. Deposit has not arrived — this was never confirmed by anyone"
+                    className="w-full resize-none rounded-lg border border-black/[0.1] bg-white px-3 py-2 text-[0.83rem] text-[#1a1a1a] outline-none placeholder:text-[#bbb] transition focus:border-[#E85C1A]/50 focus:ring-2 focus:ring-[#E85C1A]/10"
+                  />
+                  <p className="mt-1 text-right text-[0.66rem] tabular-nums text-[#c0c3c8]">{corrReason.length}/500</p>
+                </div>
+
+                {corrError && (
+                  <div className="mb-3 flex items-start gap-2 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-[0.8rem] text-red-700">
+                    <AlertCircle size={13} className="mt-0.5 shrink-0" />
+                    {corrError}
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleCorrect}
+                  disabled={corrLoading}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[#1a1a1a] px-4 text-[0.78rem] font-semibold text-white transition hover:bg-black disabled:opacity-60"
+                >
+                  {corrLoading
+                    ? <><Loader2 size={12} className="animate-spin" /> Correcting…</>
+                    : <><Undo2 size={12} strokeWidth={2.2} /> Correct it</>
+                  }
+                </button>
+              </div>
+            )}
+          </div>
         )}
       </div>
 
