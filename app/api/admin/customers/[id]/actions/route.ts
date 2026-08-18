@@ -33,6 +33,10 @@ const ACTION_PATH: Record<string, string> = {
   invite:                "/invite",
   block:                 "/block",
   resend_invite:         "/resend-invite",
+  // Email confirmation — resend the link, or vouch for the address.
+  // verify_email requires a `reason`, which is already forwarded below.
+  resend_verification:   "/resend-verification",
+  verify_email:          "/verify-email",
 };
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

@@ -9,7 +9,7 @@ import {
   ShieldOff, ShieldCheck, Ban, Trash2, KeyRound, LogOut,
   Lock, Loader2, AlertCircle, CheckCircle2, Monitor,
   ShoppingCart, FileText, Activity, Edit3, Save, X,
-  UserCheck, UserX, UserPlus, Send,
+  UserCheck, UserX, UserPlus, Send, MailCheck,
   Gauge, RefreshCw, Copy, ExternalLink, PackagePlus,
 } from "lucide-react";
 import BuyerLifecycleCard from "@/components/admin/buyer-lifecycle-card";
@@ -31,6 +31,8 @@ type CustomerFull = {
   last_login_at?: string; last_login_ip?: string; last_login_location?: string;
   admin_notes?: string; created_at: string;
   failed_login_count?: number; is_locked?: boolean;
+  /** False means login refuses with "Please verify your email" — see Admin Actions. */
+  email_verified?: boolean;
   vat_number?: string | null; vat_verified?: boolean; industry?: string | null;
   // CRM-4 segmentation & access
   customer_segment?: string;
@@ -188,17 +190,38 @@ function ActionButton({
   );
 }
 
-function ConfirmModal({ title, body, confirmLabel, danger = false, onConfirm, onCancel }: {
-  title: string; body: string; confirmLabel: string; danger?: boolean; onConfirm: () => void; onCancel: () => void;
+function ConfirmModal({ title, body, confirmLabel, danger = false, reason, onReasonChange, reasonLabel, onConfirm, onCancel }: {
+  title: string; body: string; confirmLabel: string; danger?: boolean;
+  /** Present only for actions the backend requires a written reason for. */
+  reason?: string; onReasonChange?: (v: string) => void; reasonLabel?: string;
+  onConfirm: () => void; onCancel: () => void;
 }) {
+  const needsReason = onReasonChange !== undefined;
+  const tooShort    = needsReason && (reason ?? "").trim().length < 5;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
       <div className="w-full max-w-sm rounded-2xl bg-white p-7 shadow-2xl">
         <p className="text-[1rem] font-extrabold text-[#1a1a1a]">{title}</p>
         <p className="mt-2 text-[0.83rem] leading-relaxed text-[#5c5e62]">{body}</p>
+        {needsReason && (
+          <div className="mt-4">
+            <label htmlFor="confirm-reason" className="mb-1 block text-[0.72rem] font-semibold text-[#5c5e62]">
+              {reasonLabel ?? "Reason"} <span className="font-normal text-[#9ca3af]">(required — goes on the record)</span>
+            </label>
+            <textarea
+              id="confirm-reason"
+              value={reason ?? ""}
+              onChange={(e) => onReasonChange!(e.target.value.slice(0, 500))}
+              rows={3}
+              placeholder="e.g. Their mail filter blocks our links; confirmed the address by phone"
+              className="w-full resize-none rounded-xl border border-black/[0.1] bg-white px-3 py-2 text-[0.83rem] text-[#1a1a1a] outline-none placeholder:text-[#bbb] focus:border-[#E85C1A]/50 focus:ring-2 focus:ring-[#E85C1A]/10"
+            />
+          </div>
+        )}
         <div className="mt-6 flex gap-3">
           <button type="button" onClick={onCancel} className="flex-1 h-10 rounded-xl border border-black/[0.1] text-[0.83rem] font-semibold text-[#5c5e62] hover:bg-[#f0f2f5]">Cancel</button>
-          <button type="button" onClick={onConfirm} className={`flex-1 h-10 rounded-xl text-[0.83rem] font-semibold text-white ${danger ? "bg-red-600 hover:bg-red-700" : "bg-[#E85C1A] hover:bg-[#d44d10]"}`}>{confirmLabel}</button>
+          <button type="button" onClick={onConfirm} disabled={tooShort} className={`flex-1 h-10 rounded-xl text-[0.83rem] font-semibold text-white disabled:opacity-50 ${danger ? "bg-red-600 hover:bg-red-700" : "bg-[#E85C1A] hover:bg-[#d44d10]"}`}>{confirmLabel}</button>
         </div>
       </div>
     </div>
@@ -225,6 +248,10 @@ export default function CustomerProfilePage() {
   const [actionPending, setAP]      = useState<string | null>(null);
   const [actionMsg, setActionMsg]   = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [confirm, setConfirm]       = useState<string | null>(null);
+  // Actions the backend refuses without a written reason. Only one so far —
+  // confirming an email address on the customer's behalf is Okelcor vouching
+  // for it rather than the customer proving it, and the audit trail says which.
+  const [confirmReason, setConfirmReason] = useState("");
 
   // Admin notes editing
   const [notes, setNotes]           = useState("");
@@ -310,13 +337,13 @@ export default function CustomerProfilePage() {
 
   // ── Actions ───────────────────────────────────────────────────────────────
 
-  async function doAction(action: string) {
+  async function doAction(action: string, reason?: string) {
     setAP(action); setActionMsg(null); setConfirm(null);
     try {
       const res = await fetch(`/api/admin/customers/${id}/actions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify(reason ? { action, reason } : { action }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -524,6 +551,7 @@ export default function CustomerProfilePage() {
             : confirm === "logout_all"         ? "Log out all devices?"
             : confirm === "reject"             ? "Reject this account application?"
             : confirm === "block"              ? "Block this account?"
+            : confirm === "verify_email"       ? "Confirm this email address?"
             : "Force password reset?"
           }
           body={
@@ -533,6 +561,7 @@ export default function CustomerProfilePage() {
             : confirm === "logout_all" ? "This will immediately invalidate all active sessions for this customer."
             : confirm === "reject"     ? "The account application will be rejected. The customer will be notified by email."
             : confirm === "block"      ? "The account will be blocked from all access. Sessions invalidated immediately."
+            : confirm === "verify_email" ? "You are confirming this address on the customer's behalf, without them clicking a link. Use this when the link cannot reach them — a mail filter, a forwarding address — not as a shortcut. It is recorded against your name."
             : "A password reset email will be sent and the current session will be invalidated."
           }
           confirmLabel={
@@ -542,11 +571,19 @@ export default function CustomerProfilePage() {
             : confirm === "logout_all" ? "Log Out All"
             : confirm === "reject"  ? "Reject Application"
             : confirm === "block"   ? "Block Account"
+            : confirm === "verify_email" ? "Confirm Address"
             : "Send Reset"
           }
           danger={confirm === "delete" || confirm === "ban" || confirm === "reject" || confirm === "block"}
-          onCancel={() => setConfirm(null)}
-          onConfirm={() => doAction(confirm)}
+          reason={confirm === "verify_email" ? confirmReason : undefined}
+          onReasonChange={confirm === "verify_email" ? setConfirmReason : undefined}
+          reasonLabel="Why are you confirming it for them?"
+          onCancel={() => { setConfirm(null); setConfirmReason(""); }}
+          onConfirm={() => {
+            const reason = confirm === "verify_email" ? confirmReason.trim() : undefined;
+            doAction(confirm, reason);
+            setConfirmReason("");
+          }}
         />
       )}
 
@@ -613,6 +650,23 @@ export default function CustomerProfilePage() {
                   <Shield size={13} className="shrink-0 text-[#9ca3af]" />
                   <span className="w-16 shrink-0 text-[0.72rem] font-semibold uppercase tracking-wide text-[#9ca3af]">Company</span>
                   <span className="text-[0.83rem] text-[#1a1a1a]">{customer.company_name}</span>
+                </div>
+              )}
+              {/* Say the quiet part. This is a hard login gate and it was
+                  invisible here — an approved, active, apparently healthy
+                  account that simply could not be used, with nothing on the
+                  page explaining why. */}
+              {customer.email_verified === false && (
+                <div className="flex items-start gap-3 bg-amber-50 px-5 py-3">
+                  <AlertCircle size={13} className="mt-0.5 shrink-0 text-amber-600" />
+                  <div>
+                    <p className="text-[0.8rem] font-semibold text-amber-800">Email address not confirmed</p>
+                    <p className="mt-0.5 text-[0.75rem] leading-relaxed text-amber-700">
+                      This customer cannot log in, whatever their account status says — login
+                      refuses with &ldquo;Please verify your email&rdquo;. Resend the link or confirm
+                      the address from Admin Actions below.
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
@@ -804,6 +858,19 @@ export default function CustomerProfilePage() {
               )}
               {status === "locked" && (
                 <ActionButton label="Unlock Account" icon={ShieldCheck} variant="success" loading={actionPending === "unlock"} onClick={() => doAction("unlock")} />
+              )}
+              {/* Email confirmation.
+                  A buyer whose address was never confirmed is refused at login
+                  with "Please verify your email" and has no way through: the
+                  link from registration expires in 24 hours, and B2B accounts
+                  are routinely approved weeks later. Until these two buttons
+                  existed the only route out was a developer — which is how one
+                  customer ended up going round the loop for days. */}
+              {customer.email_verified === false && (
+                <>
+                  <ActionButton label="Resend Confirmation Email" icon={MailCheck} variant="success" loading={actionPending === "resend_verification"} onClick={() => doAction("resend_verification")} />
+                  <ActionButton label="Confirm Email Address" icon={ShieldCheck} loading={actionPending === "verify_email"} onClick={() => setConfirm("verify_email")} />
+                </>
               )}
               <ActionButton label="Force Password Reset" icon={KeyRound} loading={actionPending === "force_password_reset"} onClick={() => setConfirm("force_password_reset")} />
               <ActionButton label="Log Out All Devices" icon={LogOut} loading={actionPending === "logout_all"} onClick={() => setConfirm("logout_all")} />
