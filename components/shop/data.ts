@@ -25,6 +25,17 @@ export type Product = {
   description: string;
   in_stock?: boolean;
 
+  /* ── Product optimization (Session 92) ─────────────────────────────────────
+     slug: SEO URL handle — link with productPath(), never `/shop/${id}`
+     directly, so slugged products get their SEO URL and legacy rows without
+     one keep working by id. specifications: the assembled Artikelmerkmale
+     sheet, already filtered to non-empty values, ordered by the backend.    */
+  slug?: string | null;
+  description_html?: string | null;
+  specifications?: { key: string; label_de: string; label_en: string; value: string }[];
+  shipping_info?: string | null;
+  returns_info?: string | null;
+
   /** ISO 4217 code for `price`/`price_b2b`/`price_b2c`. Defaults to EUR when absent. */
   currency?: string | null;
 
@@ -313,6 +324,15 @@ export const ALL_PRODUCTS: Product[] = [
     images: [TBR_D, PCR_A, PCR_D],
   },
 ];
+
+/**
+ * The one place a product URL is built. Slug when the product has one (the
+ * SEO shape from the marketing brief), id for legacy rows that predate the
+ * migration — both resolve on the API, so neither can 404.
+ */
+export function productPath(p: { id: number; slug?: string | null }): string {
+  return `/shop/${p.slug || p.id}`;
+}
 
 export function getProductById(id: number): Product | undefined {
   return ALL_PRODUCTS.find((p) => p.id === id);

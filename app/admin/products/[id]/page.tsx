@@ -11,6 +11,7 @@ import {
 import ProductForm from "@/components/admin/product-form";
 import GalleryManager from "@/components/admin/gallery-manager";
 import DeleteProductButton from "@/components/admin/delete-product-button";
+import { getSpecSheet } from "@/app/admin/products/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +43,8 @@ export default async function EditProductPage({ params }: Props) {
     if (e instanceof AdminUnauthorizedError) redirect("/admin/login");
     notFound();
   }
+
+  const specSheet = await getSpecSheet();
 
   // Normalise gallery images — API may return objects or plain URL strings
   const rawImages = product.images ?? [];
@@ -78,7 +81,7 @@ export default async function EditProductPage({ params }: Props) {
       <div className="flex flex-col gap-6">
         {/* Product form */}
         <div className="rounded-2xl bg-white p-6 shadow-sm md:p-8">
-          <ProductForm mode="edit" product={product} />
+          <ProductForm mode="edit" product={product} specSheet={specSheet} />
         </div>
 
         {/* Gallery manager */}

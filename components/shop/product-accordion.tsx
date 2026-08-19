@@ -48,7 +48,7 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 export default function ProductAccordion({ product }: { product: Product }) {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const [open, setOpen] = useState<string | null>("size");
 
   const parsed = parseTyreSize(product.size);
@@ -56,7 +56,44 @@ export default function ProductAccordion({ product }: { product: Product }) {
 
   const a = t.shop.accordion;
 
+  // The Artikelmerkmale sheet arrives assembled from the backend — labels in
+  // both languages, empties already skipped, order fixed by the catalogue.
+  // German UI gets the German labels the marketing brief was written in.
+  const specSheet = product.specifications ?? [];
+  const specLabel = (row: { label_de: string; label_en: string }) =>
+    locale === "de" ? row.label_de : row.label_en;
+
   const items: AccordionItem[] = [
+    // Rich description first when the marketer has written one — it is the
+    // content this page exists to show. Sanitized server-side at save time.
+    ...(product.description_html
+      ? [{
+          key: "description",
+          title: locale === "de" ? "Beschreibung" : "Description",
+          content: (
+            <div
+              className="article-body text-[0.88rem] leading-7 text-[var(--muted)] [&_h2]:mt-4 [&_h2]:mb-2 [&_h2]:text-[1.05rem] [&_h2]:font-bold [&_h2]:text-[var(--foreground)] [&_h3]:mt-3 [&_h3]:mb-1.5 [&_h3]:font-semibold [&_h3]:text-[var(--foreground)] [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-[var(--primary)] [&_a]:underline [&_img]:my-3 [&_img]:max-w-full [&_img]:rounded-xl [&_table]:my-3 [&_table]:w-full [&_td]:border [&_td]:border-black/10 [&_td]:p-2 [&_th]:border [&_th]:border-black/10 [&_th]:bg-black/[0.03] [&_th]:p-2"
+              dangerouslySetInnerHTML={{ __html: product.description_html }}
+            />
+          ),
+        }]
+      : []),
+
+    // The full specification sheet, when any of it is filled in.
+    ...(specSheet.length > 0
+      ? [{
+          key: "specifications",
+          title: locale === "de" ? "Artikelmerkmale" : "Specifications",
+          content: (
+            <div>
+              {specSheet.map((row) => (
+                <Row key={row.key} label={specLabel(row)} value={row.value} />
+              ))}
+            </div>
+          ),
+        }]
+      : []),
+
     {
       key: "size",
       title: a.sizePattern,
@@ -106,10 +143,31 @@ export default function ProductAccordion({ product }: { product: Product }) {
         </div>
       ),
     },
+    // Shipping — only when the marketer has set the text (site-wide in
+    // Settings, or per product). Absent text hides the section entirely.
+    ...(product.shipping_info
+      ? [{
+          key: "shipping",
+          title: locale === "de" ? "Versand" : "Shipping",
+          content: (
+            <p className="whitespace-pre-line text-[0.88rem] leading-7 text-[var(--muted)]">
+              {product.shipping_info}
+            </p>
+          ),
+        }]
+      : []),
+
     {
       key: "return",
       title: a.returnPolicy,
-      content: (
+      // The marketer's own returns text wins when set — one editable text in
+      // Settings instead of copy frozen into the translation files. Until it
+      // is set, the existing translated copy keeps rendering unchanged.
+      content: product.returns_info ? (
+        <p className="whitespace-pre-line text-[0.88rem] leading-7 text-[var(--muted)]">
+          {product.returns_info}
+        </p>
+      ) : (
         <div className="space-y-3 text-[0.88rem] leading-7 text-[var(--muted)]">
           <p>
             {a.returnPre}

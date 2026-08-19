@@ -46,15 +46,64 @@ export type ProductInput = {
   // Optional pricing tiers
   price_b2b?: number | null;
   price_b2c?: number | null;
-  // Extended tyre specification fields (from CSV)
-  width?: number | null;
-  height?: number | null;
-  rim?: number | null;
-  load_index?: number | null;
+  // Extended tyre specification fields (CSV import, or the admin spec sheet).
+  // Strings accepted — backend stores them as strings ("10.5" rims, "91/89"
+  // load indexes are real values).
+  width?: string | number | null;
+  height?: string | number | null;
+  rim?: string | number | null;
+  load_index?: string | number | null;
   speed_rating?: string | null;
+  ean?: string | null;
+  tread_depth_mm?: number | null;
   inventory?: number | null;
   cost?: number | null;
+  // Product optimization (Session 92)
+  /** SEO URL handle. Omit = leave unchanged; blank on create = generated brand+name+season. */
+  slug?: string | null;
+  /** Rich description (TipTap HTML) — sanitized server-side like article bodies. */
+  description_html?: string | null;
+  /** Artikelmerkmale values that have no column of their own — see getSpecSheet(). */
+  specs?: Record<string, string | boolean> | null;
+  /** Per-product shipping/returns overrides; site-wide defaults live in Settings. */
+  shipping_info?: string | null;
+  returns_info?: string | null;
 };
+
+/**
+ * One row of the tyre specification sheet, as served by
+ * GET /admin/products/spec-options. `source: "column"` rows are edited through
+ * the existing product fields (width, load index …); `source: "json"` rows are
+ * edited through `specs`; `derived` rows are read-only.
+ */
+export type SpecSheetRow = {
+  key: string;
+  label_de: string;
+  label_en: string;
+  input: "select" | "boolean" | "text" | "none";
+  source: "column" | "json" | "derived";
+  column?: string;
+  options?: string[];
+};
+
+/**
+ * The specification sheet is served by the backend rather than hardcoded here,
+ * so a new attribute is one backend entry and no frontend deploy.
+ */
+export async function getSpecSheet(): Promise<SpecSheetRow[]> {
+  const token = await getToken();
+  try {
+    const res = await fetch(`${API_URL}/admin/products/spec-options`, {
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!res.ok) return [];
+    const json = (await res.json()) as { data?: { sheet?: SpecSheetRow[] } };
+    return json.data?.sheet ?? [];
+  } catch {
+    return [];
+  }
+}
 
 // ── CRUD actions ──────────────────────────────────────────────────────────────
 

@@ -79,7 +79,8 @@ export function SearchProvider({ children }: { children: ReactNode }) {
           type: p.type ?? "",
           price: p.price,
           image: p.image_url ?? p.image ?? "",
-          href: `/shop/${p.id}`,
+          // Backend builds this with the SEO slug when the product has one.
+          href: p.href ?? `/shop/${p.slug ?? p.id}`,
         }));
         const articles = (apiData?.articles ?? []).map((a) => ({
           kind: "article" as const,

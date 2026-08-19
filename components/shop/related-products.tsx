@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { Product } from "./data";
+import { productPath, type Product } from "./data";
 import Reveal from "@/components/motion/reveal";
 import { StaggerParent, StaggerChild } from "@/components/motion/stagger";
 import { useLanguage } from "@/context/language-context";
@@ -29,7 +29,7 @@ export default function RelatedProducts({ products }: { products: Product[] }) {
           {products.map((product) => (
             <StaggerChild key={product.id}>
               <Link
-                href={`/shop/${product.id}`}
+                href={productPath(product)}
                 className="group flex flex-col overflow-hidden rounded-[22px] bg-[#efefef] transition-shadow hover:shadow-[0_8px_28px_rgba(0,0,0,0.10)]"
               >
                 <div className="relative aspect-[4/3] overflow-hidden bg-[#e0e0e0]">

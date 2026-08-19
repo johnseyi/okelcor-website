@@ -7,7 +7,7 @@ import { usePrice } from "@/hooks/use-price";
 import { readEuLabel } from "@/lib/eu-tyre-label";
 import { parseServiceDescription } from "@/lib/tyre-specs";
 import { EuLabelChips } from "./eu-tyre-label";
-import type { Product } from "./data";
+import { productPath, type Product } from "./data";
 
 const PLACEHOLDER = "/images/tyre-placeholder.svg";
 
@@ -137,7 +137,7 @@ export default function CompareModal() {
                 {products.map((p) => (
                   <td key={p.id} className="border-l border-black/[0.05] px-4 py-4">
                     <Link
-                      href={`/shop/${p.id}`}
+                      href={productPath(p)}
                       onClick={closeModal}
                       className="flex h-10 w-full items-center justify-center rounded-full bg-[var(--primary)] text-[0.8rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
                     >

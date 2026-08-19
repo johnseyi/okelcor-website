@@ -3,8 +3,9 @@
 import { useState, useTransition, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, AlertCircle, Upload, ImagePlus, X } from "lucide-react";
-import { createProduct, updateProduct, uploadProductPrimaryImage, uploadProductImages, type ProductInput } from "@/app/admin/products/actions";
+import { createProduct, updateProduct, uploadProductPrimaryImage, uploadProductImages, type ProductInput, type SpecSheetRow } from "@/app/admin/products/actions";
 import type { AdminProduct } from "@/lib/admin-api";
+import ArticleRichEditor from "@/components/admin/article-rich-editor";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -77,13 +78,22 @@ function validate(data: ProductInput): FormErrors {
 // ── Main component ────────────────────────────────────────────────────────────
 
 type Props =
-  | { mode: "create" }
-  | { mode: "edit"; product: AdminProduct };
+  | { mode: "create"; specSheet?: SpecSheetRow[] }
+  | { mode: "edit"; product: AdminProduct; specSheet?: SpecSheetRow[] };
+
+/**
+ * Columns already edited by their own form fields above the sheet — rendering
+ * them again inside the Artikelmerkmale section would mean two inputs for one
+ * value. Hersteller = Brand, Modell = Product Name, Reifenspezifikation =
+ * Spec / Load Index; Reifenzustand is derived from Type.
+ */
+const SHEET_COLUMNS_EDITED_ELSEWHERE = new Set(["brand", "name", "spec"]);
 
 export default function ProductForm(props: Props) {
   const router = useRouter();
   const isEdit = props.mode === "edit";
   const initial: AdminProduct | undefined = isEdit ? props.product : undefined;
+  const specSheet = props.specSheet ?? [];
 
   const [sku,         setSku]         = useState(initial?.sku         ?? "");
   const [brand,       setBrand]       = useState(initial?.brand       ?? "");
@@ -95,6 +105,33 @@ export default function ProductForm(props: Props) {
   const [price,       setPrice]       = useState(String(initial?.price ?? ""));
   const [description, setDescription] = useState(initial?.description ?? "");
   const [isActive,    setIsActive]    = useState(initial?.is_active   ?? true);
+
+  // ── Product optimization (Session 92) ─────────────────────────────────────
+  const [slug,            setSlug]            = useState(initial?.slug ?? "");
+  const [descriptionHtml, setDescriptionHtml] = useState(initial?.description_html ?? "");
+  const [shippingInfo,    setShippingInfo]    = useState(initial?.shipping_info ?? "");
+  const [returnsInfo,     setReturnsInfo]     = useState(initial?.returns_info ?? "");
+  // JSON-backed sheet values (EU label classes, EPREL …)
+  const [specs, setSpecs] = useState<Record<string, string | boolean>>(
+    (initial?.specs as Record<string, string | boolean>) ?? {}
+  );
+  // Column-backed sheet values (width, rim, load index …) — submitted as
+  // top-level fields so they land in their existing columns.
+  const [columnSpecs, setColumnSpecs] = useState<Record<string, string>>({
+    width:          initial?.width != null ? String(initial.width) : "",
+    height:         initial?.height != null ? String(initial.height) : "",
+    rim:            initial?.rim != null ? String(initial.rim) : "",
+    load_index:     initial?.load_index != null ? String(initial.load_index) : "",
+    speed_rating:   initial?.speed_rating ?? "",
+    ean:            initial?.ean ?? "",
+    tread_depth_mm: initial?.tread_depth_mm != null ? String(initial.tread_depth_mm) : "",
+  });
+
+  const setSpec_ = (key: string, value: string | boolean) =>
+    setSpecs((prev) => ({ ...prev, [key]: value }));
+  const setColumnSpec = (column: string, value: string) =>
+    setColumnSpecs((prev) => ({ ...prev, [column]: value }));
+
   const [imageFile,   setImageFile]   = useState<File | null>(null);
   const initialImg = initial?.primary_image ?? initial?.image_url ?? null;
   const [imagePreview, setImagePreview] = useState<string | null>(initialImg);
@@ -155,6 +192,22 @@ export default function ProductForm(props: Props) {
       price: parseFloat(price) || 0,
       description: description.trim(),
       is_active: isActive,
+
+      // Product optimization (Session 92). Blank slug on create = backend
+      // generates brand+name+season; on edit a blank keeps the existing URL.
+      slug: slug.trim() || null,
+      description_html: descriptionHtml.trim() || null,
+      shipping_info: shippingInfo.trim() || null,
+      returns_info: returnsInfo.trim() || null,
+      specs,
+      // Column-backed sheet fields — top-level, into their existing columns.
+      width:          (columnSpecs.width || null) as ProductInput["width"],
+      height:         (columnSpecs.height || null) as ProductInput["height"],
+      rim:            (columnSpecs.rim || null) as ProductInput["rim"],
+      load_index:     (columnSpecs.load_index || null) as ProductInput["load_index"],
+      speed_rating:   columnSpecs.speed_rating || null,
+      ean:            columnSpecs.ean || null,
+      tread_depth_mm: columnSpecs.tread_depth_mm ? parseFloat(columnSpecs.tread_depth_mm) : null,
     };
 
     const errs = validate(data);
@@ -326,19 +379,174 @@ export default function ProductForm(props: Props) {
           />
         </Field>
 
+        {/* ── SEO URL ── */}
+        <SectionHeading>SEO URL</SectionHeading>
+
+        <div className="col-span-full">
+          <Field label="URL Slug">
+            <input
+              type="text"
+              placeholder={isEdit ? "" : "Leave blank — generated as brand-name-season"}
+              value={slug}
+              onChange={(e) => setSlug(e.target.value)}
+              className={inputCls}
+            />
+          </Field>
+          <p className="mt-1.5 text-[0.72rem] text-[#5c5e62]">
+            The product&apos;s address: <span className="font-mono">okelcor.com/shop/{slug.trim() || "brand-name-season"}</span>.
+            {isEdit
+              ? " Renaming the product does not change it — a changed slug moves a live URL that may be indexed and bookmarked, so only edit this deliberately."
+              : " Left blank, it is generated from brand, name and season."}
+          </p>
+        </div>
+
         {/* ── Description ── */}
         <SectionHeading>Description</SectionHeading>
 
-        <Field label="Product Description" required error={errors.description}>
+        <Field label="Short Description" required error={errors.description}>
           <div className="col-span-full">
             <textarea
-              rows={4}
-              placeholder="Describe the product's key features, performance characteristics, and target use case…"
+              rows={3}
+              placeholder="One or two plain sentences — used for search results and the meta description…"
               value={description}
               onChange={(e) => { setDescription(e.target.value); setErrors((p) => ({ ...p, description: undefined })); }}
               className={`${ic("description")} resize-none col-span-full`}
             />
           </div>
+        </Field>
+
+        {/* Rich description — same editor and same server-side sanitizer as
+            article bodies, which is what the marketing brief asked for. */}
+        <div className="col-span-full">
+          <label className={labelCls}>Rich Description</label>
+          <ArticleRichEditor
+            value={descriptionHtml}
+            onChange={setDescriptionHtml}
+            placeholder="The full product story — headings, lists, tables and formatting, like an article…"
+            minHeight={220}
+          />
+          <p className="mt-1.5 text-[0.72rem] text-[#5c5e62]">
+            Shown on the product page. Leave empty to show only the short description.
+          </p>
+        </div>
+
+        {/* ── Artikelmerkmale — the tyre specification sheet ──
+            Rendered from the backend's catalogue, so a new attribute appears
+            here without a frontend change. Empty fields are simply not shown
+            on the product page. */}
+        {specSheet.length > 0 && (
+          <>
+            <SectionHeading>Artikelmerkmale / Tyre Specifications</SectionHeading>
+
+            <p className="col-span-full -mt-2 text-[0.72rem] text-[#5c5e62]">
+              Condition, manufacturer, model and specification come from the fields
+              above (Type, Brand, Product Name, Spec). Everything left empty is
+              simply not printed on the product page.
+            </p>
+
+            {specSheet.map((row) => {
+              if (row.source === "derived") return null;
+              if (row.source === "column" && (!row.column || SHEET_COLUMNS_EDITED_ELSEWHERE.has(row.column))) return null;
+
+              const label = `${row.label_de}${row.label_en !== row.label_de ? ` — ${row.label_en}` : ""}`;
+
+              if (row.input === "select") {
+                const value = (specs[row.key] as string) ?? "";
+                return (
+                  <Field key={row.key} label={label}>
+                    <select
+                      value={value}
+                      onChange={(e) => setSpec_(row.key, e.target.value)}
+                      className={inputCls}
+                    >
+                      <option value="">— not set —</option>
+                      {(row.options ?? []).map((o) => (
+                        <option key={o} value={o}>{o}</option>
+                      ))}
+                    </select>
+                  </Field>
+                );
+              }
+
+              if (row.input === "boolean") {
+                const value = specs[row.key];
+                return (
+                  <Field key={row.key} label={label}>
+                    <select
+                      value={value === true ? "yes" : value === false ? "no" : ""}
+                      onChange={(e) => {
+                        if (e.target.value === "") {
+                          setSpecs((prev) => { const next = { ...prev }; delete next[row.key]; return next; });
+                        } else {
+                          setSpec_(row.key, e.target.value === "yes");
+                        }
+                      }}
+                      className={inputCls}
+                    >
+                      <option value="">— not set —</option>
+                      <option value="yes">Ja / Yes</option>
+                      <option value="no">Nein / No</option>
+                    </select>
+                  </Field>
+                );
+              }
+
+              // Free text — column-backed rows bind their existing column,
+              // json rows bind the specs object.
+              if (row.source === "column" && row.column) {
+                return (
+                  <Field key={row.key} label={label}>
+                    <input
+                      type="text"
+                      value={columnSpecs[row.column] ?? ""}
+                      onChange={(e) => setColumnSpec(row.column!, e.target.value)}
+                      className={inputCls}
+                    />
+                  </Field>
+                );
+              }
+
+              return (
+                <Field key={row.key} label={label}>
+                  <input
+                    type="text"
+                    value={(specs[row.key] as string) ?? ""}
+                    onChange={(e) => setSpec_(row.key, e.target.value)}
+                    className={inputCls}
+                  />
+                </Field>
+              );
+            })}
+          </>
+        )}
+
+        {/* ── Shipping & Returns ── */}
+        <SectionHeading>Shipping &amp; Returns</SectionHeading>
+
+        <p className="col-span-full -mt-2 text-[0.72rem] text-[#5c5e62]">
+          Site-wide texts live in Settings (<span className="font-mono">product_shipping_info</span>,{" "}
+          <span className="font-mono">product_returns_info</span>) and apply to every product.
+          Fill these only where THIS product differs — they override the site-wide text.
+        </p>
+
+        <Field label="Shipping (this product only)">
+          <textarea
+            rows={3}
+            placeholder="Leave empty to use the site-wide shipping text…"
+            value={shippingInfo}
+            onChange={(e) => setShippingInfo(e.target.value)}
+            className={`${inputCls} resize-none`}
+          />
+        </Field>
+
+        <Field label="Returns (this product only)">
+          <textarea
+            rows={3}
+            placeholder="Leave empty to use the site-wide returns text…"
+            value={returnsInfo}
+            onChange={(e) => setReturnsInfo(e.target.value)}
+            className={`${inputCls} resize-none`}
+          />
         </Field>
 
         {/* ── Primary Image ── */}

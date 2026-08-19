@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import ProductForm from "@/components/admin/product-form";
+import { getSpecSheet } from "@/app/admin/products/actions";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Add Product" };
 
-export default function NewProductPage() {
+export default async function NewProductPage() {
+  const specSheet = await getSpecSheet();
   return (
     <div className="p-6 md:p-8">
       {/* Back + header */}
@@ -28,7 +30,7 @@ export default function NewProductPage() {
 
       {/* Form card */}
       <div className="rounded-2xl bg-white p-6 shadow-sm md:p-8">
-        <ProductForm mode="create" />
+        <ProductForm mode="create" specSheet={specSheet} />
       </div>
     </div>
   );

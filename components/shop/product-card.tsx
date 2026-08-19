@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeftRight, ChevronDown, ArrowRight, Gauge, Weight } from "lucide-react";
-import type { Product } from "./data";
+import { productPath, type Product } from "./data";
 export type { Product } from "./data";
 import { useLanguage } from "@/context/language-context";
 import { usePrice } from "@/hooks/use-price";
@@ -110,7 +110,7 @@ export default function ProductCard({
       <div className="flex flex-1 flex-col border-t border-hairline p-4 pt-7">
         {/* Floating primary CTA — straddles the image/content boundary */}
         <Link
-          href={`/shop/${product.id}`}
+          href={productPath(product)}
           className="relative z-10 -mt-11 mb-3 flex h-[42px] w-full items-center justify-center gap-1.5 rounded-full bg-brand text-[0.83rem] font-bold text-white shadow-[0_10px_24px_rgba(244,81,30,0.32)] transition hover:bg-brand-hover hover:shadow-[0_12px_28px_rgba(244,81,30,0.4)]"
         >
           {t.shop.card.viewDetails}

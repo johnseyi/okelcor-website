@@ -59,17 +59,20 @@ async function getToken(): Promise<string | undefined> {
   );
 }
 
-async function fetchProduct(id: number, locale: string, token?: string): Promise<Product | undefined> {
+// `handle` is a slug (brand-name-season, the SEO shape) or a legacy numeric
+// id — the API resolves both, so every URL already indexed or bookmarked
+// keeps working while new links use the slug.
+async function fetchProduct(handle: string, locale: string, token?: string): Promise<Product | undefined> {
   try {
-    const res = await apiFetch<ApiProduct>(`/products/${id}`, {
+    const res = await apiFetch<ApiProduct>(`/products/${encodeURIComponent(handle)}`, {
       locale,
       revalidate: false,
       token,
     });
     return res.data ? toProduct(res.data) : undefined;
   } catch {
-    // API unavailable — fall back to static data
-    return getProductById(id);
+    // API unavailable — fall back to static data (numeric handles only)
+    return /^\d+$/.test(handle) ? getProductById(Number(handle)) : undefined;
   }
 }
 
@@ -94,22 +97,26 @@ async function fetchRelated(product: Product, locale: string, token?: string, co
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const [locale, token] = await Promise.all([getServerLocale(), getToken()]);
-  const product = await fetchProduct(Number(id), locale, token);
+  const product = await fetchProduct(id, locale, token);
   if (!product) return { title: "Product Not Found" };
 
   const title = `${product.brand} ${product.name} ${product.size}`;
   const description = `${product.description} ${getProductMetaSuffix(locale)}`;
 
+  // The slug URL is canonical wherever one exists, so the id URL and the slug
+  // URL are one page to Google rather than duplicate content splitting rank.
+  const canonicalUrl = `https://www.okelcor.com/shop/${product.slug || product.id}`;
+
   return {
     title,
     description,
     alternates: {
-      canonical: `https://www.okelcor.com/shop/${product.id}`,
+      canonical: canonicalUrl,
     },
     openGraph: {
       title: `${title} – Okelcor`,
       description,
-      url: `https://www.okelcor.com/shop/${product.id}`,
+      url: canonicalUrl,
       type: "website",
     },
     twitter: {
@@ -125,7 +132,7 @@ export default async function ProductDetailPage({ params }: Props) {
 
   if (SHOP_REQUIRES_LOGIN && !token) redirect(`/login?redirect=/shop/${id}`);
 
-  const product = await fetchProduct(Number(id), locale, token);
+  const product = await fetchProduct(id, locale, token);
   if (!product) notFound();
 
   const related = await fetchRelated(product, locale, token);
@@ -144,7 +151,7 @@ export default async function ProductDetailPage({ params }: Props) {
       price: product.price.toFixed(2),
       availability: "https://schema.org/InStock",
       seller: { "@type": "Organization", name: "Okelcor" },
-      url: `${SITE_URL}/shop/${product.id}`,
+      url: `${SITE_URL}/shop/${product.slug || product.id}`,
     },
   };
 

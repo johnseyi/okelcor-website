@@ -90,14 +90,24 @@ export type AdminProduct = {
   created_at?: string;
   updated_at?: string | null;
   deleted_at?: string | null;
-  // Extended tyre specification fields (populated via CSV import)
-  width?: number | null;
-  height?: number | null;
-  rim?: number | null;
-  load_index?: number | null;
+  // Extended tyre specification fields (CSV import, or the admin spec sheet
+  // since Session 92). Stored as strings backend-side — "10.5" rims and
+  // "91/89" load indexes are real values.
+  width?: string | number | null;
+  height?: string | number | null;
+  rim?: string | number | null;
+  load_index?: string | number | null;
   speed_rating?: string | null;
+  ean?: string | null;
+  tread_depth_mm?: number | null;
   inventory?: number | null;
   cost?: number | null;
+  // Product optimization (Session 92)
+  slug?: string | null;
+  description_html?: string | null;
+  specs?: Record<string, string | boolean> | null;
+  shipping_info?: string | null;
+  returns_info?: string | null;
 };
 
 /** Per-locale content block used in both list and detail article responses. */

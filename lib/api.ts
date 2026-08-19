@@ -89,6 +89,16 @@ export type ApiProduct = {
   sku: string;
   description: string;
   in_stock?: boolean;
+  // Product optimization (Session 92)
+  /** SEO URL handle (brand-name-season). Products predating the migration may lack one. */
+  slug?: string | null;
+  /** Sanitized rich-text description; null = fall back to plain description. */
+  description_html?: string | null;
+  /** Assembled Artikelmerkmale sheet — labels in both languages, empties already skipped. */
+  specifications?: { key: string; label_de: string; label_en: string; value: string }[];
+  /** Shipping / returns text — per-product override or site-wide setting; null = hide the block. */
+  shipping_info?: string | null;
+  returns_info?: string | null;
 };
 
 /**
@@ -115,6 +125,8 @@ export type ApiArticle = {
 /** Raw product entry from GET /api/v1/search */
 export type SearchApiProduct = {
   id: number;
+  /** SEO URL handle — present once the Session 92 migration has run. */
+  slug?: string | null;
   brand: string;
   name: string;
   size?: string;
@@ -122,6 +134,8 @@ export type SearchApiProduct = {
   price: number;
   image_url?: string;
   image?: string;
+  /** Backend-built product URL (slug when available) — prefer over rebuilding from id. */
+  href?: string;
 };
 
 /** Raw article entry from GET /api/v1/search */

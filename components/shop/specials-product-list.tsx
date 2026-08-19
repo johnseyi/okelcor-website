@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { useCart } from "@/context/cart-context";
 import { usePrice } from "@/hooks/use-price";
-import type { Product } from "./data";
+import { productPath, type Product } from "./data";
 
 type CustomerType = "b2b" | "b2c" | "guest";
 
@@ -209,7 +209,7 @@ function SpecialRow({
 
         {/* View link */}
         <Link
-          href={`/shop/${product.id}`}
+          href={productPath(product)}
           className="hidden shrink-0 text-[0.72rem] font-semibold text-[#5c5e62] transition hover:text-[#f4511e] lg:block"
         >
           View →
@@ -278,7 +278,7 @@ function SpecialRow({
           </button>
 
           <Link
-            href={`/shop/${product.id}`}
+            href={productPath(product)}
             className="flex h-9 shrink-0 items-center rounded-full border border-[#e5e7eb] px-3 text-[0.78rem] font-semibold text-[#5c5e62] transition hover:border-[#f4511e]/40 hover:text-[#f4511e]"
           >
             View
