@@ -8,6 +8,7 @@ export const ALL_ROLES = [
   "sales_manager",
   "content_manager",
   "support",
+  "marketing",
   "editor",
   "viewer",
 ] as const;
@@ -27,6 +28,11 @@ export const ROLE_ACCESS: Record<string, string[]> = {
   finance:         ["dashboard", "orders", "operations", "finance"],
   sales_manager:   ["dashboard", "orders", "quotes", "customers", "analytics", "logistics", "crm", "operations"],
   content_manager: ["dashboard", "articles", "hero_slides", "promotions", "fet", "brands", "media"],
+  // Content + catalogue + campaigns — the person optimizing products and
+  // running e-mail campaigns. Nothing operational: no orders, quotes,
+  // customers or finance. Settings included because the site-wide product
+  // shipping/returns texts live there.
+  marketing:       ["dashboard", "products", "articles", "hero_slides", "promotions", "fet", "brands", "media", "settings", "marketing", "behaviour", "analytics"],
   support:         ["dashboard", "orders", "quotes", "customers", "chats", "logistics"],
   editor:          ["dashboard", "articles", "hero_slides", "promotions", "fet", "media", "behaviour"],
   viewer:          ["dashboard", "analytics"],
@@ -140,18 +146,18 @@ const PERMISSION_ROLES: Record<string, string[]> = {
   "payments.correct_state":    ["super_admin", "admin", "order_manager"],
 
   // Products
-  "products.view":         ["super_admin", "admin", "editor", "order_manager"],
-  "products.edit":         ["super_admin", "admin", "editor"],
+  "products.view":         ["super_admin", "admin", "editor", "order_manager", "marketing"],
+  "products.edit":         ["super_admin", "admin", "editor", "marketing"],
   "products.import":       ["super_admin", "admin"],
 
   // Media
-  "media.upload":          ["super_admin", "admin", "editor", "content_manager"],
+  "media.upload":          ["super_admin", "admin", "editor", "content_manager", "marketing"],
 
   // Promotions
-  "promotions.manage":     ["super_admin", "admin", "editor", "content_manager"],
+  "promotions.manage":     ["super_admin", "admin", "editor", "content_manager", "marketing"],
 
   // Articles
-  "articles.manage":       ["super_admin", "admin", "editor", "content_manager"],
+  "articles.manage":       ["super_admin", "admin", "editor", "content_manager", "marketing"],
 
   // Quotes
   "quotes.manage":         ["super_admin", "admin", "order_manager", "sales_manager"],
@@ -166,12 +172,12 @@ const PERMISSION_ROLES: Record<string, string[]> = {
   "settings.manage":       ["super_admin"],
 
   // Analytics
-  "analytics.view":        ["super_admin", "admin", "sales_manager"],
+  "analytics.view":        ["super_admin", "admin", "sales_manager", "marketing"],
   // Behaviour analytics is its own permission, copied from the backend's list
   // verbatim (AdminPermissions.php: super_admin, admin, order_manager, editor).
   // Deliberately NOT merged into "analytics.view" above, which diverges from the
   // backend and also gates the Google Analytics page — see PROGRESS.md.
-  "behaviour.view":        ["super_admin", "admin", "order_manager", "editor"],
+  "behaviour.view":        ["super_admin", "admin", "order_manager", "editor", "marketing"],
 
   // Trade documents
   "trade_documents.manage": ["super_admin", "admin", "order_manager"],
@@ -197,7 +203,7 @@ const PERMISSION_ROLES: Record<string, string[]> = {
   "system.manage":         ["super_admin", "admin"],
 
   // Marketing contacts & bulk email
-  "marketing.manage":      ["super_admin", "admin", "order_manager"],
+  "marketing.manage":      ["super_admin", "admin", "order_manager", "marketing"],
 
   // Users / audit
   "users.manage":          ["super_admin", "admin"],
@@ -236,6 +242,7 @@ export const ROLE_LABELS: Record<string, string> = {
   sales_manager:   "Sales",
   content_manager: "Content",
   support:         "Support",
+  marketing:       "Marketing",
   editor:          "Editor",
   viewer:          "Viewer",
 };
@@ -249,6 +256,7 @@ export const ROLE_BADGE_COLORS: Record<string, string> = {
   sales_manager:   "bg-cyan-100 text-cyan-700",
   content_manager: "bg-violet-100 text-violet-700",
   support:         "bg-teal-100 text-teal-700",
+  marketing:       "bg-rose-100 text-rose-700",
   editor:          "bg-emerald-100 text-emerald-700",
   viewer:          "bg-gray-100 text-gray-600",
 };
@@ -262,6 +270,7 @@ export const ROLE_COLORS: Record<string, string> = {
   sales_manager:   "bg-cyan-100 text-cyan-700",
   content_manager: "bg-violet-100 text-violet-700",
   support:         "bg-teal-100 text-teal-700",
+  marketing:       "bg-rose-100 text-rose-700",
   editor:          "bg-emerald-100 text-emerald-700",
   viewer:          "bg-gray-100 text-gray-600",
 };
