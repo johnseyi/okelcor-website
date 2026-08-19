@@ -715,6 +715,12 @@ export type AdminBrand = {
   name: string;
   logo_url: string;
   order?: number;
+  // Session 93 — brand-level content defaults, inherited by every product of
+  // this brand that has no value of its own (product → brand → site setting).
+  description_html?: string | null;
+  specs?: Record<string, string | boolean> | null;
+  shipping_info?: string | null;
+  returns_info?: string | null;
 };
 
 export type AdminFetEngine = {

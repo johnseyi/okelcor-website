@@ -2,7 +2,8 @@
 
 import { useState, useTransition, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, Upload, Check, X, ImagePlus } from "lucide-react";
+import Link from "next/link";
+import { Plus, Pencil, Trash2, Upload, Check, X, ImagePlus, FileText } from "lucide-react";
 import {
   createBrand,
   updateBrand,
@@ -139,6 +140,15 @@ function BrandCard({
           <div className="flex items-center justify-between gap-2">
             <p className="truncate text-[0.875rem] font-bold text-[#1a1a1a]">{brand.name}</p>
             <div className="flex shrink-0 gap-1">
+              {/* Session 93 — content defaults inherited by every product of
+                  the brand: rich description, spec defaults, shipping/returns. */}
+              <Link
+                href={`/admin/brands/${brand.id}`}
+                title="Brand content — description, spec defaults, shipping & returns for all its products"
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-[#5c5e62] transition hover:bg-[#E85C1A]/10 hover:text-[#E85C1A]"
+              >
+                <FileText size={13} strokeWidth={2} />
+              </Link>
               <button
                 type="button"
                 onClick={() => { setEditingName(true); setNameInput(brand.name); }}

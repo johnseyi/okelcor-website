@@ -81,6 +81,56 @@ export async function updateBrand(
   return {};
 }
 
+// ── Brand content defaults (Session 93) ───────────────────────────────────────
+
+export type BrandContentInput = {
+  name: string;
+  description_html?: string | null;
+  specs?: Record<string, string | boolean> | null;
+  shipping_info?: string | null;
+  returns_info?: string | null;
+};
+
+/**
+ * Save a brand's content defaults — the rich description, spec defaults and
+ * shipping/returns text every product of the brand inherits unless it has its
+ * own. One entry here instead of one per product across a 15,000-row catalogue.
+ */
+export async function updateBrandContent(
+  id: number,
+  data: BrandContentInput
+): Promise<{ error?: string }> {
+  const token = await getToken();
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/admin/brands/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+      cache: "no-store",
+    });
+  } catch {
+    return { error: "Network error. Could not reach the server." };
+  }
+
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    // Surface the first field-level validation message when there is one —
+    // "The specs.nasshaftungseigenschaften field…" beats a generic failure.
+    const firstFieldError = json.errors && Object.values(json.errors as Record<string, string[]>)[0]?.[0];
+    return { error: firstFieldError || json.message || `Failed to save brand content (HTTP ${res.status}).` };
+  }
+
+  revalidateBrands();
+  revalidatePath("/shop", "page");
+  revalidatePath("/shop/[id]", "page");
+  return {};
+}
+
 // ── Upload logo ────────────────────────────────────────────────────────────────
 
 export async function uploadBrandLogo(
