@@ -43,10 +43,17 @@ export default async function AdminProductsPage({
     // Other errors (network down) — fall through, table shows empty
   }
 
-  const params: Record<string, string | number> = { per_page: 200 };
+  // per_page matches the backend's cap (100) — asking for 200 just got 100
+  // back while the page believed otherwise.
+  const params: Record<string, string | number> = { per_page: 100 };
   if (q?.trim())              params.q       = q.trim();
   if (type && type !== "all") params.type    = type;
   if (currentView !== "all")  params.segment = currentView;
+  // The pagination links have always written ?page= into the URL and the
+  // label read it back — but it was never forwarded to the API, so every
+  // "page" showed the same first 100 products. With 15,000 in the catalogue,
+  // everything older was unreachable in the panel.
+  if (page && Number(page) > 1) params.page = Number(page);
 
   const res = await adminSafeFetch<AdminProduct[]>("/products", {
     params,
