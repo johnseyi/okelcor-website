@@ -4,7 +4,7 @@ import {
   Zap, MessageSquare, ShieldAlert, FileCheck, Truck, Activity, ScanLine,
   BellRing, Bell, Inbox, ClipboardCheck, UserCheck, Mail, Send, Images,
   Handshake, ReceiptText, LayoutGrid, LineChart, Search, BadgeCheck,
-  MessagesSquare,
+  MessagesSquare, Globe2,
 } from "lucide-react";
 
 /**
@@ -126,6 +126,9 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       // report to are not the ones our analytics section lists, and the two
       // pages read different data sources.
       { label: "Customer Behaviour", href: "/admin/analytics/behaviour", icon: Search, section: "behaviour" , keywords: "search demand what customers look for" },
+      // Same section as Customer Behaviour, different reader: that page asks
+      // "what should we fix", this one asks "where should we sell".
+      { label: "Market Intelligence", href: "/admin/analytics/markets", icon: Globe2, section: "behaviour" , keywords: "market country penetrate expansion opportunity where to sell demand by country export database" },
       { label: "Supplier Intel", href: "/admin/supplier", icon: TrendingUp, section: "supplier" , keywords: "intel sourcing suppliers" },
     ],
   },

@@ -77,6 +77,9 @@ export const PATH_SECTION: Record<string, string> = {
   // Listed before "/admin/analytics": PATH_SECTION is matched with startsWith()
   // and the first entry wins, so the broader prefix must come second.
   "/admin/analytics/behaviour": "behaviour",
+  // Same section as behaviour: it mirrors the backend's `analytics.view`,
+  // which is what actually gates the market endpoints.
+  "/admin/analytics/markets": "behaviour",
   "/admin/analytics":       "analytics",
   "/admin/chats":           "chats",
   "/admin/eu-declarations": "eu_declarations",
