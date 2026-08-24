@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Inbox, Mail, MessageCircle, CheckCheck, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Inbox, Mail, MessageCircle, CheckCheck, Loader2, ChevronLeft, ChevronRight, Forward } from "lucide-react";
 import type { AdminCommunicationsInboxItem } from "@/lib/admin-api";
 import { timeAgo } from "@/lib/admin-notifications";
 import EmptyState from "@/components/ui/empty-state";
+import ForwardToColleagueModal from "@/components/admin/forward-to-colleague-modal";
 
 export default function CommunicationsInbox() {
   const [items, setItems] = useState<AdminCommunicationsInboxItem[]>([]);
@@ -14,6 +15,7 @@ export default function CommunicationsInbox() {
   const [page, setPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [forwarding, setForwarding] = useState<AdminCommunicationsInboxItem | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -87,7 +89,7 @@ export default function CommunicationsInbox() {
         ) : (
           <ul className="divide-y divide-black/[0.05]">
             {items.map((item) => (
-              <InboxRow key={item.id} item={item} onRead={markRead} />
+              <InboxRow key={item.id} item={item} onRead={markRead} onForward={setForwarding} />
             ))}
           </ul>
         )}
@@ -115,13 +117,28 @@ export default function CommunicationsInbox() {
           </button>
         </div>
       )}
+
+      {forwarding && (
+        <ForwardToColleagueModal
+          communicationId={forwarding.id}
+          subject={forwarding.subject}
+          customerName={forwarding.customer_name}
+          onClose={() => setForwarding(null)}
+        />
+      )}
     </>
   );
 }
 
 // ── Row ───────────────────────────────────────────────────────────────────────
 
-function InboxRow({ item, onRead }: { item: AdminCommunicationsInboxItem; onRead: (id: number) => void }) {
+function InboxRow({
+  item, onRead, onForward,
+}: {
+  item: AdminCommunicationsInboxItem;
+  onRead: (id: number) => void;
+  onForward: (item: AdminCommunicationsInboxItem) => void;
+}) {
   const ChannelIcon = item.channel === "whatsapp" ? MessageCircle : Mail;
   const channelCls = item.channel === "whatsapp" ? "bg-emerald-50 text-emerald-600 border-emerald-200" : "bg-blue-50 text-blue-600 border-blue-200";
 
@@ -152,6 +169,18 @@ function InboxRow({ item, onRead }: { item: AdminCommunicationsInboxItem; onRead
           >
             Open →
           </Link>
+          {/* WhatsApp rows have no e-mail to forward — the endpoint takes a
+              communication of any channel, but quoting a WhatsApp thread into
+              an e-mail is a different feature. */}
+          {item.channel !== "whatsapp" && (
+            <button
+              type="button"
+              onClick={() => onForward(item)}
+              className="flex items-center gap-1 text-[0.76rem] font-semibold text-[#5c5e62] transition hover:text-[#E85C1A]"
+            >
+              <Forward size={12} /> Forward to a colleague
+            </button>
+          )}
         </div>
       </div>
 

@@ -4,6 +4,7 @@ import {
   Zap, MessageSquare, ShieldAlert, FileCheck, Truck, Activity, ScanLine,
   BellRing, Bell, Inbox, ClipboardCheck, UserCheck, Mail, Send, Images,
   Handshake, ReceiptText, LayoutGrid, LineChart, Search, BadgeCheck,
+  MessagesSquare,
 } from "lucide-react";
 
 /**
@@ -47,6 +48,11 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       // would lock somebody out of their own record.
       { label: "My Contribution", href: "/admin/contribution", icon: BadgeCheck,    section: null , keywords: "staff performance kpi my record ledger activity work log" },
       { label: "Inbox",         href: "/admin/inbox",         icon: Inbox,           section: "crm" , keywords: "email messages mail replies conversations whatsapp" },
+      // `section: null` for the same reason as My Work above: the API puts no
+      // permission on internal messaging, because a gate here would mean an
+      // account that can log in but cannot be written to. Anyone who can reach
+      // the panel can be reached in it.
+      { label: "Messages",      href: "/admin/messages",      icon: MessagesSquare,  section: null , keywords: "staff internal colleague team chat dm forward outlook write" },
       { label: "Notifications", href: "/admin/notifications", icon: Bell,            section: null , keywords: "alerts bell" },
     ],
   },
