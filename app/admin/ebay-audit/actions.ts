@@ -123,6 +123,37 @@ export async function applyPrice(id: number, price: number): Promise<{ error?: s
 }
 
 /**
+ * Market comparison by free-text query — for the eBay listings that have no
+ * product record (hand-made on ebay.de), searched by their own listing
+ * title. Reuses the supplier-intel search, whose tyre-query cleaner copes
+ * with noisy titles.
+ */
+export async function getMarketByQuery(q: string): Promise<{ market?: MarketComparison; error?: string }> {
+  const query = q.trim().slice(0, 200);
+  if (query.length < 2) return { error: "Nothing to search for." };
+
+  const { json, error } = await authedFetch(`/admin/supplier/search?q=${encodeURIComponent(query)}`);
+  if (error || !json) return { error };
+
+  const payload = json as {
+    summary?: { count?: number; avg_price?: number | null; min_price?: number | null; max_price?: number | null };
+    note?: string | null;
+  };
+  const summary = payload.summary ?? {};
+
+  return {
+    market: {
+      count:         summary?.count ?? 0,
+      avg_price:     summary?.avg_price ?? null,
+      min_price:     summary?.min_price ?? null,
+      max_price:     summary?.max_price ?? null,
+      vs_market_pct: null,
+      note:          payload.note ?? null,
+    },
+  };
+}
+
+/**
  * Live market comparison for one product — reuses the existing
  * supplier-intel endpoint, which searches eBay for comparable tyres and
  * summarizes competitor pricing.

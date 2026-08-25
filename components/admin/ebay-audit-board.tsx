@@ -14,8 +14,8 @@ import {
   RefreshCw, Search, TrendingUp, X,
 } from "lucide-react";
 import {
-  getAudit, applyPrice, getMarket, syncLive,
-  type AuditRow, type AuditMeta, type AuditVerdict, type MarketComparison,
+  getAudit, applyPrice, getMarket, getMarketByQuery, syncLive,
+  type AuditRow, type AuditMeta, type AuditVerdict, type MarketComparison, type UnmatchedListing,
 } from "@/app/admin/ebay-audit/actions";
 
 const fmt = (n: number | null | undefined) =>
@@ -42,6 +42,7 @@ export default function EbayAuditBoard() {
 
   // Per-row state
   const [markets, setMarkets]       = useState<Record<number, MarketComparison | "loading" | "error">>({});
+  const [uMarkets, setUMarkets]     = useState<Record<string, MarketComparison | "loading" | "error">>({});
   const [priceDrafts, setPriceDrafts] = useState<Record<number, string>>({});
   const [applying, setApplying]     = useState<number | null>(null);
   const [syncing, setSyncing]       = useState(false);
@@ -78,6 +79,20 @@ export default function EbayAuditBoard() {
     startTransition(async () => {
       const res = await getMarket(row.id);
       setMarkets((m) => ({ ...m, [row.id]: res.market ?? "error" }));
+    });
+  };
+
+  // Market lookup for a listing with no product record — searched by its
+  // own eBay title, compared against its own live price.
+  const checkUnmatchedMarket = (l: UnmatchedListing) => {
+    setUMarkets((m) => ({ ...m, [l.sku]: "loading" }));
+    startTransition(async () => {
+      const res = await getMarketByQuery(l.title ?? l.sku);
+      let market = res.market;
+      if (market && market.avg_price !== null && l.price !== null && market.avg_price > 0) {
+        market = { ...market, vs_market_pct: Math.round(((l.price - market.avg_price) / market.avg_price) * 1000) / 10 };
+      }
+      setUMarkets((m) => ({ ...m, [l.sku]: market ?? "error" }));
     });
   };
 
@@ -345,22 +360,49 @@ export default function EbayAuditBoard() {
                   <th className="px-3 py-2 font-bold">Listing</th>
                   <th className="px-3 py-2 font-bold">SKU</th>
                   <th className="px-3 py-2 text-right font-bold">Live price</th>
-                  <th className="px-3 py-2 font-bold">Status</th>
+                  <th className="px-3 py-2 font-bold">Market</th>
                   <th className="px-3 py-2 text-right font-bold">Qty</th>
                   <th className="px-3 py-2 font-bold">Listing ID</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-black/[0.04]">
-                {meta.unmatched_listings.map((l) => (
+                {meta.unmatched_listings.map((l) => {
+                  const um = uMarkets[l.sku];
+                  return (
                   <tr key={l.sku}>
                     <td className="max-w-[300px] truncate px-3 py-2 font-semibold text-[#1a1a1a]" title={l.title ?? undefined}>{l.title ?? "—"}</td>
                     <td className="px-3 py-2 font-mono font-bold">{l.sku}</td>
                     <td className="px-3 py-2 text-right font-mono">{fmt(l.price)} {l.currency ?? ""}</td>
-                    <td className="px-3 py-2">{l.status}</td>
+                    <td className="whitespace-nowrap px-3 py-2">
+                      {um === undefined && (
+                        <button type="button" onClick={() => checkUnmatchedMarket(l)}
+                          className="rounded-full border border-black/10 px-2.5 py-1 text-[0.68rem] font-semibold text-[#5c5e62] transition hover:border-[#E85C1A] hover:text-[#E85C1A]">
+                          Check market
+                        </button>
+                      )}
+                      {um === "loading" && <Loader2 size={13} className="animate-spin text-[#9ca3af]" />}
+                      {um === "error" && <span className="text-[0.7rem] text-red-500">failed</span>}
+                      {um !== undefined && um !== "loading" && um !== "error" && (
+                        um.count > 0 && um.avg_price !== null ? (
+                          <span className="text-[0.72rem]">
+                            <span className="font-bold">Ø {fmt(um.avg_price)}</span>
+                            <span className="text-[#9ca3af]"> ({um.count})</span>
+                            {um.vs_market_pct !== null && (
+                              <span className={um.vs_market_pct > 0 ? "text-red-600" : "text-emerald-700"}>
+                                {" "}{um.vs_market_pct > 0 ? "+" : ""}{um.vs_market_pct}%
+                              </span>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="text-[0.7rem] text-[#9ca3af]" title={um.note ?? undefined}>no comparables</span>
+                        )
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-right">{l.quantity ?? "—"}</td>
                     <td className="px-3 py-2 font-mono text-[#9ca3af]">{l.listing_id ?? "—"}</td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
