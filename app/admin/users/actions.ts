@@ -273,3 +273,95 @@ export async function deleteUser(id: number): Promise<{ error?: string }> {
   revalidatePath("/admin/users");
   return {};
 }
+
+// ── Per-user permission overrides ─────────────────────────────────────────────
+
+export type PermissionCatalogEntry = { key: string; group: string; roles: string[] };
+
+/**
+ * Everything the permission editor renders: every permission key, the roles
+ * holding it by default, and the role list. Comes from the API so a new
+ * backend permission appears here with no frontend deploy.
+ */
+export async function getPermissionsCatalog(): Promise<{
+  permissions?: PermissionCatalogEntry[];
+  roles?: string[];
+  error?: string;
+}> {
+  const token = await getToken();
+  if (!token) return { error: "Not authenticated." };
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/admin/permissions/catalog`, {
+      headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+  } catch {
+    return { error: "Could not reach the server." };
+  }
+
+  const json = await res.json().catch(() => ({}));
+
+  if (res.status === 403) return { error: "Only super admins can manage permissions." };
+  if (!res.ok) return { error: json.message || "Failed to load the permission catalog." };
+
+  return {
+    permissions: json.data?.permissions ?? [],
+    roles: json.data?.roles ?? [],
+  };
+}
+
+/**
+ * Replaces one user's override lists wholesale. Two empty arrays return the
+ * person to exactly their role's standard access.
+ */
+export async function updateUserPermissions(
+  id: number,
+  grants: string[],
+  revokes: string[],
+): Promise<{
+  error?: string;
+  user?: {
+    permissions: string[];
+    permission_grants: string[];
+    permission_revokes: string[];
+    has_permission_overrides: boolean;
+  };
+  message?: string;
+}> {
+  const token = await getToken();
+  if (!token) return { error: "Not authenticated." };
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/admin/users/${id}/permissions`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ grants, revokes }),
+      cache: "no-store",
+    });
+  } catch {
+    return { error: "Could not reach the server." };
+  }
+
+  const json = await res.json().catch(() => ({}));
+
+  if (res.status === 403) return { error: "Only super admins can manage permissions." };
+  if (!res.ok) return { error: json.message || "Failed to update permissions." };
+
+  revalidatePath("/admin/users");
+  return {
+    user: {
+      permissions:              json.data?.permissions ?? [],
+      permission_grants:        json.data?.permission_grants ?? [],
+      permission_revokes:       json.data?.permission_revokes ?? [],
+      has_permission_overrides: json.data?.has_permission_overrides ?? false,
+    },
+    message: json.message,
+  };
+}

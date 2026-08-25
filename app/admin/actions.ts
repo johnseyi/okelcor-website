@@ -119,6 +119,13 @@ export async function loginAdmin(
   const roleLabel: string | undefined = admin.role_label;
   if (roleLabel) cookieStore.set("admin_role_label", roleLabel, cookieOpts);
 
+  // The user's EFFECTIVE permissions (role + per-user grants − revokes),
+  // comma-joined. Nav and route guards prefer this over the role map, which
+  // is what makes per-person overrides visible without a role change.
+  if (Array.isArray(admin.permissions)) {
+    cookieStore.set("admin_perms", admin.permissions.join(","), cookieOpts);
+  }
+
   // Track must_change_password so the shell can show a persistent banner
   cookieStore.set("admin_must_change", admin.must_change_password ? "1" : "0", cookieOpts);
 
@@ -143,6 +150,7 @@ export async function logoutAdmin(): Promise<void> {
   cookieStore.delete("admin_display_name");
   cookieStore.delete("admin_role");
   cookieStore.delete("admin_role_label");
+  cookieStore.delete("admin_perms");
   cookieStore.delete("admin_must_change");
   cookieStore.delete("admin_setup_token");
   redirect("/admin/login");
@@ -224,6 +232,11 @@ export async function submitAdminTwoFactor(
 
   const roleLabel: string | undefined = admin.role_label;
   if (roleLabel) cookieStore.set("admin_role_label", roleLabel, cookieOpts);
+
+  // Effective permissions — see the note on the password login path.
+  if (Array.isArray(admin.permissions)) {
+    cookieStore.set("admin_perms", admin.permissions.join(","), cookieOpts);
+  }
 
   cookieStore.set("admin_must_change", admin.must_change_password ? "1" : "0", cookieOpts);
 

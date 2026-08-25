@@ -42,6 +42,60 @@ export function canAccess(role: string, section: string): boolean {
   return ROLE_ACCESS[role]?.includes(section) ?? false;
 }
 
+// ── Section → gating backend permission ────────────────────────────────────────
+// Which single permission key the API actually checks for a section's pages.
+// Used by canAccessSection() so PER-USER overrides (grants/revokes on top of
+// the role, carried in the `admin_perms` cookie from the login payload) change
+// what someone sees without a role change. Sections not listed here fall back
+// to the ROLE_ACCESS table — an override cannot move them, but the backend
+// gate is authoritative either way.
+
+export const SECTION_PERMISSION: Record<string, string> = {
+  orders:          "orders.view",
+  logistics:       "orders.view",
+  quotes:          "quotes.manage",
+  finance:         "finance.view",
+  products:        "products.view",
+  customers:       "customers.view",
+  analytics:       "analytics.view",
+  behaviour:       "analytics.view",
+  marketing:       "marketing.manage",
+  system_health:   "system.view",
+  // `security` is deliberately NOT mapped: that page doubles as every admin's
+  // own-2FA management (middleware always allows it), while the backend key
+  // security.view is super_admin-only — mapping it would hide 2FA self-service.
+  crm:             "crm.view",
+  partners:        "partners.view",
+  supplier:        "supplier.view",
+  ebay:            "ebay.manage",
+  eu_declarations: "eu_declarations.manage",
+  media:           "media.upload",
+  articles:        "articles.manage",
+  promotions:      "promotions.manage",
+  fet:             "fet.manage",
+  settings:        "settings.manage",
+  users:           "admins.manage",
+  staff_team:      "staff.view_team",
+};
+
+/**
+ * Section access that honors per-user permission overrides.
+ *
+ * With a live `permissions` list (from the admin_perms cookie / auth payload)
+ * and a mapped section, the list decides. Otherwise identical to canAccess().
+ */
+export function canAccessSection(
+  role: string,
+  section: string,
+  permissions?: string[] | null,
+): boolean {
+  if (permissions != null && permissions.length > 0) {
+    const gate = SECTION_PERMISSION[section];
+    if (gate) return permissions.includes(gate);
+  }
+  return canAccess(role, section);
+}
+
 // ── Path → section mapping (shell route guard + middleware) ────────────────────
 
 export const PATH_SECTION: Record<string, string> = {

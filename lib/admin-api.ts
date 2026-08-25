@@ -771,6 +771,11 @@ export type AdminUser = {
   email: string;
   role: string;
   role_label?: string;
+  // Per-user permission overrides (admin users list/detail only)
+  permissions?: string[];
+  permission_grants?: string[];
+  permission_revokes?: string[];
+  has_permission_overrides?: boolean;
   last_login_at: string | null;
   created_at?: string;
   // CRM-5 data quality fields (returned by customer detail/list endpoints)
