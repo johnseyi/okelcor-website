@@ -22,6 +22,8 @@ import {
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type HealthStatus   = "pass" | "warning" | "fail";
+// The report-level status has one more value than a single check can have.
+type OverallStatus  = HealthStatus | "critical";
 type HealthSeverity = "low" | "medium" | "high" | "critical";
 
 type HealthCheck = {
@@ -31,6 +33,7 @@ type HealthCheck = {
   severity:  HealthSeverity;
   message:   string;
   fix_hint?: string | null;
+  data?:     Record<string, unknown> | null;
 };
 
 type HealthGroup = {
@@ -48,7 +51,7 @@ type HealthSummary = {
 };
 
 type HealthReport = {
-  overall:      HealthStatus;
+  overall:      OverallStatus;
   generated_at: string;
   groups:       HealthGroup[];
   summary:      HealthSummary;
@@ -138,10 +141,11 @@ const GROUP_ICON: Record<string, React.ReactNode> = {
   integrations: <Zap    size={14} strokeWidth={1.8} />,
 };
 
-const OVERALL_UI: Record<HealthStatus, { label: string; ring: string; text: string; dot: string }> = {
-  pass:    { label: "All Systems Healthy",  ring: "ring-emerald-200 bg-emerald-50", text: "text-emerald-700", dot: "bg-emerald-500" },
-  warning: { label: "Issues Detected",      ring: "ring-amber-200 bg-amber-50",     text: "text-amber-700",   dot: "bg-amber-500" },
-  fail:    { label: "Critical Problems",    ring: "ring-red-200 bg-red-50",         text: "text-red-700",     dot: "bg-red-500" },
+const OVERALL_UI: Record<OverallStatus, { label: string; ring: string; text: string; dot: string }> = {
+  pass:     { label: "All Systems Healthy",  ring: "ring-emerald-200 bg-emerald-50", text: "text-emerald-700", dot: "bg-emerald-500" },
+  warning:  { label: "Issues Detected",      ring: "ring-amber-200 bg-amber-50",     text: "text-amber-700",   dot: "bg-amber-500" },
+  fail:     { label: "Failures Detected",    ring: "ring-red-200 bg-red-50",         text: "text-red-700",     dot: "bg-red-500" },
+  critical: { label: "Critical Problems",    ring: "ring-red-300 bg-red-100",        text: "text-red-800",     dot: "bg-red-600" },
 };
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -323,7 +327,40 @@ export default function SystemHealthPage() {
       const healthJson = await healthRes.json().catch(() => ({})) as Record<string, unknown>;
       // Backend may wrap in data or return directly
       const raw = (healthJson.data ?? healthJson) as Record<string, unknown>;
-      setReport(raw as unknown as HealthReport);
+
+      // The API returns `groups` as an object keyed by group name
+      // ({ application: [checks], database: [checks], … }), not the array
+      // this page was typed for. Rendering it untransformed crashed on
+      // `groups.flatMap` the moment any check failed — which is exactly
+      // when this page matters. Normalize here so both shapes render.
+      const rawGroups = raw.groups as unknown;
+      const groups: HealthGroup[] = Array.isArray(rawGroups)
+        ? (rawGroups as HealthGroup[])
+        : Object.entries((rawGroups ?? {}) as Record<string, HealthCheck[]>).map(([key, checks]) => ({
+            group:  key,
+            label:  key.replace(/_/g, " ").replace(/\b\w/g, (m) => m.toUpperCase()),
+            checks: Array.isArray(checks) ? checks : [],
+          }));
+
+      // The backup timestamp and failed-job count live inside their checks,
+      // not at the top level — surface them for the summary cards.
+      const allChecks       = groups.flatMap((g) => g.checks);
+      const backupData      = allChecks.find((c) => c.key === "last_backup")?.data as { created_at?: string } | null | undefined;
+      const failedJobsCheck = allChecks.find((c) => c.key === "failed_jobs");
+      const failedJobsCount = failedJobsCheck
+        ? (failedJobsCheck.status === "pass"
+            ? 0
+            : parseInt(failedJobsCheck.message?.match(/\d+/)?.[0] ?? "", 10) || null)
+        : null;
+
+      setReport({
+        overall:      (raw.overall as OverallStatus) ?? "pass",
+        generated_at: (raw.generated_at as string) ?? "",
+        summary:      raw.summary as HealthSummary,
+        groups,
+        last_backup:  (raw.last_backup as string | null | undefined) ?? backupData?.created_at ?? null,
+        failed_jobs:  (raw.failed_jobs as number | null | undefined) ?? failedJobsCount,
+      });
 
       if (errorsRes.ok) {
         const errorsJson = await errorsRes.json().catch(() => ({})) as Record<string, unknown>;
@@ -346,7 +383,7 @@ export default function SystemHealthPage() {
 
   const summary    = report?.summary;
   const overall    = report?.overall ?? "pass";
-  const overallUi  = OVERALL_UI[overall];
+  const overallUi  = OVERALL_UI[overall] ?? OVERALL_UI.fail;
   const critCount  = summary?.critical ?? (report?.groups.flatMap((g) => g.checks).filter((c) => c.status === "fail" && c.severity === "critical").length ?? 0);
   const warnCount  = summary?.warning  ?? (report?.groups.flatMap((g) => g.checks).filter((c) => c.status === "warning").length ?? 0);
   const failCount  = summary?.fail     ?? (report?.groups.flatMap((g) => g.checks).filter((c) => c.status === "fail").length ?? 0);
