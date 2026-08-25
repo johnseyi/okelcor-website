@@ -10,6 +10,8 @@ export type SnapshotItem = {
   id: number;
   category: string;
   person: string;
+  assigned_admin_id: number | null;
+  assignee_name: string | null;
   ref: string;
   date: string | null;
   client: string | null;
@@ -31,6 +33,8 @@ export type SnapshotMeta = {
   categories: string[];
   statuses: string[];
   liquidity_lines: { key: string; label: string }[];
+  /** Active admin users, for the assign-to-staff picker. */
+  staff: { id: number; name: string }[];
 };
 
 export type SnapshotPayload = {
@@ -42,6 +46,8 @@ export type SnapshotPayload = {
 export type ItemInput = {
   category: string;
   person: string;
+  /** Tagging a real staff member notifies them and feeds their My Work queue. */
+  assigned_admin_id?: number | null;
   ref: string;
   date?: string | null;
   client?: string | null;

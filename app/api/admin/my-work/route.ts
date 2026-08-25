@@ -24,7 +24,18 @@ export async function GET() {
     });
     if (!res.ok) return NextResponse.json({ data: [] }, { status: 200 });
     const json = await res.json().catch(() => ({ data: [] }));
-    return NextResponse.json({ data: json.data ?? [] }, { status: 200 });
+
+    // The API returns `data` GROUPED by kind ({ assigned_leads: [...],
+    // finance_tasks: [...], ... }); this page renders a flat list and
+    // sections it by each item's own `type`. The old `json.data ?? []`
+    // passed the object through, Array.isArray failed downstream, and
+    // My Work rendered empty for everyone, always. Flatten here.
+    const raw = json.data;
+    const flat = Array.isArray(raw)
+      ? raw
+      : Object.values(raw ?? {}).flatMap((group) => (Array.isArray(group) ? group : []));
+
+    return NextResponse.json({ data: flat, meta: json.meta ?? {} }, { status: 200 });
   } catch {
     return NextResponse.json({ data: [] }, { status: 200 });
   }

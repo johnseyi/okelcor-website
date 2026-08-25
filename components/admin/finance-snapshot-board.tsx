@@ -117,6 +117,7 @@ export default function FinanceSnapshotBoard() {
   // Form state for the item modal
   const [fCategory, setFCategory] = useState("");
   const [fPerson, setFPerson]     = useState("");
+  const [fAssignee, setFAssignee] = useState<string>("");   // admin user id as string, "" = untagged
   const [fRef, setFRef]           = useState("");
   const [fDate, setFDate]         = useState("");
   const [fClient, setFClient]     = useState("");
@@ -180,6 +181,7 @@ export default function FinanceSnapshotBoard() {
   const openCreateItem = (presetCategory?: string, presetPerson?: string) => {
     setFCategory(presetCategory ?? meta?.categories[0] ?? "");
     setFPerson(presetPerson ?? "");
+    setFAssignee("");
     setFRef(""); setFDate(new Date().toISOString().split("T")[0]);
     setFClient(""); setFStatus("Pending"); setFComment(""); setFAmount("");
     setModalError(null);
@@ -188,6 +190,7 @@ export default function FinanceSnapshotBoard() {
 
   const openEditItem = (item: SnapshotItem) => {
     setFCategory(item.category); setFPerson(item.person); setFRef(item.ref);
+    setFAssignee(item.assigned_admin_id ? String(item.assigned_admin_id) : "");
     setFDate(item.date ?? ""); setFClient(item.client ?? "");
     setFStatus(item.status); setFComment(item.comment ?? "");
     setFAmount(String(item.amount));
@@ -195,10 +198,21 @@ export default function FinanceSnapshotBoard() {
     setItemModal({ mode: "edit", item });
   };
 
+  // Picking a staff member fills the display name too (still editable) — the
+  // tag is what notifies them and routes the record to their My Work queue.
+  const pickAssignee = (value: string) => {
+    setFAssignee(value);
+    if (value) {
+      const staff = meta?.staff.find((s) => String(s.id) === value);
+      if (staff) setFPerson(staff.name);
+    }
+  };
+
   const submitItem = (e: React.FormEvent) => {
     e.preventDefault();
     const input: ItemInput = {
       category: fCategory, person: fPerson.trim(), ref: fRef.trim(),
+      assigned_admin_id: fAssignee ? Number(fAssignee) : null,
       date: fDate || null, client: fClient.trim() || null,
       status: fStatus, comment: fComment.trim() || null,
       amount: parseFloat(fAmount) || 0,
@@ -543,6 +557,12 @@ export default function FinanceSnapshotBoard() {
                           <td className="max-w-[220px] truncate px-3 py-2" title={item.client ?? undefined}>{item.client ?? "—"}</td>
                           <td className="px-3 py-2">
                             <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[0.68rem] font-bold ${STATUS_COLORS[item.status] ?? "bg-gray-100 text-gray-600"}`}>{item.status}</span>
+                            {item.assigned_admin_id && (
+                              <span title={`Tagged: ${item.assignee_name ?? ""} — notified and in their My Work`}
+                                className="ml-1 whitespace-nowrap rounded-full bg-indigo-100 px-2 py-0.5 text-[0.65rem] font-bold text-indigo-700">
+                                @{item.assignee_name ?? "tagged"}
+                              </span>
+                            )}
                           </td>
                           <td className="max-w-[180px] truncate px-3 py-2 italic text-[#6b7280]" title={item.comment ?? undefined}>{item.comment ?? "—"}</td>
                           <td className="whitespace-nowrap px-3 py-2 text-right font-bold">{fmt(item.amount)}</td>
@@ -587,8 +607,14 @@ export default function FinanceSnapshotBoard() {
                 {meta.categories.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </Field>
+            <Field label="Tag a staff member (they get notified + it lands in their My Work)">
+              <select value={fAssignee} onChange={(e) => pickAssignee(e.target.value)} className={`${inputCls} cursor-pointer`}>
+                <option value="">— No tag (name only) —</option>
+                {meta.staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </Field>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Person (staff handling)">
+              <Field label="Person (display name)">
                 <input type="text" value={fPerson} onChange={(e) => setFPerson(e.target.value)} placeholder="e.g. Edinah" required className={inputCls} />
               </Field>
               <Field label="Ref #">

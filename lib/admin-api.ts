@@ -553,23 +553,31 @@ export type AdminInsightsResponse = {
   next_refresh_at?: string | null;
 };
 
-// CRM-3B: actionable work queue item (GET /admin/my-work)
+// CRM-3B: actionable work queue item (GET /admin/my-work).
+// Type names match the API's own exactly — the earlier list here did not
+// ("follow_up" vs the server's "follow_up_due" etc.), which combined with
+// the grouped-vs-flat payload mismatch to render My Work permanently empty.
 export type MyWorkType =
   | "assigned_lead"
-  | "follow_up"
+  | "follow_up_due"
   | "proposal_accepted"
-  | "customer_approval"
-  | "access_request"
+  | "finance_task"
+  | "customer_approval_needed"
+  | "customer_access_requested"
   | string;
 
 export type MyWorkItem = {
   type: MyWorkType;
+  /** Present on editable rows (finance_task) — the record id to PATCH. */
+  id?: number;
   title: string;
   subtitle?: string | null;
-  priority?: "low" | "normal" | "high" | "urgent" | string | null;
+  priority?: "low" | "normal" | "medium" | "high" | "urgent" | string | null;
   due_at?: string | null;
   action_url?: string | null;
   status?: string | null;
+  /** finance_task only: the assignee may update status/comment in place. */
+  editable?: boolean;
 };
 
 // CRM-7 quote request items (admin-structured line items for proposal)

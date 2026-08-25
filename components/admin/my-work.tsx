@@ -3,21 +3,27 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  Loader2, ClipboardCheck, ClipboardList, CalendarClock,
-  CheckCircle2, UserCheck, ShieldQuestion, ArrowRight, type LucideIcon,
+  Loader2, ClipboardCheck, ClipboardList, CalendarClock, CheckCircle2,
+  UserCheck, ShieldQuestion, ArrowRight, LineChart, type LucideIcon,
 } from "lucide-react";
 import type { MyWorkItem, MyWorkType } from "@/lib/admin-api";
 import EmptyState from "@/components/ui/empty-state";
 
 // ── Section definitions (display order) ─────────────────────────────────────────
+// Type strings must match the API's exactly — a section whose type the server
+// never emits renders nothing, which is how this page sat empty.
 
 const SECTIONS: { type: MyWorkType; label: string; icon: LucideIcon }[] = [
-  { type: "assigned_lead",     label: "Assigned Leads",     icon: ClipboardList },
-  { type: "follow_up",         label: "Due Follow-ups",     icon: CalendarClock },
-  { type: "proposal_accepted", label: "Proposal Accepted",  icon: CheckCircle2 },
-  { type: "customer_approval", label: "Customer Approvals", icon: UserCheck },
-  { type: "access_request",    label: "Access Requests",    icon: ShieldQuestion },
+  { type: "finance_task",              label: "Finance Tasks",      icon: LineChart },
+  { type: "assigned_lead",             label: "Assigned Leads",     icon: ClipboardList },
+  { type: "follow_up_due",             label: "Due Follow-ups",     icon: CalendarClock },
+  { type: "proposal_accepted",         label: "Proposal Accepted",  icon: CheckCircle2 },
+  { type: "customer_approval_needed",  label: "Customer Approvals", icon: UserCheck },
+  { type: "customer_access_requested", label: "Access Requests",    icon: ShieldQuestion },
 ];
+
+/** Statuses an assignee can set on their own finance task. */
+const FINANCE_STATUSES = ["Pending", "Sent", "In Progress", "Under Review", "Approved", "Completed", "Cancelled"];
 
 const PRIORITY_STYLES: Record<string, string> = {
   urgent: "border-red-200 bg-red-50 text-red-700",
@@ -93,7 +99,7 @@ export default function MyWork() {
             <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
               <ul className="divide-y divide-black/[0.05]">
                 {sectionItems.map((item, idx) => (
-                  <WorkRow key={`${type}-${idx}`} item={item} />
+                  <WorkRow key={`${type}-${idx}`} item={item} onChanged={load} />
                 ))}
               </ul>
             </div>
@@ -106,9 +112,37 @@ export default function MyWork() {
 
 // ── Row ───────────────────────────────────────────────────────────────────────
 
-function WorkRow({ item }: { item: MyWorkItem }) {
+function WorkRow({ item, onChanged }: { item: MyWorkItem; onChanged: () => void }) {
   const due = fmtDue(item.due_at);
   const priorityCls = item.priority ? PRIORITY_STYLES[item.priority] ?? PRIORITY_STYLES.normal : null;
+  const [updating, setUpdating] = useState(false);
+  const [updateError, setUpdateError] = useState<string | null>(null);
+
+  // The assignee's in-place status update — finance tasks only. Setting a
+  // status notifies whoever created the record, so "done" reaches finance
+  // without a message being written.
+  const setStatus = async (status: string) => {
+    if (!item.id || status === item.status) return;
+    setUpdating(true);
+    setUpdateError(null);
+    try {
+      const res = await fetch(`/api/admin/my-work/finance/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({})) as { message?: string };
+        setUpdateError(json.message ?? "Could not update.");
+        return;
+      }
+      onChanged();
+    } catch {
+      setUpdateError("Could not reach the server.");
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   return (
     <li className="flex items-center gap-3 px-4 py-3.5 transition hover:bg-[#fafafa]">
@@ -120,7 +154,7 @@ function WorkRow({ item }: { item: MyWorkItem }) {
               {item.priority}
             </span>
           )}
-          {item.status && (
+          {item.status && !item.editable && (
             <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[0.65rem] font-bold capitalize text-gray-500">
               {item.status.replace(/_/g, " ")}
             </span>
@@ -134,7 +168,21 @@ function WorkRow({ item }: { item: MyWorkItem }) {
             {due.overdue ? "Overdue · " : "Due "}{due.label}
           </p>
         )}
+        {updateError && (
+          <p className="mt-0.5 text-[0.73rem] font-medium text-red-600">{updateError}</p>
+        )}
       </div>
+
+      {item.editable && item.id ? (
+        <select
+          value={item.status ?? "Pending"}
+          disabled={updating}
+          onChange={(e) => void setStatus(e.target.value)}
+          className="h-8 shrink-0 cursor-pointer rounded-xl border border-black/[0.09] bg-white px-2 text-[0.75rem] font-semibold text-[#1a1a1a] outline-none transition focus:border-[#E85C1A] disabled:opacity-50"
+        >
+          {FINANCE_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+      ) : null}
 
       {item.action_url && (
         <Link
