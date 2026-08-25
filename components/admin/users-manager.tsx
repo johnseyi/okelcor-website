@@ -1,8 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus, Pencil, Trash2, X, AlertCircle, CheckCircle2, Mail, RefreshCcw, AlertTriangle } from "lucide-react";
-import { createUser, updateUser, deleteUser, resendCredentials } from "@/app/admin/users/actions";
+import { Plus, Pencil, Trash2, X, AlertCircle, CheckCircle2, Mail, RefreshCcw, AlertTriangle, KeyRound, RotateCcw } from "lucide-react";
+import {
+  createUser, updateUser, deleteUser, resendCredentials,
+  getPermissionsCatalog, updateUserPermissions,
+  type PermissionCatalogEntry,
+} from "@/app/admin/users/actions";
 import type { AdminUser } from "@/lib/admin-api";
 import { ALL_ROLES, ROLE_LABELS, ROLE_COLORS } from "@/lib/admin-permissions";
 
@@ -77,6 +81,13 @@ export default function UsersManager({ users: initialUsers }: { users: AdminUser
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Permission overrides editor
+  const [permsUser, setPermsUser]       = useState<AdminUser | null>(null);
+  const [catalog, setCatalog]           = useState<PermissionCatalogEntry[] | null>(null);
+  const [permsChecked, setPermsChecked] = useState<Set<string>>(new Set());
+  const [permsError, setPermsError]     = useState<string | null>(null);
+  const [permsSaving, setPermsSaving]   = useState(false);
 
   // ── Modal helpers ────────────────────────────────────────────────────────────
 
@@ -155,6 +166,72 @@ export default function UsersManager({ users: initialUsers }: { users: AdminUser
       if (res.error) { setResendCredsError(res.error); return; }
       setResendCredsDone(true);
       setTimeout(() => setEmailNotSentId(null), 4000);
+    });
+  };
+
+  // ── Permission overrides ─────────────────────────────────────────────────────
+
+  /** Role-default permission keys for a role, from the loaded catalog. */
+  const roleDefaults = (cat: PermissionCatalogEntry[], role: string): Set<string> =>
+    new Set(cat.filter((p) => p.roles.includes(role)).map((p) => p.key));
+
+  const openPermissions = (user: AdminUser) => {
+    setPermsUser(user);
+    setPermsError(null);
+    setPermsChecked(new Set());
+
+    startTransition(async () => {
+      let cat = catalog;
+      if (!cat) {
+        const res = await getPermissionsCatalog();
+        if (res.error || !res.permissions) {
+          setPermsError(res.error ?? "Failed to load the permission catalog.");
+          return;
+        }
+        cat = res.permissions;
+        setCatalog(cat);
+      }
+      // Effective = API's list when we have it; otherwise role defaults.
+      const effective = user.permissions?.length
+        ? new Set(user.permissions)
+        : roleDefaults(cat, user.role);
+      setPermsChecked(effective);
+    });
+  };
+
+  const togglePerm = (key: string) => {
+    setPermsChecked((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+
+  const resetToRole = () => {
+    if (!catalog || !permsUser) return;
+    setPermsChecked(roleDefaults(catalog, permsUser.role));
+  };
+
+  const savePermissions = () => {
+    if (!catalog || !permsUser) return;
+    const defaults = roleDefaults(catalog, permsUser.role);
+    const grants   = [...permsChecked].filter((k) => !defaults.has(k));
+    const revokes  = [...defaults].filter((k) => !permsChecked.has(k));
+
+    setPermsSaving(true);
+    setPermsError(null);
+    startTransition(async () => {
+      const res = await updateUserPermissions(permsUser.id, grants, revokes);
+      setPermsSaving(false);
+      if (res.error || !res.user) {
+        setPermsError(res.error ?? "Failed to update permissions.");
+        return;
+      }
+      const updated = res.user;
+      setUsers((prev) =>
+        prev.map((u) => (u.id === permsUser.id ? { ...u, ...updated } : u))
+      );
+      setPermsUser(null);
     });
   };
 
@@ -306,6 +383,14 @@ export default function UsersManager({ users: initialUsers }: { users: AdminUser
                       >
                         {user.role_label ?? ROLE_LABELS[user.role] ?? user.role}
                       </span>
+                      {user.has_permission_overrides && (
+                        <span
+                          title="This user's access has been customized beyond their role"
+                          className="ml-1.5 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[0.65rem] font-semibold text-amber-700"
+                        >
+                          customized
+                        </span>
+                      )}
                     </td>
 
                     {/* Last login */}
@@ -344,6 +429,16 @@ export default function UsersManager({ users: initialUsers }: { users: AdminUser
                           >
                             <Pencil size={13} />
                           </button>
+                          {user.role !== "super_admin" && (
+                            <button
+                              type="button"
+                              onClick={() => openPermissions(user)}
+                              title="Edit permissions"
+                              className="flex h-7 w-7 items-center justify-center rounded-lg border border-black/[0.09] text-[#5c5e62] transition hover:border-[#E85C1A] hover:text-[#E85C1A]"
+                            >
+                              <KeyRound size={13} />
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => { setDeleteError(null); setDeleteId(user.id); }}
@@ -474,6 +569,130 @@ export default function UsersManager({ users: initialUsers }: { users: AdminUser
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Permission overrides modal ── */}
+      {permsUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            role="presentation"
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setPermsUser(null)}
+          />
+
+          <div className="relative flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl bg-white shadow-xl">
+            {/* Header */}
+            <div className="flex items-start justify-between border-b border-black/[0.06] px-6 py-5">
+              <div>
+                <h2 className="text-[0.95rem] font-extrabold text-[#1a1a1a]">
+                  Permissions — {permsUser.name}
+                </h2>
+                <p className="mt-0.5 text-[0.78rem] text-[#5c5e62]">
+                  Ticked = allowed. Unticking a role default removes it for this person only;
+                  ticking something extra adds it without changing their{" "}
+                  <strong>{ROLE_LABELS[permsUser.role] ?? permsUser.role}</strong> role.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPermsUser(null)}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#5c5e62] transition hover:bg-[#f0f2f5]"
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              {permsError && (
+                <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-[0.83rem] text-red-700">
+                  <AlertCircle size={13} className="shrink-0" />
+                  {permsError}
+                </div>
+              )}
+
+              {!catalog ? (
+                <p className="py-8 text-center text-[0.83rem] text-[#5c5e62]">
+                  {permsError ? "Could not load permissions." : "Loading permissions…"}
+                </p>
+              ) : (
+                Object.entries(
+                  catalog.reduce<Record<string, PermissionCatalogEntry[]>>((acc, p) => {
+                    (acc[p.group] ??= []).push(p);
+                    return acc;
+                  }, {})
+                ).map(([group, entries]) => {
+                  const defaults = roleDefaults(catalog, permsUser.role);
+                  return (
+                    <div key={group} className="mb-4">
+                      <p className="mb-1.5 text-[0.68rem] font-bold uppercase tracking-[0.14em] text-[#9ca3af]">
+                        {group.replace(/_/g, " ")}
+                      </p>
+                      <div className="overflow-hidden rounded-xl border border-black/[0.07]">
+                        {entries.map((p) => {
+                          const checked   = permsChecked.has(p.key);
+                          const isDefault = defaults.has(p.key);
+                          const isGrant   = checked && !isDefault;
+                          const isRevoke  = !checked && isDefault;
+                          return (
+                            <label
+                              key={p.key}
+                              className={`flex cursor-pointer items-center gap-3 border-b border-black/[0.05] px-3.5 py-2 last:border-0 transition hover:bg-[#fafafa] ${
+                                isGrant ? "bg-emerald-50/60" : isRevoke ? "bg-red-50/50" : ""
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => togglePerm(p.key)}
+                                className="h-4 w-4 shrink-0 accent-[#E85C1A]"
+                              />
+                              <span className="flex-1 font-mono text-[0.78rem] text-[#374151]">{p.key}</span>
+                              {isGrant && (
+                                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[0.62rem] font-bold uppercase text-emerald-700">added</span>
+                              )}
+                              {isRevoke && (
+                                <span className="rounded-full bg-red-100 px-2 py-0.5 text-[0.62rem] font-bold uppercase text-red-600">removed</span>
+                              )}
+                              {isDefault && !isRevoke && !isGrant && (
+                                <span className="text-[0.65rem] text-[#c2c6cc]">role default</span>
+                              )}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center gap-3 border-t border-black/[0.06] px-6 py-4">
+              <button
+                type="button"
+                onClick={savePermissions}
+                disabled={permsSaving || !catalog}
+                className="h-9 flex-1 rounded-full bg-[#E85C1A] text-[0.83rem] font-semibold text-white transition hover:bg-[#d44f12] disabled:opacity-60"
+              >
+                {permsSaving ? "Saving…" : "Save Permissions"}
+              </button>
+              <button
+                type="button"
+                onClick={resetToRole}
+                disabled={!catalog}
+                title="Clear every override — back to exactly the role's access"
+                className="flex h-9 items-center gap-1.5 rounded-full border border-black/10 px-4 text-[0.83rem] font-semibold text-[#1a1a1a] transition hover:bg-[#f0f2f5] disabled:opacity-60"
+              >
+                <RotateCcw size={13} />
+                Reset to role
+              </button>
+            </div>
+            <p className="px-6 pb-4 text-center text-[0.7rem] text-[#9ca3af]">
+              Access changes on the server immediately; their sidebar updates at next login.
+            </p>
           </div>
         </div>
       )}
