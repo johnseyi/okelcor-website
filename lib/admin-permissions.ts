@@ -25,7 +25,10 @@ export const ROLE_ACCESS: Record<string, string[]> = {
   // Reconciliation and the finance half of order sign-off. Deliberately narrow:
   // this role exists to hold one half of a separation of duties, so handing it
   // the rest of the panel would defeat the point of splitting it out.
-  finance:         ["dashboard", "orders", "operations", "finance"],
+  // `quotes` added: finance reconciles orders that begin life as quotes, so
+  // read access to the pipeline belongs with the role. The API grants it
+  // read-only (quotes.manage/view, not quotes.update).
+  finance:         ["dashboard", "orders", "quotes", "operations", "finance"],
   sales_manager:   ["dashboard", "orders", "quotes", "customers", "analytics", "logistics", "crm", "operations"],
   content_manager: ["dashboard", "articles", "hero_slides", "promotions", "fet", "brands", "media"],
   // Content + catalogue + campaigns — the person optimizing products and
@@ -163,7 +166,7 @@ const PERMISSION_ROLES: Record<string, string[]> = {
   "articles.manage":       ["super_admin", "admin", "editor", "content_manager", "marketing"],
 
   // Quotes
-  "quotes.manage":         ["super_admin", "admin", "order_manager", "sales_manager"],
+  "quotes.manage":         ["super_admin", "admin", "order_manager", "sales_manager", "finance"],
 
   // Customers
   "customers.view":        ["super_admin", "admin", "sales_manager", "support"],
