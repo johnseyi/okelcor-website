@@ -109,6 +109,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     label: "Sales Channels",
     items: [
       { label: "eBay", href: "/admin/ebay", icon: ShoppingBag, section: "ebay" , keywords: "listings marketplace sync" },
+      { label: "eBay Price Audit", href: "/admin/ebay-audit", icon: TrendingUp, section: "ebay" , keywords: "margin loss fees cost pricing market insight audit" },
     ],
   },
   {

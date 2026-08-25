@@ -131,6 +131,8 @@ export const PATH_SECTION: Record<string, string> = {
   "/admin/customer-approvals": "customers",
   "/admin/customers":       "customers",
   "/admin/security":        "security",
+  // Before "/admin/ebay": startsWith() matching, first entry wins.
+  "/admin/ebay-audit":      "ebay",
   "/admin/ebay":            "ebay",
   // Listed before "/admin/analytics": PATH_SECTION is matched with startsWith()
   // and the first entry wins, so the broader prefix must come second.
