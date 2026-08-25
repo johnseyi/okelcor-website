@@ -124,6 +124,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       { label: "Finance Invoices", href: "/admin/finance-invoices", icon: ReceiptText, section: "finance" , keywords: "sevdesk reconciliation invoice register vat" },
       { label: "Finance Snapshot", href: "/admin/finance-snapshot", icon: LineChart, section: "finance" , keywords: "liquidity cash position proposals receipts pipeline board" },
       { label: "Analytics",     href: "/admin/analytics", icon: BarChart2,  section: "analytics" , keywords: "reports stats funnel" },
+      { label: "Promotion Insight", href: "/admin/analytics/product-mix", icon: Package, section: "analytics" , keywords: "used new tyres bundles sizes repeat buyers countries promote" },
       // Its own section, not "analytics": the roles the backend grants this
       // report to are not the ones our analytics section lists, and the two
       // pages read different data sources.
