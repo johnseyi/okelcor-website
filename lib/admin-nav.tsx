@@ -121,6 +121,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       { label: "Team Contribution", href: "/admin/contribution/team", icon: Users, section: "staff_team", keywords: "staff performance team report kpi who did what" },
       { label: "Transaction Report", href: "/admin/operations/report", icon: LineChart, section: "operations" , keywords: "transactions month revenue chart export" },
       { label: "Finance Invoices", href: "/admin/finance-invoices", icon: ReceiptText, section: "finance" , keywords: "sevdesk reconciliation invoice register vat" },
+      { label: "Finance Snapshot", href: "/admin/finance-snapshot", icon: LineChart, section: "finance" , keywords: "liquidity cash position proposals receipts pipeline board" },
       { label: "Analytics",     href: "/admin/analytics", icon: BarChart2,  section: "analytics" , keywords: "reports stats funnel" },
       // Its own section, not "analytics": the roles the backend grants this
       // report to are not the ones our analytics section lists, and the two
