@@ -96,6 +96,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     items: [
       { label: "Contacts",   href: "/admin/marketing/contacts",  icon: Mail, section: "marketing" , keywords: "mailing list audience import markets wix" },
       { label: "Campaigns",  href: "/admin/marketing/campaigns", icon: Send, section: "marketing" , keywords: "bulk email newsletter send builder templates" },
+      { label: "Campaign Scores", href: "/admin/campaign-scores", icon: BadgeCheck, section: "marketing" , keywords: "open rate completion clicks tracker feedback score marketer" },
     ],
   },
   {

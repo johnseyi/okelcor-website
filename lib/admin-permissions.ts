@@ -148,6 +148,7 @@ export const PATH_SECTION: Record<string, string> = {
   "/admin/crm":             "crm",
   "/admin/inbox":           "crm",
   "/admin/marketing":       "marketing",
+  "/admin/campaign-scores": "marketing",
   "/admin/media":           "media",
   "/admin/partners":        "partners",
   "/admin/partner-sales":   "partners",
