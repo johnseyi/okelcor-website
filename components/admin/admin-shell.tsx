@@ -50,7 +50,7 @@ import {
   X,
 } from "lucide-react";
 import { logoutAdmin } from "@/app/admin/actions";
-import { canAccess, PATH_SECTION, ROLE_LABELS, ROLE_BADGE_COLORS } from "@/lib/admin-permissions";
+import { canAccessSection, PATH_SECTION, ROLE_LABELS, ROLE_BADGE_COLORS } from "@/lib/admin-permissions";
 import CrispNotifier from "@/components/admin/crisp-notifier";
 import NotificationsBell from "@/components/admin/notifications-bell";
 import InsightsBell from "@/components/admin/insights-bell";
@@ -76,6 +76,7 @@ function Sidebar({
   pathname,
   role,
   roleLabel,
+  permissions,
   collapsed,
   onClose,
   onToggleCollapse,
@@ -84,6 +85,7 @@ function Sidebar({
   pathname: string;
   role: string;
   roleLabel: string;
+  permissions: string[] | null;
   collapsed: boolean;
   onClose: () => void;
   onToggleCollapse: () => void;
@@ -133,7 +135,7 @@ function Sidebar({
       ...group,
       items: group.items.filter(
         (item) =>
-          (item.section === null || !role || canAccess(role, item.section)) &&
+          (item.section === null || !role || canAccessSection(role, item.section, permissions)) &&
           (!q ||
             `${item.label} ${item.href} ${item.keywords ?? ""}`.toLowerCase().includes(q)),
       ),
@@ -311,6 +313,8 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [role, setRole]                     = useState("");
   const [roleLabel, setRoleLabel]           = useState("");
+  // null = no admin_perms cookie (pre-override session) — role map decides.
+  const [permissions, setPermissions]       = useState<string[] | null>(null);
   const [adminName, setAdminName]           = useState("");
   const [displayName, setDisplayName]       = useState("");
   const [mustChange, setMustChange]         = useState(false);
@@ -325,6 +329,8 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     const rl = getCookie("admin_role_label") || ROLE_LABELS[r] || r;
     setRole(r);
     setRoleLabel(rl);
+    const perms = getCookie("admin_perms");
+    setPermissions(perms ? perms.split(",").filter(Boolean) : null);
     setAdminName(getCookie("admin_name"));
     setDisplayName(getCookie("admin_display_name") || getCookie("admin_name"));
     setMustChange(getCookie("admin_must_change") === "1");
@@ -365,16 +371,17 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Route guard — redirect to /admin/unauthorized if role can't access current section
+  // Route guard — redirect to /admin/unauthorized if this user can't access
+  // the current section (per-user permission overrides included).
   useEffect(() => {
     if (!role) return;
     const section = Object.entries(PATH_SECTION).find(([path]) =>
       pathname.startsWith(path)
     )?.[1];
-    if (section && !canAccess(role, section)) {
+    if (section && !canAccessSection(role, section, permissions)) {
       router.replace("/admin/unauthorized");
     }
-  }, [pathname, role, router]);
+  }, [pathname, role, permissions, router]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -425,6 +432,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           pathname={pathname}
           role={role}
           roleLabel={roleLabel}
+          permissions={permissions}
           collapsed={sidebarCollapsed}
           onClose={() => setSidebarOpen(false)}
           onToggleCollapse={handleToggleCollapse}

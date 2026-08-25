@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SHOP_REQUIRES_LOGIN } from "@/lib/flags";
-import { canAccess, PATH_SECTION } from "@/lib/admin-permissions";
+import { canAccessSection, PATH_SECTION } from "@/lib/admin-permissions";
 
 // Paths accessible to every authenticated admin regardless of role.
 const ADMIN_ALWAYS_ALLOWED = [
@@ -11,20 +11,21 @@ const ADMIN_ALWAYS_ALLOWED = [
   "/admin/security",    // all roles can visit to manage own 2FA
 ];
 
-function roleCanAccess(role: string, pathname: string): boolean {
+function roleCanAccess(role: string, pathname: string, permissions?: string[] | null): boolean {
   if (ADMIN_ALWAYS_ALLOWED.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
     return true;
   }
   if (role === "super_admin") return true;
 
-  // Derive from the canonical ROLE_ACCESS map — single source of truth.
+  // Derive from the canonical maps — permissions (per-user overrides) first,
+  // ROLE_ACCESS as fallback.
   const section = Object.entries(PATH_SECTION).find(([path]) =>
     pathname.startsWith(path)
   )?.[1];
 
   if (!section) return true;    // path not mapped — pass through
   if (!role) return false;      // unknown/missing role — deny
-  return canAccess(role, section);
+  return canAccessSection(role, section, permissions);
 }
 
 // ── Middleware ────────────────────────────────────────────────────────────────
@@ -51,7 +52,11 @@ export function middleware(request: NextRequest) {
     }
 
     const role = request.cookies.get("admin_role")?.value ?? "";
-    if (role && !roleCanAccess(role, pathname)) {
+    // Effective permissions from login (per-user overrides included). Absent
+    // for sessions from before this cookie existed — role map covers those.
+    const permsCookie = request.cookies.get("admin_perms")?.value;
+    const permissions = permsCookie ? permsCookie.split(",").filter(Boolean) : null;
+    if (role && !roleCanAccess(role, pathname, permissions)) {
       return NextResponse.redirect(new URL("/admin/unauthorized", request.url));
     }
 
