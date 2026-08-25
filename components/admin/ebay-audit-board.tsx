@@ -14,7 +14,7 @@ import {
   RefreshCw, Search, TrendingUp, X,
 } from "lucide-react";
 import {
-  getAudit, applyPrice, getMarket,
+  getAudit, applyPrice, getMarket, syncLive,
   type AuditRow, type AuditMeta, type AuditVerdict, type MarketComparison,
 } from "@/app/admin/ebay-audit/actions";
 
@@ -44,6 +44,7 @@ export default function EbayAuditBoard() {
   const [markets, setMarkets]       = useState<Record<number, MarketComparison | "loading" | "error">>({});
   const [priceDrafts, setPriceDrafts] = useState<Record<number, string>>({});
   const [applying, setApplying]     = useState<number | null>(null);
+  const [syncing, setSyncing]       = useState(false);
 
   const load = useCallback(() => {
     startTransition(async () => {
@@ -130,10 +131,30 @@ export default function EbayAuditBoard() {
             </p>
           </div>
         </div>
-        <button type="button" onClick={() => { setLoading(true); load(); }}
-          className="flex items-center gap-2 rounded-full bg-[#1a1a1a] px-4 py-2 text-[0.8rem] font-semibold text-white transition hover:bg-[#333]">
-          <RefreshCw size={13} /> Refresh
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[0.72rem] text-[#9ca3af]">
+            {meta?.live.fetched_at
+              ? `Live eBay snapshot: ${new Date(meta.live.fetched_at).toLocaleString()} · ${meta.live.total_on_ebay} listings on eBay`
+              : "No live snapshot yet — fetch to compare against real eBay prices"}
+          </span>
+          <button type="button" disabled={syncing}
+            onClick={() => {
+              setSyncing(true);
+              startTransition(async () => {
+                const res = await syncLive();
+                setSyncing(false);
+                setNotice(res.error ?? res.message ?? "Sync started.");
+              });
+            }}
+            className="flex items-center gap-2 rounded-full bg-[#E85C1A] px-4 py-2 text-[0.8rem] font-semibold text-white transition hover:bg-[#d44f12] disabled:opacity-60">
+            {syncing ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+            Fetch live from eBay
+          </button>
+          <button type="button" onClick={() => { setLoading(true); load(); }}
+            className="flex items-center gap-2 rounded-full bg-[#1a1a1a] px-4 py-2 text-[0.8rem] font-semibold text-white transition hover:bg-[#333]">
+            <RefreshCw size={13} /> Refresh
+          </button>
+        </div>
       </div>
 
       {notice && (
@@ -154,6 +175,17 @@ export default function EbayAuditBoard() {
           <SummaryCard label="Missing cost price" value={counts.missing_cost} accent={counts.missing_cost > 0 ? "text-gray-500" : undefined}
             sub="margin unknown — fill in cost" />
           <SummaryCard label="Healthy" value={counts.healthy} accent="text-emerald-600" />
+        </div>
+      )}
+
+      {/* Reconciliation vs the live snapshot */}
+      {counts && meta?.live.fetched_at && (counts.price_drift > 0 || counts.live_missing > 0 || counts.unmatched > 0) && (
+        <div className="mb-5 flex flex-wrap items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-[0.8rem] text-amber-800">
+          <AlertTriangle size={14} className="shrink-0 text-amber-500" />
+          <span className="font-bold">eBay disagrees with the panel:</span>
+          {counts.price_drift > 0 && <span>{counts.price_drift} price(s) differ on eBay</span>}
+          {counts.live_missing > 0 && <span>· {counts.live_missing} marked listed but NOT on eBay</span>}
+          {counts.unmatched > 0 && <span>· {counts.unmatched} live listing(s) unknown to the catalogue (below)</span>}
         </div>
       )}
 
@@ -182,7 +214,7 @@ export default function EbayAuditBoard() {
               <tr className="border-b border-black/[0.08] bg-[#f8f9fa] text-[#6b7280]">
                 <th className="px-3 py-2.5 font-bold">Product</th>
                 <th className="px-3 py-2.5 text-right font-bold">Cost</th>
-                <th className="px-3 py-2.5 text-right font-bold">eBay price</th>
+                <th className="px-3 py-2.5 text-right font-bold">Live on eBay</th>
                 <th className="px-3 py-2.5 text-right font-bold">Fees est.</th>
                 <th className="px-3 py-2.5 text-right font-bold">Net €</th>
                 <th className="px-3 py-2.5 text-right font-bold">Net %</th>
@@ -208,7 +240,28 @@ export default function EbayAuditBoard() {
                       </p>
                     </td>
                     <td className="whitespace-nowrap px-3 py-2.5 text-right font-mono">{fmt(r.cost_price)}</td>
-                    <td className="whitespace-nowrap px-3 py-2.5 text-right font-mono font-bold">{fmt(r.ebay_price)}</td>
+                    <td className="whitespace-nowrap px-3 py-2.5 text-right">
+                      {r.live_missing ? (
+                        <span className="rounded-full bg-red-100 px-2 py-0.5 text-[0.65rem] font-bold text-red-700" title="Marked as listed in the panel, but eBay is not showing it">
+                          NOT ON EBAY
+                        </span>
+                      ) : (
+                        <>
+                          <span className="font-mono font-bold">{fmt(r.ebay_price)}</span>
+                          {r.live && r.live.status !== "published" && (
+                            <span className="ml-1 rounded-full bg-gray-200 px-1.5 py-0.5 text-[0.6rem] font-bold uppercase text-gray-600">{r.live.status}</span>
+                          )}
+                          {r.price_drift !== null && (
+                            <p className="text-[0.65rem] text-red-600" title="eBay's live price differs from the panel price">
+                              panel: {fmt(r.db_price)} ({r.price_drift > 0 ? "+" : ""}{fmt(r.price_drift)})
+                            </p>
+                          )}
+                          {!r.live && !r.live_missing && (
+                            <p className="text-[0.62rem] text-[#c2c6cc]">panel price — no snapshot</p>
+                          )}
+                        </>
+                      )}
+                    </td>
                     <td className="whitespace-nowrap px-3 py-2.5 text-right font-mono text-[#6b7280]">−{fmt(r.fee_estimate)}</td>
                     <td className={`whitespace-nowrap px-3 py-2.5 text-right font-mono font-bold ${
                       r.net_margin === null ? "text-[#9ca3af]" : r.net_margin < 0 ? "text-red-600" : "text-emerald-700"
@@ -278,6 +331,42 @@ export default function EbayAuditBoard() {
           </table>
         </div>
       </div>
+
+      {/* Live eBay listings the catalogue does not know */}
+      {meta && meta.unmatched_listings.length > 0 && (
+        <div className="mt-6">
+          <h2 className="mb-2 text-[0.8rem] font-extrabold text-[#1a1a1a]">
+            On eBay, but not in the panel ({meta.unmatched_listings.length})
+          </h2>
+          <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/[0.06]">
+            <table className="w-full text-left text-[0.78rem]">
+              <thead>
+                <tr className="border-b border-black/[0.08] bg-[#f8f9fa] text-[#6b7280]">
+                  <th className="px-3 py-2 font-bold">SKU</th>
+                  <th className="px-3 py-2 text-right font-bold">Live price</th>
+                  <th className="px-3 py-2 font-bold">Status</th>
+                  <th className="px-3 py-2 text-right font-bold">Qty</th>
+                  <th className="px-3 py-2 font-bold">Listing ID</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-black/[0.04]">
+                {meta.unmatched_listings.map((l) => (
+                  <tr key={l.sku}>
+                    <td className="px-3 py-2 font-mono font-bold">{l.sku}</td>
+                    <td className="px-3 py-2 text-right font-mono">{fmt(l.price)} {l.currency ?? ""}</td>
+                    <td className="px-3 py-2">{l.status}</td>
+                    <td className="px-3 py-2 text-right">{l.quantity ?? "—"}</td>
+                    <td className="px-3 py-2 font-mono text-[#9ca3af]">{l.listing_id ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-1.5 text-[0.72rem] text-[#9ca3af]">
+            These are live on eBay with no matching product SKU in the catalogue — sales of these bypass the system&apos;s stock, cost, and margin tracking entirely.
+          </p>
+        </div>
+      )}
 
       <p className="mt-4 flex items-start gap-2 text-[0.72rem] text-[#9ca3af]">
         <AlertCircle size={13} className="mt-0.5 shrink-0" />

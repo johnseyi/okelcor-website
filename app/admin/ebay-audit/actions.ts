@@ -17,7 +17,16 @@ export type AuditRow = {
   type: string | null;
   season: string | null;
   stock: number;
+  /** Effective selling price — the LIVE eBay price when a snapshot has it, else the panel price. */
   ebay_price: number;
+  /** What the panel believes the price is. */
+  db_price: number;
+  /** The listing as eBay actually shows it (from the live snapshot), null if not in the snapshot. */
+  live: { price: number | null; currency: string | null; status: string; quantity: number | null; listing_id: string | null } | null;
+  /** A live snapshot exists but this "listed" product is not on eBay. */
+  live_missing: boolean;
+  /** live price − panel price, when they disagree. */
+  price_drift: number | null;
   cost_price: number | null;
   price_b2b: number | null;
   price_b2c: number | null;
@@ -32,9 +41,23 @@ export type AuditRow = {
   ebay_sync_error: string | null;
 };
 
+export type UnmatchedListing = {
+  sku: string;
+  price: number | null;
+  currency: string | null;
+  status: string;
+  quantity: number | null;
+  listing_id: string | null;
+};
+
 export type AuditMeta = {
-  counts: { listed: number; loss: number; thin: number; missing_cost: number; healthy: number };
+  counts: {
+    listed: number; loss: number; thin: number; missing_cost: number; healthy: number;
+    price_drift: number; live_missing: number; unmatched: number;
+  };
   loss_per_full_sale: number;
+  live: { fetched_at: string | null; total_on_ebay: number };
+  unmatched_listings: UnmatchedListing[];
   fee_model: { fee_percent: number; fee_fixed: number; thin_margin_percent: number; target_margin_percent: number };
 };
 
@@ -79,6 +102,13 @@ export async function getAudit(): Promise<{ rows?: AuditRow[]; meta?: AuditMeta;
   const { json, error } = await authedFetch("/admin/ebay/audit");
   if (error || !json) return { error };
   return { rows: (json.data as AuditRow[]) ?? [], meta: json.meta as AuditMeta };
+}
+
+/** Kicks off the live-listing snapshot refresh (runs server-side for a minute or two). */
+export async function syncLive(): Promise<{ error?: string; message?: string }> {
+  const { json, error } = await authedFetch("/admin/ebay/audit/sync-live", { method: "POST" });
+  if (error || !json) return { error };
+  return { message: typeof json.message === "string" ? json.message : undefined };
 }
 
 export async function applyPrice(id: number, price: number): Promise<{ error?: string; message?: string }> {
