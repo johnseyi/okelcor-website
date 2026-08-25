@@ -342,6 +342,7 @@ export default function EbayAuditBoard() {
             <table className="w-full text-left text-[0.78rem]">
               <thead>
                 <tr className="border-b border-black/[0.08] bg-[#f8f9fa] text-[#6b7280]">
+                  <th className="px-3 py-2 font-bold">Listing</th>
                   <th className="px-3 py-2 font-bold">SKU</th>
                   <th className="px-3 py-2 text-right font-bold">Live price</th>
                   <th className="px-3 py-2 font-bold">Status</th>
@@ -352,6 +353,7 @@ export default function EbayAuditBoard() {
               <tbody className="divide-y divide-black/[0.04]">
                 {meta.unmatched_listings.map((l) => (
                   <tr key={l.sku}>
+                    <td className="max-w-[300px] truncate px-3 py-2 font-semibold text-[#1a1a1a]" title={l.title ?? undefined}>{l.title ?? "—"}</td>
                     <td className="px-3 py-2 font-mono font-bold">{l.sku}</td>
                     <td className="px-3 py-2 text-right font-mono">{fmt(l.price)} {l.currency ?? ""}</td>
                     <td className="px-3 py-2">{l.status}</td>

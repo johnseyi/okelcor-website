@@ -43,6 +43,8 @@ export type AuditRow = {
 
 export type UnmatchedListing = {
   sku: string;
+  /** The eBay listing title — often the only handle on a hand-made listing with no SKU. */
+  title: string | null;
   price: number | null;
   currency: string | null;
   status: string;
