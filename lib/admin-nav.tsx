@@ -41,7 +41,10 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     label: null,
     items: [
       { label: "Dashboard",     href: "/admin",               icon: LayoutDashboard, section: "dashboard" , keywords: "home overview stats revenue kpi" },
-      { label: "My Work",       href: "/admin/my-work",       icon: ClipboardCheck,  section: null , keywords: "todo assigned tasks queue leads followups" },
+      { label: "My Work",       href: "/admin/my-work",       icon: ClipboardCheck,  section: null , keywords: "assigned tasks queue leads followups" },
+      // `section: null` — anyone can use the shared list and tag a teammate;
+      // a gate here would defeat the point of it.
+      { label: "Team To-Dos",   href: "/admin/todos",         icon: ClipboardList,   section: null , keywords: "todo to-do task list tag team assign checklist" },
       // `section: null` — no role gate, and that is the design rather than an
       // oversight. Every role holds `staff.self` on the API, because nothing may
       // be measured about a person that the person cannot open. Gating this item

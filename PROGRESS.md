@@ -1187,6 +1187,21 @@ trail, mirroring the DOC-5 order line-item revision pattern. Also asked what
 
 ---
 
+## Session note — 2026-08-28 (session 102)
+
+Backend commit `c235f29` (okelcor-api). The shared team to-do list.
+
+| Change | Notes |
+|---|---|
+| `/admin/todos` | `todo-board.tsx`. "Team To-Dos" sits in the top nav for EVERY role (`section: null`, deliberately — a gate would defeat a list anyone can use). Add/edit form with the tag picker ("notifies them" said right on the label), Active / Tagged-to-me / Created-by-me / Done pills, rows with priority badge, overdue-red due dates, assignee pill, done-by stamp, and a status select enabled per row by the server's `you_may_edit`. Edit/delete buttons render only where `you_may_edit`/`you_may_delete` say so — the participant rules live server-side and are never re-derived here. `?todo=` highlights the exact item, so notifications and My Work land on it. |
+| My Work: "To-Dos" section | The status select PATCHes the normal `/api/admin/todos/{id}` — being a participant is the authorization, so no my-work-specific proxy was needed; a third branch in the endpoint switch covers it. |
+| Plumbing | 2 proxy routes (`/api/admin/todos`, `/api/admin/todos/[id]`); `TodoItem`/`TodoMeta` types in `lib/admin-api.ts`; no `PATH_SECTION` entry — the path is ungated like My Work and Messages. |
+
+Build: `npm run build` exit 0, compiled in 8.0s. TypeScript 0 errors, ESLint
+clean on the changed files.
+
+---
+
 ## Session note — 2026-08-28 (session 101)
 
 Backend commit `3854ff2` (okelcor-api). The Sales & Order Management board —

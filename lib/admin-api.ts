@@ -1996,3 +1996,35 @@ export type SalesBoardMeta = {
   categories: string[];
   known_periods: string[];
 };
+
+// ── Team to-do list (Session 102) ────────────────────────────────────────────
+
+export type TodoItem = {
+  id: number;
+  title: string;
+  details?: string | null;
+  due_on?: string | null;
+  overdue: boolean;
+  /** low | normal | high. */
+  priority: string;
+  /** open | in_progress | done. */
+  status: string;
+  assigned_admin_id?: number | null;
+  assignee?: string | null;
+  created_by?: number | null;
+  creator?: string | null;
+  completed_at?: string | null;
+  completed_by_name?: string | null;
+  created_at?: string | null;
+  /** Served, not derived — the participant rules live server-side. */
+  you_may_edit: boolean;
+  you_may_delete: boolean;
+};
+
+export type TodoMeta = {
+  todos_available: boolean;
+  priorities: string[];
+  statuses: { key: string; label: string }[];
+  open_count: number;
+  staff: { id: number; name: string }[];
+};

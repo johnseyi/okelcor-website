@@ -16,6 +16,7 @@ import EmptyState from "@/components/ui/empty-state";
 const SECTIONS: { type: MyWorkType; label: string; icon: LucideIcon }[] = [
   { type: "finance_task",              label: "Finance Tasks",      icon: LineChart },
   { type: "ec_invoice_task",           label: "EC Invoice Tasks",   icon: FileCheck },
+  { type: "todo_task",                 label: "To-Dos",             icon: ClipboardCheck },
   { type: "assigned_lead",             label: "Assigned Leads",     icon: ClipboardList },
   { type: "follow_up_due",             label: "Due Follow-ups",     icon: CalendarClock },
   { type: "proposal_accepted",         label: "Proposal Accepted",  icon: CheckCircle2 },
@@ -123,15 +124,20 @@ function WorkRow({ item, onChanged }: { item: MyWorkItem; onChanged: () => void 
   // Setting a status notifies whoever created the record, so "done" reaches
   // finance without a message being written.
   const isEcTask = item.type === "ec_invoice_task";
+  const isTodo = item.type === "todo_task";
 
   const setStatus = async (status: string) => {
     if (!item.id || status === item.status) return;
     setUpdating(true);
     setUpdateError(null);
     try {
-      const endpoint = isEcTask
-        ? `/api/admin/my-work/ec-invoice-lines/${item.id}`
-        : `/api/admin/my-work/finance/${item.id}`;
+      // To-dos PATCH their own endpoint — being a participant is the
+      // authorization there, so no my-work-specific route is needed.
+      const endpoint = isTodo
+        ? `/api/admin/todos/${item.id}`
+        : isEcTask
+          ? `/api/admin/my-work/ec-invoice-lines/${item.id}`
+          : `/api/admin/my-work/finance/${item.id}`;
       const res = await fetch(endpoint, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
