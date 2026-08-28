@@ -21,6 +21,7 @@ import {
   createLiquidityEntry, updateLiquidityEntry, deleteLiquidityEntry, restoreBackup,
   type SnapshotItem, type LiquidityEntry, type SnapshotMeta, type ItemInput,
 } from "@/app/admin/finance-snapshot/actions";
+import LiquidityLadder from "@/components/admin/liquidity-ladder";
 
 // ── Formatting ────────────────────────────────────────────────────────────────
 
@@ -106,6 +107,8 @@ export default function FinanceSnapshotBoard() {
   const [, startTransition]       = useTransition();
 
   const [drill, setDrill]           = useState<DrillState>(null);
+  const [highlightId, setHighlightId] = useState<number | null>(null);
+  const deepLinkDone = useRef(false);
   const [itemModal, setItemModal]   = useState<ItemModalState>(null);
   const [liqModal, setLiqModal]     = useState<LiqModalState>(null);
   const [saving, setSaving]         = useState(false);
@@ -139,6 +142,24 @@ export default function FinanceSnapshotBoard() {
       setMeta(res.data.meta);
       setPageError(null);
       setLoading(false);
+
+      // ?item=<id> — a My Work "Open" or a notification lands on the exact
+      // record, not the whole page: open its person's drill-down and
+      // highlight the row. Once, on the first successful load.
+      if (!deepLinkDone.current) {
+        deepLinkDone.current = true;
+        const raw = new URLSearchParams(window.location.search).get("item");
+        const id = raw ? Number(raw) : NaN;
+        if (Number.isFinite(id)) {
+          const target = res.data.items.find((i) => i.id === id);
+          if (target) {
+            setHighlightId(id);
+            setDrill({ category: target.category, person: target.person });
+          } else {
+            setNotice("That task is no longer on the board — it may have been deleted.");
+          }
+        }
+      }
     });
   }, []);
 
@@ -521,11 +542,21 @@ export default function FinanceSnapshotBoard() {
           </table>
         </div>
         <p className="px-4 py-2 text-[0.7rem] text-[#9ca3af] print:hidden">Click any amount to view and edit its breakdown.</p>
+
+        {/* The weekly view is part of the liquidity working, per finance —
+            "we are currently in week 35": the current ISO week plus the three
+            ahead, bank balance per week, rolling with the calendar. */}
+        <div className="border-t border-black/[0.08] p-4">
+          <p className="mb-3 text-[0.72rem] font-extrabold uppercase tracking-wide text-[#5c5e62]">
+            Liquidity by week — current + 3, rolling
+          </p>
+          <LiquidityLadder />
+        </div>
       </div>
 
       {/* ── Drill-down modal: one person in one category ── */}
       {drill && (
-        <Modal onClose={() => setDrill(null)} title={`${drill.person} — ${drill.category}`} wide>
+        <Modal onClose={() => { setDrill(null); setHighlightId(null); }} title={`${drill.person} — ${drill.category}`} wide>
           {(() => {
             const personItems = items.filter(
               (i) => i.category === drill.category && i.person.trim().toLowerCase() === drill.person.trim().toLowerCase()
@@ -536,8 +567,11 @@ export default function FinanceSnapshotBoard() {
                 <p className="mb-3 text-[0.8rem] font-semibold text-[#6b7280]">
                   Total: {fmt(total)} ({personItems.length} items)
                 </p>
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[640px] text-left text-[0.8rem]">
+                {/* No min-width and no truncation: long client names and
+                    emails wrap onto a second line, so nothing hides behind a
+                    horizontal scrollbar. */}
+                <div>
+                  <table className="w-full text-left text-[0.8rem]">
                     <thead>
                       <tr className="border-b border-black/[0.08] bg-[#f8f9fa] text-[#6b7280]">
                         <th className="px-3 py-2 font-bold">Ref #</th>
@@ -551,10 +585,12 @@ export default function FinanceSnapshotBoard() {
                     </thead>
                     <tbody className="divide-y divide-black/[0.05]">
                       {personItems.map((item) => (
-                        <tr key={item.id}>
+                        <tr key={item.id}
+                          ref={item.id === highlightId ? (el) => el?.scrollIntoView({ block: "center" }) : undefined}
+                          className={item.id === highlightId ? "bg-amber-50 ring-2 ring-inset ring-amber-300" : undefined}>
                           <td className="px-3 py-2 font-bold">{item.ref}</td>
                           <td className="whitespace-nowrap px-3 py-2">{item.date ?? "—"}</td>
-                          <td className="max-w-[220px] truncate px-3 py-2" title={item.client ?? undefined}>{item.client ?? "—"}</td>
+                          <td className="whitespace-normal break-words px-3 py-2">{item.client ?? "—"}</td>
                           <td className="px-3 py-2">
                             <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[0.68rem] font-bold ${STATUS_COLORS[item.status] ?? "bg-gray-100 text-gray-600"}`}>{item.status}</span>
                             {item.assigned_admin_id && (
@@ -564,7 +600,7 @@ export default function FinanceSnapshotBoard() {
                               </span>
                             )}
                           </td>
-                          <td className="max-w-[180px] truncate px-3 py-2 italic text-[#6b7280]" title={item.comment ?? undefined}>{item.comment ?? "—"}</td>
+                          <td className="whitespace-normal break-words px-3 py-2 italic text-[#6b7280]">{item.comment ?? "—"}</td>
                           <td className="whitespace-nowrap px-3 py-2 text-right font-bold">{fmt(item.amount)}</td>
                           <td className="px-3 py-2">
                             <span className="flex justify-end gap-1.5">
@@ -728,7 +764,7 @@ function Modal({ title, wide, onClose, children }: { title: string; wide?: boole
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 print:hidden">
       <div role="presentation" className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className={`relative flex max-h-[85vh] w-full flex-col rounded-2xl bg-white shadow-xl ${wide ? "max-w-3xl" : "max-w-md"}`}>
+      <div className={`relative flex max-h-[85vh] w-full flex-col rounded-2xl bg-white shadow-xl ${wide ? "max-w-4xl" : "max-w-md"}`}>
         <div className="flex items-center justify-between border-b border-black/[0.06] px-6 py-4">
           <h2 className="text-[0.95rem] font-extrabold text-[#1a1a1a]">{title}</h2>
           <button type="button" onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-lg text-[#5c5e62] transition hover:bg-[#f0f2f5]">

@@ -186,7 +186,12 @@ function WorkRow({ item, onChanged }: { item: MyWorkItem; onChanged: () => void 
 
       {item.action_url && (
         <Link
-          href={item.action_url}
+          // Finance tasks open the exact record on the board, not the whole
+          // page. Client-side too, so it holds before the API's action_url
+          // carries the ?item= itself.
+          href={item.type === "finance_task" && item.id
+            ? `/admin/finance-snapshot?item=${item.id}`
+            : item.action_url}
           className="flex shrink-0 items-center gap-1.5 rounded-xl bg-[#1a1a1a] px-3.5 py-2 text-[0.78rem] font-semibold text-white transition hover:bg-[#333]"
         >
           Open <ArrowRight size={13} strokeWidth={2.2} />

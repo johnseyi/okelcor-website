@@ -1187,6 +1187,22 @@ trail, mirroring the DOC-5 order line-item revision pattern. Also asked what
 
 ---
 
+## Session note — 2026-08-28 (session 99b)
+
+Backend commit `fef2052` (okelcor-api). Three corrections from finance's
+walkthrough of the snapshot board and the new liquidity work.
+
+| Change | Notes |
+|---|---|
+| Liquidity weeks live INSIDE Finance Liquidity Working | The weekly ladder was built as a separate `/admin/liquidity` page; finance said it belongs in the liquidity working itself. `<LiquidityLadder />` now renders as a "Liquidity by week" section inside that card on the snapshot board; the standalone page, its nav row and its `PATH_SECTION` entry are gone (the proxy routes and component stay — same code, new home). The snapshot nav row's keywords now answer "weekly"/"weeks" searches. |
+| Long client names wrap instead of hiding behind a scrollbar | The drill-down table dropped its `min-w-[640px]` and the `truncate` on client and comment cells — long names and emails break onto a second line so every column is readable without scrolling right. The wide modal grew `max-w-3xl` → `max-w-4xl` in the same service. |
+| My Work "Open" lands on the exact task | The board reads `?item=<id>` on first load, opens that record's person drill-down and highlights + scrolls to the row (amber ring; a deleted record gets a notice instead). Backend `action_url` and the status-change notification now carry the id; `my-work.tsx` also builds the deep link client-side so it holds before the API deploy. Deep-link resolution runs in the load callback, not an effect — `react-hooks/set-state-in-effect` refuses the effect form. |
+
+Build: `npm run build` exit 0, compiled in 7.9s. TypeScript 0 errors, ESLint
+clean on the changed files.
+
+---
+
 ## Session note — 2026-08-28 (session 99)
 
 Backend commit `7d480db` (okelcor-api). The finance discussion note, frontend

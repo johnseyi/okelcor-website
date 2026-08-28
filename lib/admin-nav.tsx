@@ -4,7 +4,7 @@ import {
   Zap, MessageSquare, ShieldAlert, FileCheck, Truck, Activity, ScanLine,
   BellRing, Bell, Inbox, ClipboardCheck, UserCheck, Mail, Send, Images,
   Handshake, ReceiptText, LayoutGrid, LineChart, Search, BadgeCheck,
-  MessagesSquare, Globe2, Scale, CalendarRange,
+  MessagesSquare, Globe2, Scale,
 } from "lucide-react";
 
 /**
@@ -123,11 +123,8 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       { label: "Team Contribution", href: "/admin/contribution/team", icon: Users, section: "staff_team", keywords: "staff performance team report kpi who did what" },
       { label: "Transaction Report", href: "/admin/operations/report", icon: LineChart, section: "operations" , keywords: "transactions month revenue chart export" },
       { label: "Finance Invoices", href: "/admin/finance-invoices", icon: ReceiptText, section: "finance" , keywords: "sevdesk reconciliation invoice register vat" },
-      { label: "Finance Snapshot", href: "/admin/finance-snapshot", icon: LineChart, section: "finance" , keywords: "liquidity cash position proposals receipts pipeline board" },
+      { label: "Finance Snapshot", href: "/admin/finance-snapshot", icon: LineChart, section: "finance" , keywords: "liquidity cash position proposals receipts pipeline board weekly weeks bank balance" },
       { label: "Profitability", href: "/admin/profitability", icon: Scale, section: "finance" , keywords: "profit margin revenue invoice supplier costs fees stripe ebay verified sign off export per order" },
-      // "Weeks" distinguishes it from the snapshot board's liquidity working,
-      // which the palette already answers "liquidity" with.
-      { label: "Liquidity Weeks", href: "/admin/liquidity", icon: CalendarRange, section: "finance" , keywords: "weekly bank balance ladder rolling week 35 cash planning four weeks" },
       { label: "Analytics",     href: "/admin/analytics", icon: BarChart2,  section: "analytics" , keywords: "reports stats funnel" },
       { label: "Promotion Insight", href: "/admin/analytics/product-mix", icon: Package, section: "analytics" , keywords: "used new tyres bundles sizes repeat buyers countries promote" },
       // Its own section, not "analytics": the roles the backend grants this
