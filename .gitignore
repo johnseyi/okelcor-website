@@ -50,3 +50,14 @@ public/videos/fet-after.MP4
 public/videos/fet-after.mp4
 
 .vercel
+
+# Stray desktop exports do not belong in the repo root — assets live in
+# public/, data gets imported, screenshots get deleted.
+/*.png
+/*.jpg
+/*.jpeg
+/*.webp
+/*.pdf
+/*.csv
+/*.docx
+/*.xlsx

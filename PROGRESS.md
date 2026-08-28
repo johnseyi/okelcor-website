@@ -31,12 +31,12 @@ Earlier: `0e46cd1` behaviour analytics · `2920e90` InDesign import · `cfd4498`
 
 | Item | Status |
 |---|---|
-| `app/viz-check/page.tsx` | **Uncommitted on purpose** — a mock-data harness for eyeballing the behaviour-analytics layout, left from session 79. `npm run dev -- --port 3939`, open `/viz-check`, then delete it. Now genuinely runnable: see the backlog row and the screenshot recipe in `CLAUDE.md` |
+| ~~`app/viz-check/page.tsx`~~ | **Deleted in the 2026-08-28 cleanup** — the harness had served its purpose and PROGRESS itself said to delete it after use |
 | ~~A `next dev` on port 3939~~ | **Resolved** — killed in session 85. It had survived several sessions of edits and was serving **stale renders of new routes** with no error anywhere. A long-lived dev server is a suspect before the code is |
 | `.claude/settings.local.json` | Modified — accumulated permission allowlist from past sessions, unrelated to any feature. Never committed with feature work |
-| `contacts.csv` | **Still the real 188-row marketing list, untracked, in the repo root, with no `csv` rule in `.gitignore`** — one `git add -A` from being published permanently. Unchanged backlog item |
-| `email marketing image template.jpg` | The InDesign reference. Sent to backend directly rather than committed |
-| 15 screenshots + a `.webp` | July leftovers, referenced nowhere |
+| ~~`contacts.csv`~~ | **Deleted in the 2026-08-28 cleanup** — the publication risk this row warned about is gone; its contacts live in production (the `asia` market import), and root `*.csv` is now in `.gitignore` |
+| ~~`email marketing image template.jpg`~~ | **Deleted in the 2026-08-28 cleanup** — the InDesign reference had already been sent to the backend |
+| ~~15 screenshots + a `.webp`~~ | **Deleted in the 2026-08-28 cleanup** (~10 MB) — July leftovers, referenced nowhere. Root image/PDF/CSV patterns are now in `.gitignore` so the next batch stays out of git |
 
 <details><summary>Previous build status (historical — iCloud era)</summary>
 
