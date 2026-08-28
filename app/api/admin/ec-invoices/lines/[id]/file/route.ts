@@ -1,0 +1,31 @@
+import { NextRequest, NextResponse } from "next/server";
+import { ADMIN_BASE, adminToken, unauthorized } from "@/lib/admin-proxy";
+
+export const dynamic = "force-dynamic";
+
+/** POST — finance.manage. Multipart: kind=invoice|proof + file. */
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const tk = await adminToken();
+  if (!tk) return unauthorized();
+  const { id } = await params;
+
+  let form: FormData;
+  try {
+    form = await req.formData();
+  } catch {
+    return NextResponse.json({ error: "Invalid upload." }, { status: 400 });
+  }
+
+  try {
+    const res = await fetch(`${ADMIN_BASE}/ec-invoices/lines/${id}/file`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${tk}`, Accept: "application/json" },
+      body: form,
+      cache: "no-store",
+    });
+    const json = await res.json().catch(() => ({}));
+    return NextResponse.json(json, { status: res.status });
+  } catch {
+    return NextResponse.json({ error: "Network error" }, { status: 502 });
+  }
+}

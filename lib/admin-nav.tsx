@@ -125,6 +125,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       { label: "Finance Invoices", href: "/admin/finance-invoices", icon: ReceiptText, section: "finance" , keywords: "sevdesk reconciliation invoice register vat" },
       { label: "Finance Snapshot", href: "/admin/finance-snapshot", icon: LineChart, section: "finance" , keywords: "liquidity cash position proposals receipts pipeline board weekly weeks bank balance" },
       { label: "Profitability", href: "/admin/profitability", icon: Scale, section: "finance" , keywords: "profit margin revenue invoice supplier costs fees stripe ebay verified sign off export per order" },
+      { label: "EC Invoice List", href: "/admin/ec-invoices", icon: FileCheck, section: "finance" , keywords: "zm zusammenfassende meldung elster bzst eu vat intra-community sales list delivery proof cmr audit xml" },
       { label: "Analytics",     href: "/admin/analytics", icon: BarChart2,  section: "analytics" , keywords: "reports stats funnel" },
       { label: "Promotion Insight", href: "/admin/analytics/product-mix", icon: Package, section: "analytics" , keywords: "used new tyres bundles sizes repeat buyers countries promote" },
       // Its own section, not "analytics": the roles the backend grants this

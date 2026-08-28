@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Loader2, ClipboardCheck, ClipboardList, CalendarClock, CheckCircle2,
-  UserCheck, ShieldQuestion, ArrowRight, LineChart, type LucideIcon,
+  UserCheck, ShieldQuestion, ArrowRight, LineChart, FileCheck, type LucideIcon,
 } from "lucide-react";
 import type { MyWorkItem, MyWorkType } from "@/lib/admin-api";
 import EmptyState from "@/components/ui/empty-state";
@@ -15,6 +15,7 @@ import EmptyState from "@/components/ui/empty-state";
 
 const SECTIONS: { type: MyWorkType; label: string; icon: LucideIcon }[] = [
   { type: "finance_task",              label: "Finance Tasks",      icon: LineChart },
+  { type: "ec_invoice_task",           label: "EC Invoice Tasks",   icon: FileCheck },
   { type: "assigned_lead",             label: "Assigned Leads",     icon: ClipboardList },
   { type: "follow_up_due",             label: "Due Follow-ups",     icon: CalendarClock },
   { type: "proposal_accepted",         label: "Proposal Accepted",  icon: CheckCircle2 },
@@ -118,18 +119,23 @@ function WorkRow({ item, onChanged }: { item: MyWorkItem; onChanged: () => void 
   const [updating, setUpdating] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
 
-  // The assignee's in-place status update — finance tasks only. Setting a
-  // status notifies whoever created the record, so "done" reaches finance
-  // without a message being written.
+  // The assignee's in-place status update — finance and EC invoice tasks.
+  // Setting a status notifies whoever created the record, so "done" reaches
+  // finance without a message being written.
+  const isEcTask = item.type === "ec_invoice_task";
+
   const setStatus = async (status: string) => {
     if (!item.id || status === item.status) return;
     setUpdating(true);
     setUpdateError(null);
     try {
-      const res = await fetch(`/api/admin/my-work/finance/${item.id}`, {
+      const endpoint = isEcTask
+        ? `/api/admin/my-work/ec-invoice-lines/${item.id}`
+        : `/api/admin/my-work/finance/${item.id}`;
+      const res = await fetch(endpoint, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify(isEcTask ? { task_status: status } : { status }),
       });
       if (!res.ok) {
         const json = await res.json().catch(() => ({})) as { message?: string };
@@ -180,7 +186,9 @@ function WorkRow({ item, onChanged }: { item: MyWorkItem; onChanged: () => void 
           onChange={(e) => void setStatus(e.target.value)}
           className="h-8 shrink-0 cursor-pointer rounded-xl border border-black/[0.09] bg-white px-2 text-[0.75rem] font-semibold text-[#1a1a1a] outline-none transition focus:border-[#E85C1A] disabled:opacity-50"
         >
-          {FINANCE_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+          {item.status_options
+            ? item.status_options.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)
+            : FINANCE_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
       ) : null}
 

@@ -1187,6 +1187,23 @@ trail, mirroring the DOC-5 order line-item revision pattern. Also asked what
 
 ---
 
+## Session note — 2026-08-28 (session 100)
+
+Backend commit `dd672b3` (okelcor-api). The EC Invoice List — finance's
+File6.html mockup (Zusammenfassende Meldung portal) rebuilt in the panel.
+
+| Change | Notes |
+|---|---|
+| `/admin/ec-invoices` | `ec-invoice-list.tsx`. The mockup's shape kept: expandable ZM table (country · customer VAT · type · computed total), itemized invoice lines with inline editing (onBlur PATCH), assignee select, colored status select, attach/download cells for the invoice PDF and the delivery proof, an add-group form and an add-line form (files ride on the create). Period selector covers quarters + months of this and last year, with data-holding periods marked •. Filing badge draft/ready/submitted (select for finance.manage, read-only pill otherwise) with the submitted date. Taxpayer USt-IdNr. editable in place. Everything wraps — the walkthrough rule; nothing hides behind a horizontal scrollbar. |
+| CSV + ELSTER | Export CSV audit file (gated `orders.export`, passthrough proxy). Generate ELSTER XML fetches the § 18a payload as text into a review modal, downloadable as `.xml` client-side. |
+| My Work: "EC Invoice Tasks" | New section; the status select uses the item's own `status_options` (the EC statuses are not the finance-task set) and PATCHes `/api/admin/my-work/ec-invoice-lines/{id}` — the assignee needs no finance permission. "Open" deep-links `?period=&line=`, and the list expands the right group and highlights the row. |
+| Plumbing | 12 proxy routes under `app/api/admin/ec-invoices/*` + the my-work one; `EcInvoiceGroup/Line/PeriodState/Meta` types in `lib/admin-api.ts`; nav row in Insights (`section: "finance"`); `PATH_SECTION` entry. |
+
+Build: `npm run build` exit 0, compiled in 9.5s. TypeScript 0 errors, ESLint
+clean on the changed files.
+
+---
+
 ## Session note — 2026-08-28 (session 99b)
 
 Backend commit `fef2052` (okelcor-api). Three corrections from finance's

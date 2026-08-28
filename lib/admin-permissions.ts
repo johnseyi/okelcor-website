@@ -114,6 +114,7 @@ export const PATH_SECTION: Record<string, string> = {
   "/admin/finance-invoices": "finance",
   "/admin/finance-snapshot": "finance",
   "/admin/profitability":   "finance",
+  "/admin/ec-invoices":     "finance",
   // Before "/admin/orders": PATH_SECTION is matched with startsWith() and the
   // first entry wins, so the more specific prefix must come first.
   "/admin/orders/in-transit": "orders",

@@ -582,8 +582,13 @@ export type MyWorkItem = {
   due_at?: string | null;
   action_url?: string | null;
   status?: string | null;
-  /** finance_task only: the assignee may update status/comment in place. */
+  /** finance_task / ec_invoice_task: the assignee may update status in place. */
   editable?: boolean;
+  /**
+   * ec_invoice_task: the select's options travel with the item — the EC
+   * statuses are not the finance-task statuses. Absent = finance-task set.
+   */
+  status_options?: { value: string; label: string }[];
 };
 
 // CRM-7 quote request items (admin-structured line items for proposal)
@@ -1891,4 +1896,54 @@ export type LiquidityWeekRow = {
   notes?: string | null;
   updated_by?: string | null;
   updated_at?: string | null;
+};
+
+// ── EC Invoice List — Zusammenfassende Meldung (Session 100) ─────────────────
+
+export type EcInvoiceLine = {
+  id: number;
+  group_id: number;
+  invoice_number: string;
+  invoice_date?: string | null;
+  amount: number;
+  assigned_admin_id?: number | null;
+  /** The tagged staff member's name, or the typed display name. */
+  person?: string | null;
+  /** complete | pending_doc | review. */
+  task_status: string;
+  has_invoice_file: boolean;
+  invoice_file_name?: string | null;
+  has_proof_file: boolean;
+  proof_file_name?: string | null;
+};
+
+export type EcInvoiceGroup = {
+  id: number;
+  period: string;
+  country_code: string;
+  customer_vat_id: string;
+  /** goods | services | triangular. */
+  transaction_type: string;
+  type_label: string;
+  /** The sum of the lines — never stored, computed server-side. */
+  total: number;
+  lines: EcInvoiceLine[];
+};
+
+export type EcInvoicePeriodState = {
+  period: string;
+  /** draft | ready | submitted. */
+  status: string;
+  submitted_at?: string | null;
+};
+
+export type EcInvoiceMeta = {
+  ec_invoices_available: boolean;
+  company_vat_id: string;
+  countries: string[];
+  types: { key: string; label: string; art: string }[];
+  statuses: { key: string; label: string }[];
+  period_statuses: string[];
+  staff: { id: number; name: string }[];
+  known_periods: string[];
 };
