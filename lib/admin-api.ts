@@ -386,6 +386,12 @@ export type AdminOrderFull = AdminOrder & {
   customer_accepted_at?: string | null;
   customer_rejection_reason?: string | null;
   acceptance_token?: string | null;
+  /**
+   * Session 99 profitability summary, embedded so order tracking knows the
+   * finalized revenue invoice exists without a second request. `null` until
+   * the backend migration has run — hide the panel, don't error.
+   */
+  finance?: OrderFinanceSummary | null;
 };
 
 // CRM-6 communications
@@ -1718,4 +1724,171 @@ export type StaffTeamReport = {
   };
   /** Travels with the payload because this report gets exported and forwarded. */
   caveats: string[];
+};
+
+// ── Order profitability & weekly liquidity (Session 99) ───────────────────────
+
+/** The compact block embedded on GET /admin/orders/{id}. */
+export type OrderFinanceSummary = {
+  has_revenue_invoice: boolean;
+  revenue_invoice_number?: string | null;
+  revenue_amount?: number | null;
+  customer_agreed?: boolean;
+  costs_total: number;
+  cost_lines: number;
+  profit?: number | null;
+  margin_percent?: number | null;
+  currency: string;
+  verified: boolean;
+};
+
+export type OrderCostLine = {
+  id: number;
+  /** 'supplier_invoice' or 'fee'. */
+  kind: string;
+  /** Fees only: stripe | ebay | bank | shipping | other. Null on supplier invoices. */
+  category?: string | null;
+  supplier?: string | null;
+  /** The supplier's own invoice number. Free text, deliberately not unique. */
+  reference?: string | null;
+  amount: number;
+  currency: string;
+  incurred_on?: string | null;
+  notes?: string | null;
+  has_file?: boolean | null;
+  file_name?: string | null;
+  uploaded_at?: string | null;
+  entered_by?: string | null;
+  created_at?: string | null;
+};
+
+/** GET /admin/orders/{id}/profitability. */
+export type OrderProfitability = {
+  /** Null until finance records the finalized, customer-agreed invoice. */
+  revenue: {
+    invoice_number?: string | null;
+    amount: number | null;
+    currency: string;
+    issued_on?: string | null;
+    finalized_at?: string | null;
+    customer_agreed_at?: string | null;
+    has_file: boolean;
+    file_name?: string | null;
+    uploaded_at?: string | null;
+    set_by?: string | null;
+    /** Invoiced minus ordered — the figure finance reconciles. Null across currencies. */
+    variance_from_order_total?: number | null;
+  } | null;
+  costs: {
+    supplier_total: number;
+    fees_total: number;
+    total: number;
+    currency: string;
+    by_category: Record<string, number>;
+    lines_count: number;
+    /** Costs in other currencies: named, excluded from the totals, never converted. */
+    other_currencies: Record<string, number>;
+  };
+  profit: {
+    /** Null until a revenue invoice exists — unknown, not zero. */
+    amount: number | null;
+    margin_percent: number | null;
+    currency: string;
+    mixed_currency: boolean;
+  };
+  verification: {
+    verified: boolean;
+    verified_at?: string | null;
+    verified_by?: string | null;
+    note?: string | null;
+  };
+  lines: OrderCostLine[];
+  /** What the rest of the system already believes about this order's money. */
+  context?: {
+    order_total: number;
+    order_currency: string;
+    order_status: string;
+    counts_as_confirmed: boolean;
+    customer_acceptance_status?: string | null;
+    customer_accepted_at?: string | null;
+    system_invoice_number?: string | null;
+    system_invoice_amount?: number | null;
+  };
+};
+
+/** One row of GET /admin/finance/profitability. */
+export type ProfitabilityRow = {
+  order_id: number;
+  order_ref: string;
+  order_date?: string | null;
+  channel?: string | null;
+  customer_name?: string | null;
+  status: string;
+  order_total: number;
+  order_currency: string;
+  revenue_invoice_number?: string | null;
+  revenue_amount?: number | null;
+  revenue_has_file?: boolean | null;
+  supplier_costs: number;
+  fees: number;
+  costs_total: number;
+  profit?: number | null;
+  margin_percent?: number | null;
+  currency: string;
+  mixed_currency?: boolean | null;
+  verified: boolean;
+  verified_by?: string | null;
+  verified_at?: string | null;
+};
+
+export type ProfitabilityDashboardMonth = {
+  key: string;
+  label: string;
+  orders: number;
+  orders_with_revenue: number;
+  order_total_eur: number;
+  revenue_eur: number;
+  supplier_costs_eur: number;
+  fees_eur: number;
+  costs_eur: number;
+  profit_eur: number;
+  /** Null when the month has no revenue — undefined, not 0%. */
+  margin_percent: number | null;
+  verified: number;
+  /** Counted, never converted. */
+  non_eur_orders: number;
+};
+
+export type ProfitabilityDashboard = {
+  year: number;
+  period: { from: string; to: string };
+  months: ProfitabilityDashboardMonth[];
+  totals: Omit<ProfitabilityDashboardMonth, "key" | "label">;
+  /** Every figure's meaning, served with the numbers — render as tooltips. */
+  definitions: Record<string, string>;
+};
+
+/**
+ * One ISO week of the liquidity ladder ('2026-W35'). The planner returns the
+ * current week + 3; the window rolls by the calendar, not by anything anyone
+ * runs, and finished weeks live under /history.
+ */
+export type LiquidityWeekRow = {
+  week_key: string;
+  label: string;
+  iso_year?: number;
+  iso_week?: number;
+  starts_on: string;
+  ends_on: string;
+  is_current?: boolean;
+  /** False = no row saved yet — an empty editable week, not an error. */
+  recorded?: boolean;
+  bank_balance: number | null;
+  expected_in: number | null;
+  expected_out: number | null;
+  /** Chains: opens on the entered balance or the previous week's close. */
+  projected_closing?: number | null;
+  notes?: string | null;
+  updated_by?: string | null;
+  updated_at?: string | null;
 };

@@ -1187,6 +1187,36 @@ trail, mirroring the DOC-5 order line-item revision pattern. Also asked what
 
 ---
 
+## Session note — 2026-08-28 (session 99)
+
+Backend commit `7d480db` (okelcor-api). The finance discussion note, frontend
+half: per-order profitability, the finance list/dashboard/export, and the
+weekly liquidity ladder. The backend computes every figure in one service;
+these screens render, they never re-derive — after any write the panels
+refetch, because an edit that moves the money withdraws finance's sign-off
+server-side and a card patching local state would keep showing a signature
+that no longer stands.
+
+| Change | Notes |
+|---|---|
+| `Finance` tab on the order page | `components/admin/order-profitability-card.tsx`, wired into `order-detail.tsx` as a seventh tab, offered only to roles holding `finance.view` — a tab that 403s on open is worse than one that is not there. Revenue invoice (record/replace with the PDF in the same request, download, variance vs order total, customer-agreed flag), cost lines (supplier invoices + stripe/ebay/bank/shipping fees), and the sign-off box with Sign off / Withdraw (withdraw demands a written reason, mirroring the API). |
+| `/admin/profitability` | `profitability-panel.tsx`, modelled on the finance-invoices panel. Orders tab: one row per ref with revenue, suppliers, fees, profit, margin, sign-off; filters for verified / has-revenue; `verified=no` is the worklist. Export CSV button gated on `orders.export`, streaming through a binary-passthrough proxy route like the operations export. Dashboard tab: KPI tiles, a two-series recharts line (Revenue vs Profit, `SERIES` palette, animation off), and the gap-free month table with the server's `definitions` as column tooltips. |
+| `/admin/liquidity` | `liquidity-ladder.tsx`. Four week cards from the API (current + 3), the current one ringed; bank balance / expected in / expected out / notes per week, save per card, projected closing chained server-side so a save reloads all four. Finished weeks under a collapsible History. Inputs disabled without `finance.manage` rather than hidden — a reader should see the shape of what finance maintains. |
+| Proxy routes ×13 | `app/api/admin/finance/*` + `app/api/admin/orders/[id]/profitability/*`, standard `adminToken()`/`forward()` shape; multipart re-sent as parsed FormData; two binary passthroughs for the PDFs and one for the CSV. |
+| Types | `OrderFinanceSummary` (embedded on `AdminOrderFull.finance`), `OrderProfitability`, `ProfitabilityRow`, `ProfitabilityDashboard`, `LiquidityWeekRow` in `lib/admin-api.ts`. |
+| Nav + gates | Two rows in Insights (`section: "finance"`); `PATH_SECTION` entries for both paths. "Liquidity Weeks" is named to keep the palette from confusing it with the snapshot board's liquidity working, whose keywords already answer "liquidity". |
+
+One thing worth knowing for later: every panel renders the amber
+"not available on this server yet" state off `meta.profitability_available` /
+`meta.liquidity_available` (or a non-2xx), because the backend ships
+deploy-order safe — the screens exist before migrations #52–54 run and must
+say so rather than showing an empty list as if it were a fact.
+
+Build: `npm run build` exit 0, compiled in 12.1s. TypeScript 0 errors, ESLint
+clean on the changed files.
+
+---
+
 ## Session note — 2026-08-17 (session 89c)
 
 Backend `f296f5b`. **Almost no frontend work needed, and that is the point** —

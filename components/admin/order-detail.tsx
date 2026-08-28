@@ -16,6 +16,7 @@ import { ORDER_CURRENCIES, formatMoney } from "@/lib/currency";
 import TradeDocumentsCard from "@/components/admin/trade-documents-card";
 import PaymentMilestonesCard from "@/components/admin/payment-milestones-card";
 import OrderSignoffCard from "@/components/admin/order-signoff-card";
+import OrderProfitabilityCard from "@/components/admin/order-profitability-card";
 import TrackShipmentControl from "@/components/admin/tracking/track-shipment-control";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -23,7 +24,7 @@ import TrackShipmentControl from "@/components/admin/tracking/track-shipment-con
 const ORDER_STATUSES = ["pending", "confirmed", "awaiting_proforma", "processing", "shipped", "delivered", "cancelled"] as const;
 type OrderStatus = (typeof ORDER_STATUSES)[number];
 
-type TabId = "overview" | "payments" | "documents" | "logistics" | "compliance" | "activity";
+type TabId = "overview" | "payments" | "documents" | "finance" | "logistics" | "compliance" | "activity";
 type RevisionItemDraft = { id: number; name: string; unit_price: string; quantity: string; remove: boolean };
 type RevisionNewItemDraft = { name: string; unit_price: string; quantity: string };
 
@@ -476,6 +477,9 @@ const TAB_LABELS: { id: TabId; label: string }[] = [
   { id: "overview",    label: "Overview"    },
   { id: "payments",    label: "Payments"    },
   { id: "documents",   label: "Documents"   },
+  // Only offered to roles holding finance.view — a tab that 403s on open is
+  // worse than one that is not there.
+  { id: "finance",     label: "Finance"     },
   { id: "logistics",   label: "Logistics"   },
   { id: "compliance",  label: "Compliance"  },
   { id: "activity",    label: "Activity"    },
@@ -1162,7 +1166,7 @@ export default function OrderDetail({
           TAB NAVIGATION
       ══════════════════════════════════════════════════════════════════════ */}
       <div className="flex gap-1 overflow-x-auto rounded-2xl bg-white p-1.5 shadow-sm [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-        {TAB_LABELS.map((tab) => (
+        {TAB_LABELS.filter((tab) => tab.id !== "finance" || canDo(adminRole, "finance.view")).map((tab) => (
           <button
             key={tab.id}
             type="button"
@@ -1811,6 +1815,13 @@ export default function OrderDetail({
             orderStatus={order.status}
           />
         </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          TAB: FINANCE — profitability (Session 99)
+      ══════════════════════════════════════════════════════════════════════ */}
+      {activeTab === "finance" && (
+        <OrderProfitabilityCard orderId={order.id} adminRole={adminRole} />
       )}
 
       {/* ══════════════════════════════════════════════════════════════════════
