@@ -1187,6 +1187,26 @@ trail, mirroring the DOC-5 order line-item revision pattern. Also asked what
 
 ---
 
+## Session note — 2026-08-28 (session 101)
+
+Backend commit `3854ff2` (okelcor-api). The Sales & Order Management board —
+finance's OT 3.html mockup in the panel.
+
+| Change | Notes |
+|---|---|
+| `/admin/sales-orders` | `sales-order-board.tsx`. The mockup's shape kept: five KPI cards (unique customers, tyres sold, avg price/tyre — "—" over zero tyres — B2B and B2C GP margins), All/Pending pills plus a month filter, inline-editable summary rows (order no, customer, B2B/B2C, month, Tyres/FET), the computed verified/pending-proof badge and coloured margin, and expandable transaction lines: party select, name, tyre qty (customer lines only), amount, attach/download document, per-order Customer/Supplier/GP footer. All figures come computed from the server; every mutation reloads rather than patching local state, because the status and the KPIs move with the lines. |
+| Plumbing | 6 proxy routes under `app/api/admin/sales-orders/*` (multipart line create, binary download passthrough); `SalesBoardEntry/Line/Kpis/Meta` types in `lib/admin-api.ts`; nav row in Insights (`section: "finance"`); `PATH_SECTION` entry. |
+
+One thing worth knowing for later: the pending filter narrows the ROWS, not
+the KPI cards — the server computes the cards over the whole filtered scope
+and the page says so under the table, because a worklist view that swung the
+margins would read as the business changing when only the filter did.
+
+Build: `npm run build` exit 0, compiled in 11.9s. TypeScript 0 errors, ESLint
+clean on the changed files.
+
+---
+
 ## Session note — 2026-08-28 (session 100)
 
 Backend commit `dd672b3` (okelcor-api). The EC Invoice List — finance's

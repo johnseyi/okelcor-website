@@ -1947,3 +1947,52 @@ export type EcInvoiceMeta = {
   staff: { id: number; name: string }[];
   known_periods: string[];
 };
+
+// ── Sales & Order Management board (Session 101) ─────────────────────────────
+
+export type SalesBoardLine = {
+  id: number;
+  /** customer (revenue + tyres) | supplier (cost + document). */
+  party_type: string;
+  party_name: string;
+  tyre_qty: number;
+  amount: number;
+  has_file: boolean;
+  file_name?: string | null;
+};
+
+export type SalesBoardEntry = {
+  id: number;
+  order_no: string;
+  customer_name: string;
+  /** B2B | B2C. */
+  segment: string;
+  /** 'YYYY-MM'. */
+  period: string;
+  /** Tyres | FET. */
+  category: string;
+  /** verified | pending_proof — computed from the lines, never stored. */
+  status: string;
+  revenue: number;
+  costs: number;
+  gross_profit: number;
+  /** Null when there is no revenue — undefined, not 0%. */
+  margin_percent: number | null;
+  tyres: number;
+  lines: SalesBoardLine[];
+};
+
+export type SalesBoardKpis = {
+  unique_customers: number;
+  tyres_sold: number;
+  avg_price_per_tyre: number | null;
+  b2b_margin_percent: number | null;
+  b2c_margin_percent: number | null;
+};
+
+export type SalesBoardMeta = {
+  sales_orders_available: boolean;
+  segments: string[];
+  categories: string[];
+  known_periods: string[];
+};
