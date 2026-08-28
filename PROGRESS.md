@@ -1,12 +1,16 @@
 # Okelcor Website — Progress Tracker
 
-**Last updated:** 2026-08-17 (session 89 — the contribution ledger)  
+**Last updated:** 2026-08-28 (session 102 — the team to-do list)  
 **Branch:** `main` — **everything committed and pushed**. Nothing is uncommitted except the items in "Working tree" below.
 
 | Commit | What |
 |---|---|
-| _(this session)_ | Development & technical work now counted — commits, uploads, account admin |
-| _(this session)_ | Job titles over roles · Team Contribution report · admin nav search + ⌘K palette |
+| `45ebbcd` | Team To-Dos — one shared list, tag a teammate, it finds them (session 102) |
+| `7321368` | Sales & Orders board — finance's OT 3 mockup: KPIs, GP/margin, proof-driven status (session 101) |
+| `7ae51b4` | EC Invoice List — the ZM portal: itemized invoices, delivery proofs, ELSTER XML (session 100) |
+| `bb3b57c` | Liquidity weeks folded into the snapshot board · long names wrap · My Work deep-links (session 99b) |
+| `94090ed` | Profitability + weekly liquidity ladder + Finance tab on the order page (session 99) |
+| `27a1e5f` | Campaign Scores · promotion insight · eBay price audit · finance snapshot board *(parallel sessions, 2026-08-25)* |
 | `6bfe521` | My Contribution — recorded work beside self-reported work, kept apart on purpose |
 | `579fcd7` | PROGRESS.md brought current for sessions 81–87 |
 | `2ea8e45` | eBay beside the website in the report · CSV export · fulfilment queue split in two |
@@ -19,9 +23,9 @@
 
 Earlier: `0e46cd1` behaviour analytics · `2920e90` InDesign import · `cfd4498` campaign autosave · `7a7344f` typography system — deployed and confirmed live on Vercel  
 
-**⚠️ Deploy dependencies — much of the above is inert until the API ships.** Newest first: backend `f25ca2a` (session 87 — no migration, one new route, so the route cache rebuilds on deploy), `54c508b` + one additive migration (session 86 — clients drill-down, report, invoice register), `657049d` + four migrations (session 83 — operations board, sign-off, eBay split), `05f359e` + migration #32 (behaviour analytics), `4d050d0` + migration #31 (payment milestones), plus the older campaign migrations #26/#27/#29. **Every one degrades cleanly on its own** — each new screen shows an explicit "not available on this server yet" panel rather than an empty state that reads as "no data". None breaks anything by arriving late.  
+**✅ Deploy dependencies — cleared as of 2026-08-28.** The backend is deployed through `374b89c` with migrations #1–57 applied and every new endpoint verified live from outside, so no screen in this repo is waiting on the API any more. The "not available on this server yet" panels every screen carries remain the standing pattern for the next time frontend ships ahead of a migration.  
 **Repo location:** `~/okelcor-website` — the move off iCloud is done. `eslint` and `tsc` both complete in seconds.  
-**Build status (2026-08-14, session 87):** **Full `npm run build` passes — exit 0, compiled in 7.2s, 104 pages.** TypeScript **0 errors** · ESLint **0 errors / 0 warnings** on every changed file. **Eighteen** routes added across sessions 83–87, all registered (6 pages, 12 proxies — counted, not estimated). **Still not re-measured: the repo-wide ESLint count.** The "11 errors / 45 warnings" figure below is from the iCloud era and has been stale for six sessions — one full-repo run would replace a guess with a number.
+**Build status (2026-08-28, session 102):** **Full `npm run build` passes — exit 0, compiled in 8.0s.** TypeScript **0 errors** · ESLint **0 errors / 0 warnings** on every changed file, every session today. Sessions 99–102 added five pages (`/admin/profitability`, `/admin/liquidity` — since folded into the snapshot board — `/admin/ec-invoices`, `/admin/sales-orders`, `/admin/todos`) and 33 proxy routes, all registered in the build output. **Still not re-measured: the repo-wide ESLint count** — the figure below remains from the iCloud era.
 
 **Working tree — two deliberate leftovers, and the pre-existing clutter:**
 
