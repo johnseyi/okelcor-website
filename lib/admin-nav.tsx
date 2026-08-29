@@ -126,7 +126,9 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       { label: "Team Contribution", href: "/admin/contribution/team", icon: Users, section: "staff_team", keywords: "staff performance team report kpi who did what" },
       { label: "Transaction Report", href: "/admin/operations/report", icon: LineChart, section: "operations" , keywords: "transactions month revenue chart export" },
       { label: "Finance Invoices", href: "/admin/finance-invoices", icon: ReceiptText, section: "finance" , keywords: "sevdesk reconciliation invoice register vat" },
-      { label: "Finance Snapshot", href: "/admin/finance-snapshot", icon: LineChart, section: "finance" , keywords: "liquidity cash position proposals receipts pipeline board weekly weeks bank balance" },
+      // `finance_snapshot`, not `finance`: this one page is closed to `admin`
+      // and the order manager, who keep every other item in this group.
+      { label: "Finance Snapshot", href: "/admin/finance-snapshot", icon: LineChart, section: "finance_snapshot" , keywords: "liquidity cash position proposals receipts pipeline board weekly weeks bank balance" },
       { label: "Profitability", href: "/admin/profitability", icon: Scale, section: "finance" , keywords: "profit margin revenue invoice supplier costs fees stripe ebay verified sign off export per order" },
       { label: "EC Invoice List", href: "/admin/ec-invoices", icon: FileCheck, section: "finance" , keywords: "zm zusammenfassende meldung elster bzst eu vat intra-community sales list delivery proof cmr audit xml" },
       { label: "Sales & Orders Board", href: "/admin/sales-orders", icon: ClipboardList, section: "finance" , keywords: "sales order management dashboard gp gross profit margin b2b b2c tyres sold avg price customer supplier proof" },

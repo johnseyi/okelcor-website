@@ -45,7 +45,7 @@ function fmtDue(iso?: string | null): { label: string; overdue: boolean } | null
   return { label, overdue };
 }
 
-export default function MyWork() {
+export default function MyWork({ highlightFinanceItem = null }: { highlightFinanceItem?: number | null }) {
   const [items, setItems] = useState<MyWorkItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -101,7 +101,16 @@ export default function MyWork() {
             <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
               <ul className="divide-y divide-black/[0.05]">
                 {sectionItems.map((item, idx) => (
-                  <WorkRow key={`${type}-${idx}`} item={item} onChanged={load} />
+                  <WorkRow
+                    key={`${type}-${idx}`}
+                    item={item}
+                    onChanged={load}
+                    highlighted={
+                      type === "finance_task"
+                      && highlightFinanceItem != null
+                      && item.id === highlightFinanceItem
+                    }
+                  />
                 ))}
               </ul>
             </div>
@@ -114,7 +123,11 @@ export default function MyWork() {
 
 // ── Row ───────────────────────────────────────────────────────────────────────
 
-function WorkRow({ item, onChanged }: { item: MyWorkItem; onChanged: () => void }) {
+function WorkRow({
+  item,
+  onChanged,
+  highlighted = false,
+}: { item: MyWorkItem; onChanged: () => void; highlighted?: boolean }) {
   const due = fmtDue(item.due_at);
   const priorityCls = item.priority ? PRIORITY_STYLES[item.priority] ?? PRIORITY_STYLES.normal : null;
   const [updating, setUpdating] = useState(false);
@@ -157,7 +170,15 @@ function WorkRow({ item, onChanged }: { item: MyWorkItem; onChanged: () => void 
   };
 
   return (
-    <li className="flex items-center gap-3 px-4 py-3.5 transition hover:bg-[#fafafa]">
+    <li
+      // Deep-linked row: scroll it into view and mark it, so arriving from a
+      // tagged-task link lands on the record rather than on a list to search.
+      // Same treatment as the to-do board's ?todo= highlight.
+      ref={highlighted ? (el) => el?.scrollIntoView({ block: "center" }) : undefined}
+      className={`flex items-center gap-3 px-4 py-3.5 transition hover:bg-[#fafafa] ${
+        highlighted ? "bg-amber-50 ring-2 ring-inset ring-amber-300" : ""
+      }`}
+    >
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-[0.875rem] font-semibold text-[#1a1a1a]">{item.title}</p>
@@ -198,17 +219,32 @@ function WorkRow({ item, onChanged }: { item: MyWorkItem; onChanged: () => void 
         </select>
       ) : null}
 
+      {/*
+        Use action_url exactly as served. This used to rewrite finance tasks
+        to /admin/finance-snapshot?item=N, which is now a guaranteed 403 for
+        most assignees — the board is finance-only and the people tagged to
+        chase a payment usually are not finance. The API decides where a task
+        opens; overriding it here is how the two came apart.
+      */}
       {item.action_url && (
         <Link
-          // Finance tasks open the exact record on the board, not the whole
-          // page. Client-side too, so it holds before the API's action_url
-          // carries the ?item= itself.
-          href={item.type === "finance_task" && item.id
-            ? `/admin/finance-snapshot?item=${item.id}`
-            : item.action_url}
+          href={item.action_url}
           className="flex shrink-0 items-center gap-1.5 rounded-xl bg-[#1a1a1a] px-3.5 py-2 text-[0.78rem] font-semibold text-white transition hover:bg-[#333]"
         >
           Open <ArrowRight size={13} strokeWidth={2.2} />
+        </Link>
+      )}
+
+      {/*
+        Secondary, and only when the server says this viewer may open the
+        board — it sends board_url as null otherwise.
+      */}
+      {item.board_url && (
+        <Link
+          href={item.board_url}
+          className="hidden shrink-0 items-center gap-1.5 rounded-xl border border-black/[0.09] bg-white px-3 py-2 text-[0.78rem] font-semibold text-[#5c5e62] transition hover:bg-[#fafafa] sm:flex"
+        >
+          Board
         </Link>
       )}
     </li>

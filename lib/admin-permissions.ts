@@ -19,7 +19,13 @@ export type AdminRole = (typeof ALL_ROLES)[number];
 // Mirrors backend ROLE_ACCESS table.
 
 export const ROLE_ACCESS: Record<string, string[]> = {
-  super_admin:     ["operations", "finance", "dashboard", "products", "orders", "quotes", "articles", "hero_slides", "promotions", "fet", "brands", "categories", "media", "settings", "users", "supplier", "customers", "ebay", "analytics", "behaviour", "chats", "security", "eu_declarations", "logistics", "system_health", "crm", "marketing", "partners", "staff_team"],
+  // `finance_snapshot` is a section of ONE page, held only by super_admin and
+  // `finance`. The snapshot board is the finance team's own working pipeline
+  // and the business closed it to everyone else — including `admin` and the
+  // order manager, who both keep the rest of the `finance` section (invoice
+  // reconciliation, profitability, EC Invoices, the Sales & Orders board).
+  // Keep the two apart: folding the board back under `finance` reopens it.
+  super_admin:     ["operations", "finance", "finance_snapshot", "dashboard", "products", "orders", "quotes", "articles", "hero_slides", "promotions", "fet", "brands", "categories", "media", "settings", "users", "supplier", "customers", "ebay", "analytics", "behaviour", "chats", "security", "eu_declarations", "logistics", "system_health", "crm", "marketing", "partners", "staff_team"],
   admin:           ["operations", "finance", "dashboard", "products", "orders", "quotes", "articles", "hero_slides", "promotions", "fet", "brands", "categories", "media", "settings", "users", "supplier", "customers", "ebay", "analytics", "behaviour", "chats", "security", "eu_declarations", "logistics", "system_health", "crm", "marketing", "partners", "staff_team"],
   order_manager:   ["dashboard", "orders", "quotes", "supplier", "eu_declarations", "logistics", "crm", "marketing", "partners", "behaviour", "operations", "finance", "staff_team"],
   // Reconciliation and the finance half of order sign-off. Deliberately narrow:
@@ -28,7 +34,7 @@ export const ROLE_ACCESS: Record<string, string[]> = {
   // `quotes` added: finance reconciles orders that begin life as quotes, so
   // read access to the pipeline belongs with the role. The API grants it
   // read-only (quotes.manage/view, not quotes.update).
-  finance:         ["dashboard", "orders", "quotes", "operations", "finance"],
+  finance:         ["dashboard", "orders", "quotes", "operations", "finance", "finance_snapshot"],
   sales_manager:   ["dashboard", "orders", "quotes", "customers", "analytics", "logistics", "crm", "operations"],
   content_manager: ["dashboard", "articles", "hero_slides", "promotions", "fet", "brands", "media"],
   // Content + catalogue + campaigns — the person optimizing products and
@@ -58,6 +64,9 @@ export const SECTION_PERMISSION: Record<string, string> = {
   logistics:       "orders.view",
   quotes:          "quotes.manage",
   finance:         "finance.view",
+  // The snapshot board alone. `admin` and `order_manager` hold finance.view
+  // and would be let straight in if this section were not mapped separately.
+  finance_snapshot: "finance.snapshot",
   products:        "products.view",
   customers:       "customers.view",
   analytics:       "analytics.view",
@@ -112,7 +121,7 @@ export const PATH_SECTION: Record<string, string> = {
   "/admin/operations/report":  "operations",
   "/admin/operations":      "operations",
   "/admin/finance-invoices": "finance",
-  "/admin/finance-snapshot": "finance",
+  "/admin/finance-snapshot": "finance_snapshot",
   "/admin/profitability":   "finance",
   "/admin/ec-invoices":     "finance",
   "/admin/sales-orders":    "finance",
@@ -201,6 +210,9 @@ const PERMISSION_ROLES: Record<string, string[]> = {
   // Finance-system (sevDesk) invoice recording + reconciliation.
   "finance.view":                         ["super_admin", "admin", "finance", "order_manager"],
   "finance.manage":                       ["super_admin", "admin", "finance"],
+  // The snapshot board, read and write alike. Narrower than finance.view on
+  // purpose — see the ROLE_ACCESS note above.
+  "finance.snapshot":                     ["super_admin", "finance"],
 
   // Payments
   "payments.mark_paid":        ["super_admin", "admin", "order_manager"],

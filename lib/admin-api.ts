@@ -585,10 +585,18 @@ export type MyWorkItem = {
   /** finance_task / ec_invoice_task: the assignee may update status in place. */
   editable?: boolean;
   /**
-   * ec_invoice_task: the select's options travel with the item — the EC
-   * statuses are not the finance-task statuses. Absent = finance-task set.
+   * The select's options travel with the item — the EC statuses are not the
+   * finance-task statuses, and neither is the to-do set. Now served for every
+   * editable row including finance tasks; the local list is a fallback only.
    */
   status_options?: { value: string; label: string }[];
+  /**
+   * finance_task: a link to the record on the snapshot board, present ONLY
+   * for someone who may open that board (super_admin / finance). Null or
+   * absent for every other assignee — render no board link rather than one
+   * that 403s. `action_url` is where the task is actually worked.
+   */
+  board_url?: string | null;
 };
 
 // CRM-7 quote request items (admin-structured line items for proposal)
