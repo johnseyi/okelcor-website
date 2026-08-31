@@ -12,7 +12,7 @@ import { useAdminPermissions } from "@/hooks/use-admin-permissions";
 
 /**
  * EC Invoice List — the Zusammenfassende Meldung portal, from finance's
- * mockup. Per reporting period: ZM groups (EU country × customer VAT ID ×
+ * mockup. Per reporting period: customer groups (country × customer VAT ID ×
  * transaction type), each expandable into the itemized invoices behind its
  * aggregate — with the invoice PDF and delivery proof attached, an assignee
  * chasing what is missing, the CSV audit file, and the § 18a ELSTER payload.
@@ -331,7 +331,7 @@ export default function EcInvoiceList({
           {canManage && (
             <button type="button" onClick={() => setAddingGroup(true)}
               className="flex items-center gap-1.5 rounded-full bg-[#E85C1A] px-3.5 py-2 text-[0.78rem] font-semibold text-white transition hover:bg-[#d44f12]">
-              <Plus size={13} /> Add EU country / customer
+              <Plus size={13} /> Add country / customer
             </button>
           )}
         </div>
@@ -359,7 +359,7 @@ export default function EcInvoiceList({
       {/* ── The ZM table ────────────────────────────────────────────────── */}
       {groups.length === 0 ? (
         <div className="rounded-2xl border border-black/[0.06] bg-white p-8 text-center text-[0.83rem] text-[#8c8f94]">
-          Nothing in {periodLabel(period)} yet — add an EU country / customer group to start the list.
+          Nothing in {periodLabel(period)} yet — add a country / customer group to start the list. EU supplies feed the ZM; non-EU exports are tracked right beside them.
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-black/[0.06] bg-white">
@@ -421,6 +421,8 @@ export default function EcInvoiceList({
               <p className="mb-2 text-[0.75rem] text-[#8c8f94]">
                 The § 18a UStG transmission structure: the aggregated figure per customer, whole euros,
                 with the Art code from the transaction type. Review it, then download for filing.
+                Export groups (non-EU) are <strong>not</strong> in this file — § 18a covers intra-EU
+                supplies only; exports stay in the list and the CSV audit export.
               </p>
               <textarea readOnly value={xmlText}
                 className="h-72 w-full resize-y rounded-xl border border-black/[0.09] bg-[#f8f9fa] p-3 font-mono text-[0.72rem] text-[#171a20]" />
@@ -470,7 +472,15 @@ function GroupRows({
     <>
       <tr className="cursor-pointer border-b border-black/[0.04] font-semibold transition hover:bg-[#eef4fc]" onClick={onToggle}>
         <td className={`${td} text-[#8c8f94]`}>{open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}</td>
-        <td className={td}><strong>{group.country_code}</strong></td>
+        <td className={td}>
+          <strong>{group.country_code}</strong>
+          {group.is_export && (
+            <span title="Third-country export — audited here, excluded from the ELSTER XML (§ 18a is intra-EU only)"
+              className="ml-1.5 whitespace-nowrap rounded-full bg-sky-100 px-2 py-0.5 text-[0.62rem] font-bold uppercase text-sky-700">
+              Export
+            </span>
+          )}
+        </td>
         <td className={`${td} whitespace-normal break-words`}>{group.customer_vat_id}</td>
         <td className={`${td} whitespace-normal break-words font-normal text-[#5c5e62]`}>{group.type_label}</td>
         <td className={`${td} text-right tabular-nums`}>{formatMoney(group.total, "EUR")}</td>
@@ -649,6 +659,7 @@ function GroupForm({
   const [country, setCountry] = useState("AT");
   const [vatId, setVatId] = useState("");
   const [type, setType] = useState(meta.types[0]?.key ?? "goods");
+  const isExport = type === "export";
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -673,34 +684,48 @@ function GroupForm({
   return (
     <form onSubmit={submit} className="space-y-3 rounded-2xl border border-black/[0.06] bg-white p-4">
       <p className="text-[0.72rem] font-bold uppercase tracking-wider text-[#5c5e62]">
-        New EU country transaction group — {periodLabel(period)}
+        New country transaction group — {periodLabel(period)}
       </p>
       {formError && (
         <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[0.78rem] text-red-700">{formError}</p>
       )}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         <div>
-          <label className={LABEL}>EU member state</label>
-          <select value={country} onChange={(e) => setCountry(e.target.value)} className={`${INPUT} cursor-pointer`}>
-            {meta.countries.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className={LABEL}>Customer VAT ID (USt-IdNr.)</label>
-          <input value={vatId} onChange={(e) => setVatId(e.target.value.toUpperCase())}
-            placeholder="e.g. ESB12345678" required className={INPUT} />
-        </div>
-        <div>
           <label className={LABEL}>Transaction type</label>
-          <select value={type} onChange={(e) => setType(e.target.value)} className={`${INPUT} cursor-pointer`}>
+          <select value={type}
+            onChange={(e) => {
+              const next = e.target.value;
+              setType(next);
+              // The two vocabularies do not overlap: an EU state under
+              // Export (or a third country under an intra-EU type) is a 422
+              // server-side, so the control changes shape with the type.
+              setCountry(next === "export" ? "" : meta.countries[0] ?? "AT");
+            }}
+            className={`${INPUT} cursor-pointer`}>
             {meta.types.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
           </select>
+        </div>
+        <div>
+          <label className={LABEL}>{isExport ? "Destination country (non-EU, 2 letters)" : "EU member state"}</label>
+          {isExport ? (
+            <input value={country} onChange={(e) => setCountry(e.target.value.toUpperCase())}
+              placeholder="e.g. US, GH, GB, AE" maxLength={2} required className={`${INPUT} uppercase`} />
+          ) : (
+            <select value={country} onChange={(e) => setCountry(e.target.value)} className={`${INPUT} cursor-pointer`}>
+              {meta.countries.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          )}
+        </div>
+        <div>
+          <label className={LABEL}>{isExport ? "Customer / tax reference" : "Customer VAT ID (USt-IdNr.)"}</label>
+          <input value={vatId} onChange={(e) => setVatId(e.target.value.toUpperCase())}
+            placeholder={isExport ? "e.g. MLK-TIRES-LLC" : "e.g. ESB12345678"} required className={INPUT} />
         </div>
       </div>
       <div className="flex items-center gap-2">
         <button type="submit" disabled={busy}
           className="flex items-center gap-1.5 rounded-full bg-[#E85C1A] px-4 py-1.5 text-[0.78rem] font-semibold text-white transition hover:bg-[#d44f12] disabled:opacity-50">
-          {busy && <Loader2 size={12} className="animate-spin" />} Add country group
+          {busy && <Loader2 size={12} className="animate-spin" />} Add group
         </button>
         <button type="button" onClick={onCancel}
           className="rounded-full border border-black/10 px-4 py-1.5 text-[0.78rem] font-semibold text-[#5c5e62]">

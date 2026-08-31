@@ -1930,9 +1930,15 @@ export type EcInvoiceGroup = {
   period: string;
   country_code: string;
   customer_vat_id: string;
-  /** goods | services | triangular. */
+  /** goods | services | triangular | export. */
   transaction_type: string;
   type_label: string;
+  /**
+   * Third-country export (Session 105) — listed and audited here, badged in
+   * the table, and EXCLUDED from the ELSTER XML: § 18a covers intra-EU
+   * supplies only.
+   */
+  is_export: boolean;
   /** The sum of the lines — never stored, computed server-side. */
   total: number;
   lines: EcInvoiceLine[];
@@ -1949,7 +1955,8 @@ export type EcInvoiceMeta = {
   ec_invoices_available: boolean;
   company_vat_id: string;
   countries: string[];
-  types: { key: string; label: string; art: string }[];
+  /** `art` is null for `export` — no § 18a code, and no ZM line. */
+  types: { key: string; label: string; art: string | null }[];
   statuses: { key: string; label: string }[];
   period_statuses: string[];
   staff: { id: number; name: string }[];

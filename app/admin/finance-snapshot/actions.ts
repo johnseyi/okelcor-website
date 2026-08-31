@@ -23,16 +23,37 @@ export type SnapshotItem = {
 export type LiquidityEntry = {
   id: number;
   line: string;
-  period: "open_current" | "next_month";
+  /** Legacy two-period bucket — '' on week-keyed entries. */
+  period: string;
+  /** ISO week the entry lives in, e.g. '2026-W35'. Null on legacy rows. */
+  week_key: string | null;
+  supplier: string | null;
   description: string;
   reference: string | null;
   amount: number;
+  currency: string;
+  comment: string | null;
+};
+
+export type LiquidityInput = {
+  line: string;
+  week_key: string;
+  supplier?: string | null;
+  description?: string | null;
+  amount: number;
+  currency?: string | null;
+  comment?: string | null;
 };
 
 export type SnapshotMeta = {
   categories: string[];
   statuses: string[];
   liquidity_lines: { key: string; label: string }[];
+  /**
+   * Cash Position = bank_balance + these; Forecasted = + revenue_payment.
+   * Served by the API so the grid's arithmetic cannot drift from its rows.
+   */
+  liquidity_expense_lines: string[];
   /** Active admin users, for the assign-to-staff picker. */
   staff: { id: number; name: string }[];
 };
@@ -122,13 +143,13 @@ export async function bulkAddItems(items: ItemInput[]): Promise<{ error?: string
   return { message: typeof json.message === "string" ? json.message : undefined };
 }
 
-export async function createLiquidityEntry(input: Omit<LiquidityEntry, "id">): Promise<{ entry?: LiquidityEntry; error?: string }> {
+export async function createLiquidityEntry(input: LiquidityInput): Promise<{ entry?: LiquidityEntry; error?: string }> {
   const { json, error } = await api("/liquidity", { method: "POST", body: input });
   if (error || !json) return { error };
   return { entry: json.data as LiquidityEntry };
 }
 
-export async function updateLiquidityEntry(id: number, input: Omit<LiquidityEntry, "id">): Promise<{ entry?: LiquidityEntry; error?: string }> {
+export async function updateLiquidityEntry(id: number, input: LiquidityInput): Promise<{ entry?: LiquidityEntry; error?: string }> {
   const { json, error } = await api(`/liquidity/${id}`, { method: "PUT", body: input });
   if (error || !json) return { error };
   return { entry: json.data as LiquidityEntry };

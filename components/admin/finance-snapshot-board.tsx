@@ -19,9 +19,8 @@ import {
 import {
   getSnapshot, createItem, updateItem, deleteItem, bulkAddItems,
   createLiquidityEntry, updateLiquidityEntry, deleteLiquidityEntry, restoreBackup,
-  type SnapshotItem, type LiquidityEntry, type SnapshotMeta, type ItemInput,
+  type SnapshotItem, type LiquidityEntry, type LiquidityInput, type SnapshotMeta, type ItemInput,
 } from "@/app/admin/finance-snapshot/actions";
-import LiquidityLadder from "@/components/admin/liquidity-ladder";
 
 // ── Formatting ────────────────────────────────────────────────────────────────
 
@@ -29,6 +28,48 @@ function fmt(num: number): string {
   if (!num || isNaN(num)) return "—";
   const s = Math.abs(num).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return num < 0 ? `- ${s}` : s;
+}
+
+// ── ISO week helpers — the grid's columns are ISO weeks ('2026-W35') ─────────
+
+function isoWeekMonday(year: number, week: number): Date {
+  // ISO: week 1 is the week containing 4 January.
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const day = jan4.getUTCDay() || 7;
+  const monday = new Date(jan4);
+  monday.setUTCDate(jan4.getUTCDate() - day + 1 + (week - 1) * 7);
+  return monday;
+}
+
+/** '2026-W35' → '24 Aug – 30 Aug', the file's column subtitle. */
+function isoWeekRange(weekKey: string): string {
+  const m = /^(\d{4})-W(\d{2})$/.exec(weekKey);
+  if (!m) return "";
+  const start = isoWeekMonday(+m[1], +m[2]);
+  const end = new Date(start);
+  end.setUTCDate(start.getUTCDate() + 6);
+  const f = (d: Date) => d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", timeZone: "UTC" });
+  return `${f(start)} – ${f(end)}`;
+}
+
+function currentIsoWeekKey(): string {
+  const now = new Date();
+  const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day); // the Thursday decides the ISO year
+  const year = d.getUTCFullYear();
+  const week = Math.ceil(((+d - +new Date(Date.UTC(year, 0, 1))) / 86400000 + 1) / 7);
+  return `${year}-W${String(week).padStart(2, "0")}`;
+}
+
+function nextWeekKey(key: string): string {
+  const m = /^(\d{4})-W(\d{2})$/.exec(key);
+  if (!m) return key;
+  let y = +m[1], w = +m[2] + 1;
+  const jan1 = new Date(Date.UTC(y, 0, 1)).getUTCDay();
+  const leap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+  if (w > (jan1 === 4 || (leap && jan1 === 3) ? 53 : 52)) { y += 1; w = 1; }
+  return `${y}-W${String(w).padStart(2, "0")}`;
 }
 
 const inputCls =
@@ -95,7 +136,7 @@ function parseCSV(text: string, categories: string[]): ItemInput[] {
 
 type ItemModalState = { mode: "create" | "edit"; item?: SnapshotItem; presetCategory?: string; presetPerson?: string } | null;
 type DrillState = { category: string; person: string } | null;
-type LiqModalState = { line: string; label: string; period: "open_current" | "next_month" } | null;
+type LiqModalState = { line: string; label: string; week: string } | null;
 
 export default function FinanceSnapshotBoard() {
   const [items, setItems]         = useState<SnapshotItem[]>([]);
@@ -129,9 +170,14 @@ export default function FinanceSnapshotBoard() {
   const [fAmount, setFAmount]     = useState("");
 
   // Form state for adding a liquidity line
+  const [lSupplier, setLSupplier] = useState("");
   const [lDesc, setLDesc] = useState("");
-  const [lRef, setLRef]   = useState("");
   const [lAmount, setLAmount] = useState("");
+  const [lCurrency, setLCurrency] = useState("EUR");
+  const [lComment, setLComment] = useState("");
+  // Weeks added by hand before any entry exists in them, so a fresh column
+  // can be started from the grid.
+  const [extraWeeks, setExtraWeeks] = useState<string[]>([]);
 
   const load = useCallback(() => {
     startTransition(async () => {
@@ -165,37 +211,50 @@ export default function FinanceSnapshotBoard() {
 
   useEffect(() => { load(); }, [load]);
 
-  // ── Derived: liquidity math (same formulas as the original) ────────────────
+  // ── Derived: the weekly grid, finance's "Liquidity File" summary ──────────
+  //
+  // Columns are the ISO weeks that hold entries (plus any started by hand);
+  // rows are the served line list. The computed rows follow the file's own
+  // formulas: Cash Position = Bank Balance + every expense line, and
+  // Forecasted Cash Position = Cash Position + Revenue Payment. Which lines
+  // count as expenses is SERVED (meta.liquidity_expense_lines), so the
+  // arithmetic here cannot drift from the API's row list.
 
   const liq = useMemo(() => {
     const lines = meta?.liquidity_lines ?? [];
-    const sum = (line: string, period?: string) =>
-      liquidity.filter((e) => e.line === line && (!period || e.period === period))
-        .reduce((s, e) => s + e.amount, 0);
+    const expense = new Set(meta?.liquidity_expense_lines ?? []);
+    const weekly = liquidity.filter((e) => e.week_key);
 
-    const rows = lines.map((l) => ({
-      key: l.key, label: l.label,
-      open: sum(l.key, "open_current"), next: sum(l.key, "next_month"), total: sum(l.key),
-    }));
+    const weeks = [...new Set([...weekly.map((e) => e.week_key as string), ...extraWeeks])].sort();
+    if (weeks.length === 0) weeks.push(currentIsoWeekKey());
 
-    const outflowKeys = lines.map((l) => l.key).filter((k) => k !== "bank_balance" && k !== "revenue_payment");
-    const outOpen  = outflowKeys.reduce((s, k) => s + sum(k, "open_current"), 0);
-    const outNext  = outflowKeys.reduce((s, k) => s + sum(k, "next_month"), 0);
-    const bankOpen = sum("bank_balance", "open_current");
-    const bankNext = sum("bank_balance", "next_month");
-    const revOpen  = sum("revenue_payment", "open_current");
-    const revNext  = sum("revenue_payment", "next_month");
+    const cell = (line: string, week: string) =>
+      weekly.filter((e) => e.line === line && e.week_key === week).reduce((sum, e) => sum + e.amount, 0);
 
-    const cashOpen = bankOpen + outOpen, cashNext = bankNext + outNext;
-    const foreOpen = cashOpen + revOpen, foreNext = cashNext + revNext;
+    const rows = lines.map((l) => {
+      const values = weeks.map((w) => cell(l.key, w));
+      return { key: l.key, label: l.label, values, total: values.reduce((sum, v) => sum + v, 0) };
+    });
+    const rowFor = (key: string) => rows.find((r) => r.key === key);
+
+    const cashValues = weeks.map((_, i) =>
+      (rowFor("bank_balance")?.values[i] ?? 0)
+      + rows.filter((r) => expense.has(r.key)).reduce((sum, r) => sum + r.values[i], 0));
+    const forecastValues = cashValues.map((v, i) => v + (rowFor("revenue_payment")?.values[i] ?? 0));
+    const total = (arr: number[]) => arr.reduce((sum, v) => sum + v, 0);
 
     return {
-      rows,
-      cash:     { open: cashOpen, next: cashNext, total: cashOpen + cashNext },
-      request:  { open: outOpen,  next: outNext,  total: outOpen + outNext },
-      forecast: { open: foreOpen, next: foreNext, total: foreOpen + foreNext },
+      weeks,
+      bankRow:     rowFor("bank_balance"),
+      expenseRows: rows.filter((r) => expense.has(r.key)),
+      revenueRow:  rowFor("revenue_payment"),
+      cash:     { values: cashValues, total: total(cashValues) },
+      forecast: { values: forecastValues, total: total(forecastValues) },
+      // Rows from the retired month-bucket format — counted so their
+      // absence from the grid is explained rather than silent.
+      legacyCount: liquidity.filter((e) => !e.week_key).length,
     };
-  }, [liquidity, meta]);
+  }, [liquidity, meta, extraWeeks]);
 
   // ── Item modal helpers ─────────────────────────────────────────────────────
 
@@ -267,16 +326,19 @@ export default function FinanceSnapshotBoard() {
   // ── Liquidity modal helpers ────────────────────────────────────────────────
 
   const liqModalEntries = liqModal
-    ? liquidity.filter((e) => e.line === liqModal.line && e.period === liqModal.period)
+    ? liquidity.filter((e) => e.line === liqModal.line && e.week_key === liqModal.week)
     : [];
 
   const submitLiquidityLine = (e: React.FormEvent) => {
     e.preventDefault();
     if (!liqModal) return;
-    const input = {
-      line: liqModal.line, period: liqModal.period,
-      description: lDesc.trim(), reference: lRef.trim() || null,
+    const input: LiquidityInput = {
+      line: liqModal.line, week_key: liqModal.week,
+      supplier: lSupplier.trim() || null,
+      description: lDesc.trim() || null,
       amount: parseFloat(lAmount) || 0,
+      currency: (lCurrency.trim() || "EUR").toUpperCase(),
+      comment: lComment.trim() || null,
     };
     setSaving(true);
     startTransition(async () => {
@@ -284,22 +346,34 @@ export default function FinanceSnapshotBoard() {
       setSaving(false);
       if (res.error || !res.entry) { setModalError(res.error ?? "Save failed."); return; }
       setLiquidity((prev) => [...prev, res.entry!]);
-      setLDesc(""); setLRef(""); setLAmount("");
+      setLSupplier(""); setLDesc(""); setLAmount(""); setLComment("");
     });
   };
 
-  const patchLiquidity = (entry: LiquidityEntry, field: "description" | "reference" | "amount", value: string) => {
-    const next = {
-      line: entry.line, period: entry.period,
+  const patchLiquidity = (
+    entry: LiquidityEntry,
+    field: "supplier" | "description" | "amount" | "currency" | "comment",
+    value: string,
+  ) => {
+    const next: LiquidityInput = {
+      line: entry.line, week_key: entry.week_key ?? currentIsoWeekKey(),
+      supplier: field === "supplier" ? (value || null) : entry.supplier,
       description: field === "description" ? value : entry.description,
-      reference: field === "reference" ? (value || null) : entry.reference,
       amount: field === "amount" ? (parseFloat(value) || 0) : entry.amount,
+      currency: field === "currency" ? (value.toUpperCase() || "EUR") : entry.currency,
+      comment: field === "comment" ? (value || null) : entry.comment,
     };
     startTransition(async () => {
       const res = await updateLiquidityEntry(entry.id, next);
       if (res.error || !res.entry) { setNotice(res.error ?? "Update failed."); return; }
       setLiquidity((prev) => prev.map((x) => (x.id === entry.id ? res.entry! : x)));
     });
+  };
+
+  const openLiqCell = (line: string, label: string, week: string) => {
+    setModalError(null);
+    setLSupplier(""); setLDesc(""); setLAmount(""); setLCurrency("EUR"); setLComment("");
+    setLiqModal({ line, label, week });
   };
 
   const removeLiquidity = (id: number) => {
@@ -324,7 +398,10 @@ export default function FinanceSnapshotBoard() {
         .map((e) => ({ id: e.id, desc: e.description, ref: e.reference ?? "", amount: e.amount })),
     }));
     const blob = new Blob(
-      [JSON.stringify({ items, liquidityItems }, null, 2)],
+      // weeklyEntries: the current weekly-grid rows, raw. The D13 restore
+      // ignores the key; it is here so a backup taken from the weekly board
+      // does not silently drop what the two-period shape cannot express.
+      [JSON.stringify({ items, liquidityItems, weeklyEntries: liquidity.filter((e) => e.week_key) }, null, 2)],
       { type: "application/json" },
     );
     const a = document.createElement("a");
@@ -500,58 +577,70 @@ export default function FinanceSnapshotBoard() {
           Finance Liquidity Working
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-[0.8rem]">
+          {/* The Summary grid of finance's Liquidity File: categories down,
+              ISO weeks across, a Total column, and the file's two computed
+              rows. Cells open the Details behind them. */}
+          <table className="w-full min-w-[720px] text-[0.8rem]">
             <thead>
               <tr className="border-b border-black/[0.08] bg-amber-400/90 text-[#1a1a1a]">
                 <th className="px-4 py-2 text-left font-extrabold">Item</th>
-                <th className="px-4 py-2 text-right font-extrabold">Open Current Month</th>
-                <th className="px-4 py-2 text-right font-extrabold">Next Month Forecast</th>
+                {liq.weeks.map((w) => (
+                  <th key={w} className="px-3 py-1.5 text-right font-extrabold">
+                    Week {w.slice(6).replace(/^0/, "")}
+                    <span className="block text-[0.62rem] font-semibold opacity-70">{isoWeekRange(w)}</span>
+                  </th>
+                ))}
                 <th className="px-4 py-2 text-right font-extrabold">Total</th>
+                <th className="px-2 py-2 text-right print:hidden">
+                  <button type="button"
+                    title="Start the next week's column"
+                    onClick={() => setExtraWeeks((prev) => [...prev, nextWeekKey(liq.weeks[liq.weeks.length - 1])])}
+                    className="rounded-md border border-black/20 px-1.5 py-0.5 text-[0.65rem] font-bold transition hover:bg-black/10">
+                    + Week
+                  </button>
+                </th>
               </tr>
             </thead>
             <tbody>
-              {liq.rows.filter((r) => r.key !== "revenue_payment").map((r) => (
-                <LiquidityRow key={r.key} row={r}
-                  onOpen={(period) => { setModalError(null); setLDesc(""); setLRef(""); setLAmount(""); setLiqModal({ line: r.key, label: r.label, period }); }} />
+              {liq.bankRow && (
+                <WeekGridRow row={liq.bankRow} positive weeks={liq.weeks}
+                  onOpen={(week) => openLiqCell(liq.bankRow!.key, liq.bankRow!.label, week)} />
+              )}
+              {liq.expenseRows.map((r) => (
+                <WeekGridRow key={r.key} row={r} weeks={liq.weeks}
+                  onOpen={(week) => openLiqCell(r.key, r.label, week)} />
               ))}
 
               <tr className="border-t-2 border-black/20 font-bold">
                 <td className="px-4 py-2">Cash Position</td>
-                {[liq.cash.open, liq.cash.next, liq.cash.total].map((v, i) => (
-                  <td key={i} className={`px-4 py-2 text-right font-mono ${v >= 0 ? "bg-emerald-100" : "bg-red-200"}`}>{fmt(v)}</td>
+                {[...liq.cash.values, liq.cash.total].map((v, i) => (
+                  <td key={i} className={`px-3 py-2 text-right font-mono ${v >= 0 ? "bg-emerald-100" : "bg-red-200"}`}>{fmt(v)}</td>
                 ))}
+                <td />
               </tr>
-              <tr className="bg-amber-400/90 font-extrabold">
-                <td className="px-4 py-2">Liquidity Injection Request</td>
-                {[liq.request.open, liq.request.next, liq.request.total].map((v, i) => (
-                  <td key={i} className="px-4 py-2 text-right font-mono">{fmt(v)}</td>
-                ))}
-              </tr>
-              <tr><td colSpan={4} className="h-3" /></tr>
-              {liq.rows.filter((r) => r.key === "revenue_payment").map((r) => (
-                <LiquidityRow key={r.key} row={r}
-                  onOpen={(period) => { setModalError(null); setLDesc(""); setLRef(""); setLAmount(""); setLiqModal({ line: r.key, label: r.label, period }); }} />
-              ))}
+              <tr><td colSpan={liq.weeks.length + 3} className="h-3" /></tr>
+              {liq.revenueRow && (
+                <WeekGridRow row={liq.revenueRow} positive weeks={liq.weeks}
+                  onOpen={(week) => openLiqCell(liq.revenueRow!.key, liq.revenueRow!.label, week)} />
+              )}
               <tr className="border-t border-black/10 font-bold">
                 <td className="px-4 py-2">Forecasted Cash Position</td>
-                {[liq.forecast.open, liq.forecast.next, liq.forecast.total].map((v, i) => (
-                  <td key={i} className={`px-4 py-2 text-right font-mono ${v >= 0 ? "bg-emerald-100" : "bg-red-200"}`}>{fmt(v)}</td>
+                {[...liq.forecast.values, liq.forecast.total].map((v, i) => (
+                  <td key={i} className={`px-3 py-2 text-right font-mono ${v >= 0 ? "bg-emerald-100" : "bg-red-200"}`}>{fmt(v)}</td>
                 ))}
+                <td />
               </tr>
             </tbody>
           </table>
         </div>
-        <p className="px-4 py-2 text-[0.7rem] text-[#9ca3af] print:hidden">Click any amount to view and edit its breakdown.</p>
-
-        {/* The weekly view is part of the liquidity working, per finance —
-            "we are currently in week 35": the current ISO week plus the three
-            ahead, bank balance per week, rolling with the calendar. */}
-        <div className="border-t border-black/[0.08] p-4">
-          <p className="mb-3 text-[0.72rem] font-extrabold uppercase tracking-wide text-[#5c5e62]">
-            Liquidity by week — current + 3, rolling
-          </p>
-          <LiquidityLadder />
-        </div>
+        <p className="px-4 py-2 text-[0.7rem] text-[#9ca3af] print:hidden">
+          Click any amount to view and edit the entries behind it — supplier, week, amount and comment.
+          {liq.legacyCount > 0 && (
+            <span className="ml-2 font-semibold text-amber-600">
+              {liq.legacyCount} entr{liq.legacyCount === 1 ? "y" : "ies"} from the old month-bucket board {liq.legacyCount === 1 ? "is" : "are"} not shown — the weekly file replaces them.
+            </span>
+          )}
+        </p>
       </div>
 
       {/* ── Drill-down modal: one person in one category ── */}
@@ -688,35 +777,44 @@ export default function FinanceSnapshotBoard() {
 
       {/* ── Liquidity breakdown modal ── */}
       {liqModal && (
-        <Modal onClose={() => setLiqModal(null)} title={`${liqModal.label} — ${liqModal.period === "open_current" ? "Open Current Month" : "Next Month Forecast"}`} wide>
+        <Modal onClose={() => setLiqModal(null)} title={`${liqModal.label} — Week ${liqModal.week.slice(6).replace(/^0/, "")} (${isoWeekRange(liqModal.week)})`} wide>
           {modalError && (
             <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-[0.83rem] text-red-700">
               <AlertCircle size={13} className="shrink-0" /> {modalError}
             </div>
           )}
+          {/* The Details ledger behind this cell — the file's own columns. */}
           <table className="w-full text-left text-[0.8rem]">
             <thead>
               <tr className="border-b border-black/[0.08] bg-[#f8f9fa] text-[#6b7280]">
-                <th className="px-3 py-2 font-bold">Description / Note</th>
-                <th className="px-3 py-2 font-bold">Reference / Vendor</th>
+                <th className="px-3 py-2 font-bold">Supplier</th>
+                <th className="px-3 py-2 font-bold">Description</th>
                 <th className="px-3 py-2 text-right font-bold">Amount</th>
+                <th className="px-3 py-2 font-bold">CUR</th>
+                <th className="px-3 py-2 font-bold">Comment</th>
                 <th className="px-3 py-2 text-right font-bold">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-black/[0.05]">
               {liqModalEntries.length === 0 && (
-                <tr><td colSpan={4} className="px-3 py-4 text-center italic text-[#9ca3af]">No entries for this line and period yet. Add one below.</td></tr>
+                <tr><td colSpan={6} className="px-3 py-4 text-center italic text-[#9ca3af]">No entries for this line and week yet. Add one below.</td></tr>
               )}
               {liqModalEntries.map((entry) => (
                 <tr key={entry.id}>
                   <td className="px-3 py-1.5">
-                    <input type="text" defaultValue={entry.description} onBlur={(e) => e.target.value !== entry.description && patchLiquidity(entry, "description", e.target.value)} className={inputCls} />
+                    <input type="text" defaultValue={entry.supplier ?? ""} onBlur={(e) => e.target.value !== (entry.supplier ?? "") && patchLiquidity(entry, "supplier", e.target.value)} className={inputCls} />
                   </td>
                   <td className="px-3 py-1.5">
-                    <input type="text" defaultValue={entry.reference ?? ""} onBlur={(e) => e.target.value !== (entry.reference ?? "") && patchLiquidity(entry, "reference", e.target.value)} className={inputCls} />
+                    <input type="text" defaultValue={entry.description} onBlur={(e) => e.target.value !== entry.description && patchLiquidity(entry, "description", e.target.value)} className={inputCls} />
                   </td>
                   <td className="px-3 py-1.5 text-right">
-                    <input type="number" step="0.01" defaultValue={entry.amount} onBlur={(e) => parseFloat(e.target.value) !== entry.amount && patchLiquidity(entry, "amount", e.target.value)} className={`${inputCls} w-32 text-right font-bold`} />
+                    <input type="number" step="0.01" defaultValue={entry.amount} onBlur={(e) => parseFloat(e.target.value) !== entry.amount && patchLiquidity(entry, "amount", e.target.value)} className={`${inputCls} w-28 text-right font-bold`} />
+                  </td>
+                  <td className="px-3 py-1.5">
+                    <input type="text" maxLength={3} defaultValue={entry.currency} onBlur={(e) => e.target.value.toUpperCase() !== entry.currency && patchLiquidity(entry, "currency", e.target.value)} className={`${inputCls} w-14 uppercase`} />
+                  </td>
+                  <td className="px-3 py-1.5">
+                    <input type="text" defaultValue={entry.comment ?? ""} placeholder="e.g. To Pay on 30-Sep-2026" onBlur={(e) => e.target.value !== (entry.comment ?? "") && patchLiquidity(entry, "comment", e.target.value)} className={inputCls} />
                   </td>
                   <td className="px-3 py-1.5 text-right">
                     <button type="button" onClick={() => removeLiquidity(entry.id)}
@@ -728,9 +826,11 @@ export default function FinanceSnapshotBoard() {
           </table>
 
           <form onSubmit={submitLiquidityLine} className="mt-4 flex flex-wrap gap-2 border-t border-black/[0.06] pt-4">
-            <input type="text" value={lDesc} onChange={(e) => setLDesc(e.target.value)} placeholder="Description / note" required className={`${inputCls} min-w-[180px] flex-[2]`} />
-            <input type="text" value={lRef} onChange={(e) => setLRef(e.target.value)} placeholder="Ref / vendor (optional)" className={`${inputCls} min-w-[120px] flex-1`} />
-            <input type="number" step="0.01" value={lAmount} onChange={(e) => setLAmount(e.target.value)} placeholder="Amount (e.g. 5000 or -2000)" required className={`${inputCls} min-w-[140px] flex-1`} />
+            <input type="text" value={lSupplier} onChange={(e) => setLSupplier(e.target.value)} placeholder="Supplier / who" className={`${inputCls} min-w-[150px] flex-[2]`} />
+            <input type="text" value={lDesc} onChange={(e) => setLDesc(e.target.value)} placeholder="Description (optional)" className={`${inputCls} min-w-[150px] flex-[2]`} />
+            <input type="number" step="0.01" value={lAmount} onChange={(e) => setLAmount(e.target.value)} placeholder="Amount (e.g. -2000)" required className={`${inputCls} min-w-[120px] flex-1`} />
+            <input type="text" maxLength={3} value={lCurrency} onChange={(e) => setLCurrency(e.target.value)} className={`${inputCls} w-16 uppercase`} />
+            <input type="text" value={lComment} onChange={(e) => setLComment(e.target.value)} placeholder="Comment (e.g. To Pay on 30-Sep)" className={`${inputCls} min-w-[150px] flex-[2]`} />
             <button type="submit" disabled={saving} className="h-9 rounded-full bg-[#E85C1A] px-4 text-[0.78rem] font-semibold text-white transition hover:bg-[#d44f12] disabled:opacity-60">+ Add Line</button>
           </form>
         </Modal>
@@ -741,21 +841,30 @@ export default function FinanceSnapshotBoard() {
 
 // ── Small building blocks ─────────────────────────────────────────────────────
 
-function LiquidityRow({
+function WeekGridRow({
   row,
+  weeks,
+  positive,
   onOpen,
 }: {
-  row: { key: string; label: string; open: number; next: number; total: number };
-  onOpen: (period: "open_current" | "next_month") => void;
+  row: { key: string; label: string; values: number[]; total: number };
+  weeks: string[];
+  positive?: boolean;
+  onOpen: (week: string) => void;
 }) {
-  const isPositiveLine = row.key === "bank_balance" || row.key === "revenue_payment";
-  const cellBg = (v: number) => (v === 0 ? "" : isPositiveLine ? "bg-emerald-100" : "bg-red-200");
+  const cellBg = (v: number) => (v === 0 ? "" : positive ? "bg-emerald-100" : "bg-red-200");
   return (
     <tr className="border-b border-black/[0.05]">
-      <td className="px-4 py-2 font-bold">{row.label}</td>
-      <td className={`cursor-pointer px-4 py-2 text-right font-mono transition hover:brightness-95 ${cellBg(row.open)}`} onClick={() => onOpen("open_current")}>{fmt(row.open)}</td>
-      <td className={`cursor-pointer px-4 py-2 text-right font-mono transition hover:brightness-95 ${cellBg(row.next)}`} onClick={() => onOpen("next_month")}>{fmt(row.next)}</td>
-      <td className={`px-4 py-2 text-right font-mono ${row.total === 0 ? "" : row.total >= 0 ? "bg-emerald-100" : "bg-red-200"}`}>{fmt(row.total)}</td>
+      <td className="whitespace-nowrap px-4 py-2 font-bold">{row.label}</td>
+      {row.values.map((v, i) => (
+        <td key={weeks[i]}
+          className={`cursor-pointer px-3 py-2 text-right font-mono transition hover:brightness-95 ${cellBg(v)}`}
+          onClick={() => onOpen(weeks[i])}>
+          {fmt(v)}
+        </td>
+      ))}
+      <td className={`px-4 py-2 text-right font-mono font-bold ${row.total === 0 ? "" : row.total >= 0 ? "bg-emerald-100" : "bg-red-200"}`}>{fmt(row.total)}</td>
+      <td />
     </tr>
   );
 }
