@@ -54,6 +54,12 @@ export type SnapshotMeta = {
    * Served by the API so the grid's arithmetic cannot drift from its rows.
    */
   liquidity_expense_lines: string[];
+  /**
+   * The server's current ISO week ('2026-W36'). Weeks before it are CLOSED:
+   * the API refuses writes landing in them, and the grid marks the columns.
+   * Served so the panel and the refusals share one clock.
+   */
+  current_week: string;
   /** Active admin users, for the assign-to-staff picker. */
   staff: { id: number; name: string }[];
 };

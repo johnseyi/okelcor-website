@@ -243,8 +243,30 @@ export default function FinanceSnapshotBoard() {
     const forecastValues = cashValues.map((v, i) => v + (rowFor("revenue_payment")?.values[i] ?? 0));
     const total = (arr: number[]) => arr.reduce((sum, v) => sum + v, 0);
 
+    // Weeks before the SERVER'S current week are closed — the API refuses
+    // writes landing in them, so the grid must say so rather than offer
+    // controls that 422. Server clock, not the browser's: the refusal and
+    // the label have to agree.
+    const currentWeek = meta?.current_week ?? currentIsoWeekKey();
+    const isClosed = (w: string) => w < currentWeek;
+
+    // Where a record can be MOVED to: every open week on the grid, plus the
+    // next few beyond it, so rolling forward never requires creating the
+    // destination column first.
+    let horizon = weeks[weeks.length - 1] >= currentWeek ? weeks[weeks.length - 1] : currentWeek;
+    const openWeeks = weeks.filter((w) => !isClosed(w));
+    if (!openWeeks.includes(currentWeek)) openWeeks.unshift(currentWeek);
+    for (let i = 0; i < 4; i++) {
+      horizon = nextWeekKey(horizon);
+      if (!openWeeks.includes(horizon)) openWeeks.push(horizon);
+    }
+    openWeeks.sort();
+
     return {
       weeks,
+      currentWeek,
+      isClosed,
+      openWeeks,
       bankRow:     rowFor("bank_balance"),
       expenseRows: rows.filter((r) => expense.has(r.key)),
       revenueRow:  rowFor("revenue_payment"),
@@ -370,7 +392,24 @@ export default function FinanceSnapshotBoard() {
     });
   };
 
-  const openLiqCell = (line: string, label: string, week: string) => {
+  // The move that used to be delete-and-retype: same entry, new week. The
+  // modal follows the record so finance sees where it landed.
+  const moveLiquidity = (entry: LiquidityEntry, week: string) => {
+    if (!week || week === entry.week_key) return;
+    const next: LiquidityInput = {
+      line: entry.line, week_key: week,
+      supplier: entry.supplier, description: entry.description,
+      amount: entry.amount, currency: entry.currency, comment: entry.comment,
+    };
+    startTransition(async () => {
+      const res = await updateLiquidityEntry(entry.id, next);
+      if (res.error || !res.entry) { setModalError(res.error ?? "Move failed."); return; }
+      setLiquidity((prev) => prev.map((x) => (x.id === entry.id ? res.entry! : x)));
+      setLiqModal((m) => (m ? { ...m, week } : m));
+    });
+  };
+
+    const openLiqCell = (line: string, label: string, week: string) => {
     setModalError(null);
     setLSupplier(""); setLDesc(""); setLAmount(""); setLCurrency("EUR"); setLComment("");
     setLiqModal({ line, label, week });
@@ -490,6 +529,19 @@ export default function FinanceSnapshotBoard() {
           <button type="button" onClick={() => window.print()} className="flex items-center gap-1.5 rounded-full border border-black/10 px-3.5 py-2 text-[0.78rem] font-semibold text-[#1a1a1a] transition hover:bg-[#f0f2f5]">
             <Printer size={13} /> Print
           </button>
+          {/* Spreadsheet downloads — plain navigations so the browser's own
+              download handling applies; the proxy routes forward the API's
+              BOM-prefixed CSVs with their filenames. The liquidity file is
+              in the import's own column layout, so what finance downloads
+              is also what liquidity:import can restore. */}
+          <a href="/api/admin/finance-snapshot/export" download
+            className="flex items-center gap-1.5 rounded-full border border-black/10 px-3.5 py-2 text-[0.78rem] font-semibold text-[#1a1a1a] transition hover:bg-[#f0f2f5]">
+            <Download size={13} /> Snapshot CSV
+          </a>
+          <a href="/api/admin/finance-snapshot/liquidity/export" download
+            className="flex items-center gap-1.5 rounded-full border border-black/10 px-3.5 py-2 text-[0.78rem] font-semibold text-[#1a1a1a] transition hover:bg-[#f0f2f5]">
+            <Download size={13} /> Liquidity CSV
+          </a>
           <button type="button" onClick={downloadBackup} className="flex items-center gap-1.5 rounded-full border border-black/10 px-3.5 py-2 text-[0.78rem] font-semibold text-[#1a1a1a] transition hover:bg-[#f0f2f5]">
             <Download size={13} /> Backup JSON
           </button>
@@ -585,8 +637,12 @@ export default function FinanceSnapshotBoard() {
               <tr className="border-b border-black/[0.08] bg-amber-400/90 text-[#1a1a1a]">
                 <th className="px-4 py-2 text-left font-extrabold">Item</th>
                 {liq.weeks.map((w) => (
-                  <th key={w} className="px-3 py-1.5 text-right font-extrabold">
+                  <th key={w} className={`px-3 py-1.5 text-right font-extrabold ${liq.isClosed(w) ? "opacity-60" : ""}`}>
                     Week {w.slice(6).replace(/^0/, "")}
+                    {liq.isClosed(w) && (
+                      <span title="This week has ended — its records are read-only; unpaid items can still be moved forward."
+                        className="ml-1 rounded-full bg-black/15 px-1.5 py-0.5 text-[0.58rem] font-bold uppercase">Closed</span>
+                    )}
                     <span className="block text-[0.62rem] font-semibold opacity-70">{isoWeekRange(w)}</span>
                   </th>
                 ))}
@@ -594,7 +650,12 @@ export default function FinanceSnapshotBoard() {
                 <th className="px-2 py-2 text-right print:hidden">
                   <button type="button"
                     title="Start the next week's column"
-                    onClick={() => setExtraWeeks((prev) => [...prev, nextWeekKey(liq.weeks[liq.weeks.length - 1])])}
+                    onClick={() => {
+                      // Never "start" a closed week: extend from whichever
+                      // is later, the last shown column or the current week.
+                      const last = liq.weeks[liq.weeks.length - 1];
+                      setExtraWeeks((prev) => [...prev, nextWeekKey(last >= liq.currentWeek ? last : liq.currentWeek)]);
+                    }}
                     className="rounded-md border border-black/20 px-1.5 py-0.5 text-[0.65rem] font-bold transition hover:bg-black/10">
                     + Week
                   </button>
@@ -777,10 +838,16 @@ export default function FinanceSnapshotBoard() {
 
       {/* ── Liquidity breakdown modal ── */}
       {liqModal && (
-        <Modal onClose={() => setLiqModal(null)} title={`${liqModal.label} — Week ${liqModal.week.slice(6).replace(/^0/, "")} (${isoWeekRange(liqModal.week)})`} wide>
+        <Modal onClose={() => setLiqModal(null)} title={`${liqModal.label} — Week ${liqModal.week.slice(6).replace(/^0/, "")} (${isoWeekRange(liqModal.week)})${liq.isClosed(liqModal.week) ? " — CLOSED" : ""}`} wide>
           {modalError && (
             <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-[0.83rem] text-red-700">
               <AlertCircle size={13} className="shrink-0" /> {modalError}
+            </div>
+          )}
+          {liq.isClosed(liqModal.week) && (
+            <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-[0.8rem] text-amber-800">
+              This week has ended, so its records are read-only. An unpaid or unfinished item can still be
+              <strong> moved to an open week</strong> with the Week selector on its row — that is the one change a closed week allows.
             </div>
           )}
           {/* The Details ledger behind this cell — the file's own columns. */}
@@ -792,39 +859,62 @@ export default function FinanceSnapshotBoard() {
                 <th className="px-3 py-2 text-right font-bold">Amount</th>
                 <th className="px-3 py-2 font-bold">CUR</th>
                 <th className="px-3 py-2 font-bold">Comment</th>
+                <th className="px-3 py-2 font-bold">Week</th>
                 <th className="px-3 py-2 text-right font-bold">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-black/[0.05]">
               {liqModalEntries.length === 0 && (
-                <tr><td colSpan={6} className="px-3 py-4 text-center italic text-[#9ca3af]">No entries for this line and week yet. Add one below.</td></tr>
+                <tr><td colSpan={7} className="px-3 py-4 text-center italic text-[#9ca3af]">No entries for this line and week yet. Add one below.</td></tr>
               )}
-              {liqModalEntries.map((entry) => (
+              {liqModalEntries.map((entry) => {
+                const closed = liq.isClosed(liqModal.week);
+                const roCls = closed ? `${inputCls} pointer-events-none bg-[#f8f9fa] text-[#6b7280]` : inputCls;
+                return (
                 <tr key={entry.id}>
                   <td className="px-3 py-1.5">
-                    <input type="text" defaultValue={entry.supplier ?? ""} onBlur={(e) => e.target.value !== (entry.supplier ?? "") && patchLiquidity(entry, "supplier", e.target.value)} className={inputCls} />
+                    <input type="text" readOnly={closed} defaultValue={entry.supplier ?? ""} onBlur={(e) => !closed && e.target.value !== (entry.supplier ?? "") && patchLiquidity(entry, "supplier", e.target.value)} className={roCls} />
                   </td>
                   <td className="px-3 py-1.5">
-                    <input type="text" defaultValue={entry.description} onBlur={(e) => e.target.value !== entry.description && patchLiquidity(entry, "description", e.target.value)} className={inputCls} />
+                    <input type="text" readOnly={closed} defaultValue={entry.description} onBlur={(e) => !closed && e.target.value !== entry.description && patchLiquidity(entry, "description", e.target.value)} className={roCls} />
                   </td>
                   <td className="px-3 py-1.5 text-right">
-                    <input type="number" step="0.01" defaultValue={entry.amount} onBlur={(e) => parseFloat(e.target.value) !== entry.amount && patchLiquidity(entry, "amount", e.target.value)} className={`${inputCls} w-28 text-right font-bold`} />
+                    <input type="number" step="0.01" readOnly={closed} defaultValue={entry.amount} onBlur={(e) => !closed && parseFloat(e.target.value) !== entry.amount && patchLiquidity(entry, "amount", e.target.value)} className={`${closed ? roCls : inputCls} w-28 text-right font-bold`} />
                   </td>
                   <td className="px-3 py-1.5">
-                    <input type="text" maxLength={3} defaultValue={entry.currency} onBlur={(e) => e.target.value.toUpperCase() !== entry.currency && patchLiquidity(entry, "currency", e.target.value)} className={`${inputCls} w-14 uppercase`} />
+                    <input type="text" maxLength={3} readOnly={closed} defaultValue={entry.currency} onBlur={(e) => !closed && e.target.value.toUpperCase() !== entry.currency && patchLiquidity(entry, "currency", e.target.value)} className={`${closed ? roCls : inputCls} w-14 uppercase`} />
                   </td>
                   <td className="px-3 py-1.5">
-                    <input type="text" defaultValue={entry.comment ?? ""} placeholder="e.g. To Pay on 30-Sep-2026" onBlur={(e) => e.target.value !== (entry.comment ?? "") && patchLiquidity(entry, "comment", e.target.value)} className={inputCls} />
+                    <input type="text" readOnly={closed} defaultValue={entry.comment ?? ""} placeholder="e.g. To Pay on 30-Sep-2026" onBlur={(e) => !closed && e.target.value !== (entry.comment ?? "") && patchLiquidity(entry, "comment", e.target.value)} className={roCls} />
+                  </td>
+                  <td className="px-3 py-1.5">
+                    {/* The move that replaces delete-and-retype. Always
+                        offered — in a closed week it is the ONLY control, in
+                        an open one it saves the round trip. Options are open
+                        weeks only; the API refuses anything else anyway. */}
+                    <select value={entry.week_key ?? ""} onChange={(e) => moveLiquidity(entry, e.target.value)}
+                      className={`${inputCls} w-[7.5rem] cursor-pointer`}>
+                      {entry.week_key && liq.isClosed(entry.week_key) && (
+                        <option value={entry.week_key} disabled>W{entry.week_key.slice(6)} (closed)</option>
+                      )}
+                      {liq.openWeeks.map((w) => (
+                        <option key={w} value={w}>Week {w.slice(6).replace(/^0/, "")}</option>
+                      ))}
+                    </select>
                   </td>
                   <td className="px-3 py-1.5 text-right">
-                    <button type="button" onClick={() => removeLiquidity(entry.id)}
-                      className="rounded-lg bg-red-500 px-2.5 py-1 text-[0.7rem] font-semibold text-white transition hover:bg-red-600">Delete</button>
+                    {!closed && (
+                      <button type="button" onClick={() => removeLiquidity(entry.id)}
+                        className="rounded-lg bg-red-500 px-2.5 py-1 text-[0.7rem] font-semibold text-white transition hover:bg-red-600">Delete</button>
+                    )}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
 
+          {!liq.isClosed(liqModal.week) && (
           <form onSubmit={submitLiquidityLine} className="mt-4 flex flex-wrap gap-2 border-t border-black/[0.06] pt-4">
             <input type="text" value={lSupplier} onChange={(e) => setLSupplier(e.target.value)} placeholder="Supplier / who" className={`${inputCls} min-w-[150px] flex-[2]`} />
             <input type="text" value={lDesc} onChange={(e) => setLDesc(e.target.value)} placeholder="Description (optional)" className={`${inputCls} min-w-[150px] flex-[2]`} />
@@ -833,6 +923,7 @@ export default function FinanceSnapshotBoard() {
             <input type="text" value={lComment} onChange={(e) => setLComment(e.target.value)} placeholder="Comment (e.g. To Pay on 30-Sep)" className={`${inputCls} min-w-[150px] flex-[2]`} />
             <button type="submit" disabled={saving} className="h-9 rounded-full bg-[#E85C1A] px-4 text-[0.78rem] font-semibold text-white transition hover:bg-[#d44f12] disabled:opacity-60">+ Add Line</button>
           </form>
+          )}
         </Modal>
       )}
     </div>
