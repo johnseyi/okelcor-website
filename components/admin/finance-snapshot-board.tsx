@@ -499,15 +499,33 @@ export default function FinanceSnapshotBoard() {
   }
 
   if (pageError) {
+    // The board is finance-only (Session 103), but people who used it daily
+    // before the lockdown still land here — stale tabs, bookmarks, muscle
+    // memory. A tagged task is worked from My Work, and a dead end that
+    // does not say so reads as "I was tagged but I have no access".
+    const restricted = /permission/i.test(pageError);
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center p-8 text-center">
         <AlertCircle size={32} className="mb-3 text-amber-400" strokeWidth={1.5} />
-        <p className="mb-1 text-[1rem] font-bold text-[#1a1a1a]">Finance snapshot unavailable</p>
-        <p className="mb-5 max-w-sm text-[0.83rem] text-[#6b7280]">{pageError}</p>
-        <button type="button" onClick={() => { setLoading(true); load(); }}
-          className="flex items-center gap-2 rounded-full bg-[#E85C1A] px-5 py-2.5 text-[0.85rem] font-semibold text-white transition hover:bg-[#d14f14]">
-          <RefreshCw size={14} /> Retry
-        </button>
+        <p className="mb-1 text-[1rem] font-bold text-[#1a1a1a]">
+          {restricted ? "The finance snapshot is restricted to Finance" : "Finance snapshot unavailable"}
+        </p>
+        <p className="mb-5 max-w-md text-[0.83rem] text-[#6b7280]">
+          {restricted
+            ? "Only the finance team and super admins can open the full board. If you were tagged on a task, everything you need — the details, the status, a note back — is in My Work."
+            : pageError}
+        </p>
+        {restricted ? (
+          <a href="/admin/my-work"
+            className="flex items-center gap-2 rounded-full bg-[#E85C1A] px-5 py-2.5 text-[0.85rem] font-semibold text-white transition hover:bg-[#d14f14]">
+            Open My Work
+          </a>
+        ) : (
+          <button type="button" onClick={() => { setLoading(true); load(); }}
+            className="flex items-center gap-2 rounded-full bg-[#E85C1A] px-5 py-2.5 text-[0.85rem] font-semibold text-white transition hover:bg-[#d14f14]">
+            <RefreshCw size={14} /> Retry
+          </button>
+        )}
       </div>
     );
   }

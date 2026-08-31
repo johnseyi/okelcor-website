@@ -139,6 +139,32 @@ function WorkRow({
   const isEcTask = item.type === "ec_invoice_task";
   const isTodo = item.type === "todo_task";
 
+  // The note back to finance — PATCHes alongside the current status (the
+  // endpoint requires one), so "done, but the client asked for X" travels
+  // without a message being written anywhere else.
+  const saveNote = async (comment: string) => {
+    if (!item.id || comment.trim() === (item.comment ?? "").trim()) return;
+    setUpdating(true);
+    setUpdateError(null);
+    try {
+      const res = await fetch(`/api/admin/my-work/finance/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: item.status ?? "Pending", comment: comment.trim() }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({})) as { message?: string };
+        setUpdateError(json.message ?? "Could not save the note.");
+        return;
+      }
+      onChanged();
+    } catch {
+      setUpdateError("Could not reach the server.");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   const setStatus = async (status: string) => {
     if (!item.id || status === item.status) return;
     setUpdating(true);
@@ -203,6 +229,20 @@ function WorkRow({
         )}
         {updateError && (
           <p className="mt-0.5 text-[0.73rem] font-medium text-red-600">{updateError}</p>
+        )}
+        {/* The assignee's note back to finance. Finance tasks only: the
+            tagged person cannot open the board, so this row is where the
+            whole exchange happens — status right, words here. */}
+        {item.type === "finance_task" && item.editable && item.id && (
+          <input
+            type="text"
+            defaultValue={item.comment ?? ""}
+            placeholder="Add a note back to finance — saved when you click away…"
+            disabled={updating}
+            onBlur={(e) => void saveNote(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+            className="mt-1.5 h-8 w-full max-w-md rounded-lg border border-black/[0.08] bg-white px-2.5 text-[0.78rem] text-[#1a1a1a] outline-none placeholder:text-[#b6b8bc] transition focus:border-[#E85C1A] disabled:opacity-50"
+          />
         )}
       </div>
 

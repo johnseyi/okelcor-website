@@ -597,6 +597,16 @@ export type MyWorkItem = {
    * that 403s. `action_url` is where the task is actually worked.
    */
   board_url?: string | null;
+  /**
+   * finance_task: the task's raw fields (Session 107). The assignee cannot
+   * open the board, so My Work is their whole view of it — and the note
+   * (`comment`) is editable in place, which needs the raw value rather
+   * than the copy baked into the subtitle.
+   */
+  category?: string | null;
+  client?: string | null;
+  amount?: number | null;
+  comment?: string | null;
 };
 
 // CRM-7 quote request items (admin-structured line items for proposal)
