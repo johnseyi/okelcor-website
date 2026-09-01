@@ -328,10 +328,18 @@ export default function TodoBoard({ initialTodo }: { initialTodo: number | null 
                   controls and no explanation is indistinguishable from a
                   broken one — which is how this was reported.
                 */}
+                {/*
+                  Name the DEPARTMENT, not two colleagues. Naming people was
+                  accurate and still unhelpful: the second finance user read
+                  "Only Joseph or Solomon can change this", was finance
+                  himself, and could not tell whether he was locked out by
+                  design or by a bug.
+                */}
                 {!todo.you_may_edit && (
                   <span className="shrink-0 text-[0.7rem] italic text-[#b6b8bc]">
-                    Only {todo.creator ?? "whoever created it"}
-                    {todo.assignee ? ` or ${todo.assignee}` : ""} can change this
+                    {todo.department
+                      ? `Only ${todo.department}${todo.assignee ? ` or ${todo.assignee}` : ""} can change this`
+                      : `Only ${todo.creator ?? "whoever created it"}${todo.assignee ? ` or ${todo.assignee}` : ""} can change this`}
                   </span>
                 )}
               </li>
