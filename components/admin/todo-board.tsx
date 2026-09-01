@@ -24,6 +24,24 @@ const PRIORITY_BADGE: Record<string, string> = {
   low:    "border-gray-200 bg-gray-50 text-gray-500",
 };
 
+/**
+ * A stable colour per department, so "from Finance" is recognisable at a
+ * glance on a list that mixes every team's requests together. Anything not
+ * listed falls back to grey rather than going uncoloured.
+ */
+const DEPARTMENT_BADGE: Record<string, string> = {
+  Finance:    "border-emerald-200 bg-emerald-50 text-emerald-700",
+  Operations: "border-sky-200 bg-sky-50 text-sky-700",
+  Sales:      "border-violet-200 bg-violet-50 text-violet-700",
+  Marketing:  "border-pink-200 bg-pink-50 text-pink-700",
+  Management: "border-amber-200 bg-amber-50 text-amber-800",
+  Content:    "border-indigo-200 bg-indigo-50 text-indigo-700",
+  Support:    "border-teal-200 bg-teal-50 text-teal-700",
+  General:    "border-gray-200 bg-gray-50 text-gray-600",
+};
+
+const DEPARTMENT_FALLBACK = "border-gray-200 bg-gray-50 text-gray-600";
+
 const STATUS_SELECT: Record<string, string> = {
   open:        "border-black/[0.10] bg-white text-[#171a20]",
   in_progress: "border-cyan-200 bg-cyan-50 text-cyan-800",
@@ -43,10 +61,21 @@ export default function TodoBoard({ initialTodo }: { initialTodo: number | null 
   const [error, setError] = useState<string | null>(null);
 
   const [scope, setScope] = useState<Scope>("active");
+  const [department, setDepartment] = useState<string>("");
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<TodoItem | null>(null);
   const [highlight, setHighlight] = useState<number | null>(null);
   const deepLinkDone = useRef(false);
+  const formRef = useRef<HTMLDivElement | null>(null);
+
+  // The add/edit form renders above the list. Opening it from a row halfway
+  // down the page put it off-screen, so the click looked like it did nothing
+  // — which is most of what "you can't click a to-do to edit it" was.
+  useEffect(() => {
+    if (adding || editing) {
+      formRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+  }, [adding, editing]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -55,6 +84,7 @@ export default function TodoBoard({ initialTodo }: { initialTodo: number | null 
       if (scope === "mine") p.set("scope", "mine");
       if (scope === "created") p.set("scope", "created");
       if (scope === "done") p.set("status", "done");
+      if (department) p.set("department", department);
       const res = await fetch(`/api/admin/todos${p.size ? `?${p}` : ""}`);
       const json = await res.json().catch(() => ({}));
       if (!res.ok || json?.meta?.todos_available === false) {
@@ -78,7 +108,7 @@ export default function TodoBoard({ initialTodo }: { initialTodo: number | null 
     } finally {
       setLoading(false);
     }
-  }, [scope, initialTodo]);
+  }, [scope, department, initialTodo]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -139,6 +169,29 @@ export default function TodoBoard({ initialTodo }: { initialTodo: number | null 
         <button type="button" onClick={() => setScope("done")} className={chip(scope === "done")}>
           Done
         </button>
+
+        {/*
+          Where a request came from. Only departments that actually have
+          to-dos are offered — a filter listing eight choices where six
+          return nothing is a worse list than one offering the two that exist.
+        */}
+        {meta?.departments && Object.keys(meta.departments).length > 0 && (
+          <label className="flex items-center gap-1.5 text-[0.8rem] font-semibold text-[#5c5e62]">
+            From:
+            <select
+              value={department}
+              onChange={(e) => setDepartment(e.target.value)}
+              className="h-8 cursor-pointer rounded-full border border-black/[0.10] bg-white px-2.5 text-[0.78rem] font-semibold text-[#171a20] outline-none transition focus:border-[#E85C1A]"
+            >
+              <option value="">All departments</option>
+              {Object.entries(meta.departments)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([name, count]) => (
+                  <option key={name} value={name}>{name} ({count})</option>
+                ))}
+            </select>
+          </label>
+        )}
         {!adding && !editing && (
           <button type="button" onClick={() => setAdding(true)}
             className="ml-auto flex items-center gap-1.5 rounded-full bg-[#E85C1A] px-3.5 py-1.5 text-[0.8rem] font-semibold text-white transition hover:bg-[#d44f12]">
@@ -154,15 +207,19 @@ export default function TodoBoard({ initialTodo }: { initialTodo: number | null 
         </div>
       )}
 
-      {(adding || editing) && meta && (
-        <TodoForm meta={meta} editing={editing}
-          onCancel={() => { setAdding(false); setEditing(null); }}
-          onDone={() => { setAdding(false); setEditing(null); void load(); }} />
-      )}
+      <div ref={formRef}>
+        {(adding || editing) && meta && (
+          <TodoForm meta={meta} editing={editing}
+            onCancel={() => { setAdding(false); setEditing(null); }}
+            onDone={() => { setAdding(false); setEditing(null); void load(); }} />
+        )}
+      </div>
 
       {todos.length === 0 ? (
         <div className="rounded-2xl border border-black/[0.06] bg-white p-8 text-center text-[0.83rem] text-[#8c8f94]">
-          {scope === "done" ? "Nothing finished yet."
+          {department
+            ? `Nothing from ${department}${scope === "done" ? " is finished" : " on this list"}.`
+            : scope === "done" ? "Nothing finished yet."
             : scope === "mine" ? "Nothing is tagged to you — enjoy it while it lasts."
             : "Nothing on the list — add the first to-do."}
         </div>
@@ -175,7 +232,21 @@ export default function TodoBoard({ initialTodo }: { initialTodo: number | null 
                 className={`flex flex-wrap items-center gap-3 px-4 py-3 ${
                   todo.id === highlight ? "bg-amber-50 ring-2 ring-inset ring-amber-300" : ""
                 }`}>
-                <div className="min-w-0 flex-1">
+                <div
+                  className={`min-w-0 flex-1 ${todo.you_may_edit ? "cursor-pointer" : ""}`}
+                  role={todo.you_may_edit ? "button" : undefined}
+                  tabIndex={todo.you_may_edit ? 0 : undefined}
+                  title={todo.you_may_edit ? "Open this to-do to edit it" : undefined}
+                  onClick={() => { if (todo.you_may_edit) { setEditing(todo); setAdding(false); } }}
+                  onKeyDown={(e) => {
+                    if (!todo.you_may_edit) return;
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setEditing(todo);
+                      setAdding(false);
+                    }
+                  }}
+                >
                   <div className="flex flex-wrap items-center gap-2">
                     <p className={`whitespace-normal break-words text-[0.875rem] font-semibold ${
                       todo.status === "done" ? "text-[#9ca3af] line-through" : "text-[#171a20]"
@@ -187,9 +258,22 @@ export default function TodoBoard({ initialTodo }: { initialTodo: number | null 
                         {todo.priority}
                       </span>
                     )}
+                    {todo.department && (
+                      <span
+                        title={`Raised by ${todo.department}`}
+                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[0.62rem] font-bold uppercase tracking-wide ${DEPARTMENT_BADGE[todo.department] ?? DEPARTMENT_FALLBACK}`}
+                      >
+                        {todo.department}
+                      </span>
+                    )}
                   </div>
                   {todo.details && (
                     <p className="mt-0.5 whitespace-normal break-words text-[0.78rem] text-[#5c5e62]">{todo.details}</p>
+                  )}
+                  {todo.assignee_note && (
+                    <p className="mt-1 whitespace-pre-wrap break-words border-l-2 border-[#E85C1A]/40 pl-2 text-[0.78rem] text-[#5c5e62]">
+                      <span className="font-semibold text-[#8c8f94]">Note back:</span> {todo.assignee_note}
+                    </p>
                   )}
                   <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[0.72rem] text-[#8c8f94]">
                     {todo.assignee ? (
@@ -220,17 +304,35 @@ export default function TodoBoard({ initialTodo }: { initialTodo: number | null 
                   {(meta?.statuses ?? []).map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
                 </select>
 
+                {/*
+                  Labelled, not a bare 13px icon. Two people reported they
+                  "could not edit or delete" a to-do they had every right to
+                  move: the controls were there, in grey, unlabelled, at the
+                  end of a row that wraps on a narrow screen. Nothing was
+                  denied — nothing was findable.
+                */}
                 {todo.you_may_edit && (
                   <button type="button" onClick={() => { setEditing(todo); setAdding(false); }}
-                    className="shrink-0 text-[#8c8f94] transition hover:text-[#171a20]" aria-label="Edit to-do">
-                    <Pencil size={13} />
+                    className="flex shrink-0 items-center gap-1 rounded-lg border border-black/[0.10] bg-white px-2.5 py-1.5 text-[0.73rem] font-semibold text-[#5c5e62] transition hover:border-[#E85C1A] hover:text-[#171a20]">
+                    <Pencil size={12} /> Edit
                   </button>
                 )}
                 {todo.you_may_delete && (
                   <button type="button" onClick={() => void remove(todo)}
-                    className="shrink-0 text-[#8c8f94] transition hover:text-red-600" aria-label="Delete to-do">
-                    <Trash2 size={13} />
+                    className="flex shrink-0 items-center gap-1 rounded-lg border border-black/[0.10] bg-white px-2.5 py-1.5 text-[0.73rem] font-semibold text-[#5c5e62] transition hover:border-red-300 hover:text-red-600">
+                    <Trash2 size={12} /> Delete
                   </button>
+                )}
+                {/*
+                  And when it genuinely is not yours, say so. A row with no
+                  controls and no explanation is indistinguishable from a
+                  broken one — which is how this was reported.
+                */}
+                {!todo.you_may_edit && (
+                  <span className="shrink-0 text-[0.7rem] italic text-[#b6b8bc]">
+                    Only {todo.creator ?? "whoever created it"}
+                    {todo.assignee ? ` or ${todo.assignee}` : ""} can change this
+                  </span>
                 )}
               </li>
             ))}
@@ -256,6 +358,7 @@ function TodoForm({
   const [dueOn, setDueOn] = useState(editing?.due_on ?? "");
   const [priority, setPriority] = useState(editing?.priority ?? "normal");
   const [assignee, setAssignee] = useState(editing?.assigned_admin_id ? String(editing.assigned_admin_id) : "");
+  const [note, setNote] = useState(editing?.assignee_note ?? "");
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -270,6 +373,8 @@ function TodoForm({
         due_on: dueOn || null,
         priority,
         assigned_admin_id: assignee ? Number(assignee) : null,
+        // Only on an edit: a to-do being created has nobody to reply yet.
+        ...(editing ? { assignee_note: note || null } : {}),
       };
       const res = await fetch(editing ? `/api/admin/todos/${editing.id}` : "/api/admin/todos", {
         method: editing ? "PATCH" : "POST",
@@ -302,6 +407,18 @@ function TodoForm({
         <textarea value={details} onChange={(e) => setDetails(e.target.value)} maxLength={2000} rows={2}
           className={`${INPUT} h-auto py-2`} />
       </div>
+      {editing && (
+        <div>
+          <label className={LABEL}>Note back (whoever is doing it)</label>
+          <textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={2000} rows={2}
+            placeholder="e.g. Customer asked to push it to Thursday"
+            className={`${INPUT} h-auto py-2`} />
+          <p className="mt-1 text-[0.7rem] text-[#8c8f94]">
+            Kept apart from the details above — that is what was asked, this is the reply.
+            Whoever created the to-do is notified.
+          </p>
+        </div>
+      )}
       <div className="grid grid-cols-3 gap-3">
         <div>
           <label className={LABEL}>Tag a teammate (notifies them)</label>

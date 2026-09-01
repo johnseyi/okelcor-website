@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Loader2, ClipboardCheck, ClipboardList, CalendarClock, CheckCircle2,
-  UserCheck, ShieldQuestion, ArrowRight, LineChart, FileCheck, type LucideIcon,
+  UserCheck, ShieldQuestion, ArrowRight, LineChart, FileCheck,
+  ChevronDown, ChevronRight, ListTodo, type LucideIcon,
 } from "lucide-react";
 import type { MyWorkItem, MyWorkType } from "@/lib/admin-api";
 import EmptyState from "@/components/ui/empty-state";
@@ -27,6 +28,21 @@ const SECTIONS: { type: MyWorkType; label: string; icon: LucideIcon }[] = [
 /** Statuses an assignee can set on their own finance task. */
 const FINANCE_STATUSES = ["Pending", "Sent", "In Progress", "Under Review", "Approved", "Completed", "Cancelled"];
 
+/**
+ * Which part of the business raised a to-do. Matches the to-do board's
+ * palette so the same department reads the same on both screens.
+ */
+const DEPARTMENT_BADGE: Record<string, string> = {
+  Finance:    "border-emerald-200 bg-emerald-50 text-emerald-700",
+  Operations: "border-sky-200 bg-sky-50 text-sky-700",
+  Sales:      "border-violet-200 bg-violet-50 text-violet-700",
+  Marketing:  "border-pink-200 bg-pink-50 text-pink-700",
+  Management: "border-amber-200 bg-amber-50 text-amber-800",
+  Content:    "border-indigo-200 bg-indigo-50 text-indigo-700",
+  Support:    "border-teal-200 bg-teal-50 text-teal-700",
+  General:    "border-gray-200 bg-gray-50 text-gray-600",
+};
+
 const PRIORITY_STYLES: Record<string, string> = {
   urgent: "border-red-200 bg-red-50 text-red-700",
   high:   "border-amber-200 bg-amber-50 text-amber-700",
@@ -45,7 +61,13 @@ function fmtDue(iso?: string | null): { label: string; overdue: boolean } | null
   return { label, overdue };
 }
 
-export default function MyWork({ highlightFinanceItem = null }: { highlightFinanceItem?: number | null }) {
+export default function MyWork({
+  highlightFinanceItem = null,
+  highlightTodo = null,
+}: {
+  highlightFinanceItem?: number | null;
+  highlightTodo?: number | null;
+}) {
   const [items, setItems] = useState<MyWorkItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -106,9 +128,12 @@ export default function MyWork({ highlightFinanceItem = null }: { highlightFinan
                     item={item}
                     onChanged={load}
                     highlighted={
-                      type === "finance_task"
-                      && highlightFinanceItem != null
-                      && item.id === highlightFinanceItem
+                      (type === "finance_task"
+                        && highlightFinanceItem != null
+                        && item.id === highlightFinanceItem)
+                      || (type === "todo_task"
+                        && highlightTodo != null
+                        && item.id === highlightTodo)
                     }
                   />
                 ))}
@@ -130,14 +155,19 @@ function WorkRow({
 }: { item: MyWorkItem; onChanged: () => void; highlighted?: boolean }) {
   const due = fmtDue(item.due_at);
   const priorityCls = item.priority ? PRIORITY_STYLES[item.priority] ?? PRIORITY_STYLES.normal : null;
-  const [updating, setUpdating] = useState(false);
-  const [updateError, setUpdateError] = useState<string | null>(null);
 
-  // The assignee's in-place status update — finance and EC invoice tasks.
-  // Setting a status notifies whoever created the record, so "done" reaches
-  // finance without a message being written.
+  // The assignee's in-place status update — finance, EC invoice and to-do
+  // tasks. Setting a status notifies whoever created the record, so "done"
+  // reaches them without a message being written.
   const isEcTask = item.type === "ec_invoice_task";
   const isTodo = item.type === "todo_task";
+
+  const [updating, setUpdating] = useState(false);
+  const [updateError, setUpdateError] = useState<string | null>(null);
+  // A to-do opens where it is worked. Arriving from a tagged-task link opens
+  // it already expanded: the person clicked the task, so show them the task
+  // rather than a row they have to work out how to open.
+  const [expanded, setExpanded] = useState(isTodo && highlighted);
 
   // The note back to finance — PATCHes alongside the current status (the
   // endpoint requires one), so "done, but the client asked for X" travels
@@ -151,6 +181,34 @@ function WorkRow({
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: item.status ?? "Pending", comment: comment.trim() }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({})) as { message?: string };
+        setUpdateError(json.message ?? "Could not save the note.");
+        return;
+      }
+      onChanged();
+    } catch {
+      setUpdateError("Could not reach the server.");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // The to-do's note back. Its own field, not `details` — the brief belongs
+  // to whoever asked, and a reply that overwrote it would destroy the
+  // question while answering it. PATCHes the to-do endpoint directly:
+  // being a participant is the authorization there, so no my-work-specific
+  // route is needed.
+  const saveTodoNote = async (note: string) => {
+    if (!item.id || note.trim() === (item.assignee_note ?? "").trim()) return;
+    setUpdating(true);
+    setUpdateError(null);
+    try {
+      const res = await fetch(`/api/admin/todos/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assignee_note: note.trim() || null }),
       });
       if (!res.ok) {
         const json = await res.json().catch(() => ({})) as { message?: string };
@@ -201,10 +259,11 @@ function WorkRow({
       // tagged-task link lands on the record rather than on a list to search.
       // Same treatment as the to-do board's ?todo= highlight.
       ref={highlighted ? (el) => el?.scrollIntoView({ block: "center" }) : undefined}
-      className={`flex items-center gap-3 px-4 py-3.5 transition hover:bg-[#fafafa] ${
+      className={`px-4 py-3.5 transition hover:bg-[#fafafa] ${
         highlighted ? "bg-amber-50 ring-2 ring-inset ring-amber-300" : ""
       }`}
     >
+      <div className="flex items-center gap-3">
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-[0.875rem] font-semibold text-[#1a1a1a]">{item.title}</p>
@@ -213,13 +272,23 @@ function WorkRow({
               {item.priority}
             </span>
           )}
+          {item.department && (
+            <span
+              title={`Raised by ${item.department}`}
+              className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[0.62rem] font-bold uppercase tracking-wide ${
+                DEPARTMENT_BADGE[item.department] ?? "border-gray-200 bg-gray-50 text-gray-600"
+              }`}
+            >
+              {item.department}
+            </span>
+          )}
           {item.status && !item.editable && (
             <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[0.65rem] font-bold capitalize text-gray-500">
               {item.status.replace(/_/g, " ")}
             </span>
           )}
         </div>
-        {item.subtitle && (
+        {item.subtitle && !(isTodo && expanded) && (
           <p className="mt-0.5 truncate text-[0.8rem] text-[#5c5e62]">{item.subtitle}</p>
         )}
         {due && (
@@ -260,18 +329,49 @@ function WorkRow({
       ) : null}
 
       {/*
-        Use action_url exactly as served. This used to rewrite finance tasks
-        to /admin/finance-snapshot?item=N, which is now a guaranteed 403 for
-        most assignees — the board is finance-only and the people tagged to
-        chase a payment usually are not finance. The API decides where a task
-        opens; overriding it here is how the two came apart.
+        A to-do opens HERE, so its primary control expands the row instead of
+        navigating. Its action_url (/admin/my-work?todo=N) is still served and
+        still correct — it is what the notification bell links to from another
+        page — but rendering it as a button on this page would be a link to
+        the page you are already on, which is what "clicking it took me to the
+        to-do list" was on the other side of.
       */}
-      {item.action_url && (
+      {isTodo ? (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+          className="flex shrink-0 items-center gap-1.5 rounded-xl bg-[#1a1a1a] px-3.5 py-2 text-[0.78rem] font-semibold text-white transition hover:bg-[#333]"
+        >
+          {expanded ? "Close" : "Open"}
+          {expanded
+            ? <ChevronDown size={13} strokeWidth={2.2} />
+            : <ChevronRight size={13} strokeWidth={2.2} />}
+        </button>
+      ) : item.action_url ? (
+        /*
+          Use action_url exactly as served. This used to rewrite finance tasks
+          to /admin/finance-snapshot?item=N, which is now a guaranteed 403 for
+          most assignees — the board is finance-only and the people tagged to
+          chase a payment usually are not finance. The API decides where a task
+          opens; overriding it here is how the two came apart.
+        */
         <Link
           href={item.action_url}
           className="flex shrink-0 items-center gap-1.5 rounded-xl bg-[#1a1a1a] px-3.5 py-2 text-[0.78rem] font-semibold text-white transition hover:bg-[#333]"
         >
           Open <ArrowRight size={13} strokeWidth={2.2} />
+        </Link>
+      ) : null}
+
+      {/* The shared team board — a second way out, never the only one. */}
+      {isTodo && item.list_url && (
+        <Link
+          href={item.list_url}
+          title="Open on the shared team to-do list"
+          className="hidden shrink-0 items-center gap-1.5 rounded-xl border border-black/[0.09] bg-white px-3 py-2 text-[0.78rem] font-semibold text-[#5c5e62] transition hover:bg-[#fafafa] sm:flex"
+        >
+          <ListTodo size={13} strokeWidth={2.2} /> List
         </Link>
       )}
 
@@ -286,6 +386,65 @@ function WorkRow({
         >
           Board
         </Link>
+      )}
+      </div>
+
+      {/*
+        The to-do, opened. Everything the task IS — the brief, who asked, when
+        it is due — plus the one thing the assignee writes back. This is the
+        whole view of the task by design: the alternative was the shared list,
+        where the person had to find their own row again.
+      */}
+      {isTodo && expanded && (
+        <div className="mt-3 space-y-3 rounded-xl border border-black/[0.07] bg-[#fbfbfc] p-3.5">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[0.73rem] text-[#8c8f94]">
+            {item.creator && (
+              <span>
+                Asked by <span className="font-semibold text-[#5c5e62]">{item.creator}</span>
+                {item.department ? ` · ${item.department}` : ""}
+              </span>
+            )}
+            {item.due_on && (
+              <span className={due?.overdue ? "font-semibold text-red-600" : ""}>
+                {due?.overdue ? "Overdue · due " : "Due "}{item.due_on}
+              </span>
+            )}
+          </div>
+
+          {item.details ? (
+            <div>
+              <p className="mb-1 text-[0.68rem] font-bold uppercase tracking-wider text-[#8c8f94]">
+                What was asked
+              </p>
+              <p className="whitespace-pre-wrap break-words text-[0.8rem] leading-relaxed text-[#1a1a1a]">
+                {item.details}
+              </p>
+            </div>
+          ) : (
+            <p className="text-[0.78rem] italic text-[#8c8f94]">
+              No further details were given — just the title.
+            </p>
+          )}
+
+          <div>
+            <label className="mb-1 block text-[0.68rem] font-bold uppercase tracking-wider text-[#8c8f94]">
+              Your note back
+            </label>
+            <textarea
+              defaultValue={item.assignee_note ?? ""}
+              placeholder="e.g. Customer asked to push it to Thursday — saved when you click away"
+              rows={2}
+              disabled={updating}
+              onBlur={(e) => void saveTodoNote(e.target.value)}
+              className="w-full rounded-lg border border-black/[0.08] bg-white px-2.5 py-2 text-[0.78rem] text-[#1a1a1a] outline-none transition placeholder:text-[#b6b8bc] focus:border-[#E85C1A] disabled:opacity-50"
+            />
+            <p className="mt-1 text-[0.7rem] text-[#8c8f94]">
+              {item.creator
+                ? `${item.creator} is notified, so you don't have to send a message.`
+                : "Whoever created this is notified, so you don't have to send a message."}
+            </p>
+          </div>
+        </div>
       )}
     </li>
   );

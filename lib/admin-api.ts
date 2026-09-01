@@ -607,6 +607,26 @@ export type MyWorkItem = {
   client?: string | null;
   amount?: number | null;
   comment?: string | null;
+  /**
+   * todo_task: the shared list, kept as a SECOND way out (Session 108).
+   * `action_url` opens the task here in My Work; this opens it on the team
+   * board. Unlike `board_url` it is never a 403 — every role holds
+   * `staff.self` — so it is always populated for a to-do.
+   */
+  list_url?: string | null;
+  /**
+   * todo_task: the task's raw fields. Same reasoning as the finance block
+   * above — these were baked into `subtitle`, so the row could show them but
+   * never edit them, and the assignee had to leave My Work to read the brief.
+   * `details` is whoever asked; `assignee_note` is this person's reply, and
+   * they are two fields because they are two people talking.
+   */
+  details?: string | null;
+  assignee_note?: string | null;
+  creator?: string | null;
+  /** todo_task: the department that raised it, e.g. "Finance". */
+  department?: string | null;
+  due_on?: string | null;
 };
 
 // CRM-7 quote request items (admin-structured line items for proposal)
@@ -2028,6 +2048,8 @@ export type TodoItem = {
   id: number;
   title: string;
   details?: string | null;
+  /** The assignee's note back (Session 108) — separate from the brief. */
+  assignee_note?: string | null;
   due_on?: string | null;
   overdue: boolean;
   /** low | normal | high. */
@@ -2038,6 +2060,13 @@ export type TodoItem = {
   assignee?: string | null;
   created_by?: number | null;
   creator?: string | null;
+  /**
+   * Which part of the business raised it (Session 109). Derived from the
+   * role STAMPED on the to-do at creation, not from the creator's current
+   * one — so it survives a role change and the account being deleted.
+   */
+  created_by_role?: string | null;
+  department?: string | null;
   completed_at?: string | null;
   completed_by_name?: string | null;
   created_at?: string | null;
@@ -2051,5 +2080,7 @@ export type TodoMeta = {
   priorities: string[];
   statuses: { key: string; label: string }[];
   open_count: number;
+  /** Department name → count. Only departments that actually have to-dos. */
+  departments?: Record<string, number>;
   staff: { id: number; name: string }[];
 };

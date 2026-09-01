@@ -4,14 +4,14 @@ import MyWork from "@/components/admin/my-work";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "My Work" };
 
-// Deep link from a tagged finance task. Same contract as ?todo= on the
-// to-do list and ?line= on the EC Invoice List: the task is worked here, so
-// the link lands on the row rather than on the finance snapshot board — which
-// most assignees cannot open at all.
-type SearchParams = Promise<{ finance_item?: string }>;
+// Deep links from a tagged task. Same contract as ?line= on the EC Invoice
+// List: the task is worked HERE, so the link lands on the row rather than on
+// the board or list behind it — which in the finance case most assignees
+// cannot open at all, and in the to-do case is a whole list to search.
+type SearchParams = Promise<{ finance_item?: string; todo?: string }>;
 
 export default async function MyWorkPage({ searchParams }: { searchParams: SearchParams }) {
-  const { finance_item: financeItem } = await searchParams;
+  const { finance_item: financeItem, todo } = await searchParams;
 
   return (
     <div className="p-6 md:p-8">
@@ -24,7 +24,10 @@ export default async function MyWorkPage({ searchParams }: { searchParams: Searc
         </p>
       </div>
 
-      <MyWork highlightFinanceItem={financeItem ? Number(financeItem) : null} />
+      <MyWork
+        highlightFinanceItem={financeItem ? Number(financeItem) : null}
+        highlightTodo={todo ? Number(todo) : null}
+      />
     </div>
   );
 }
