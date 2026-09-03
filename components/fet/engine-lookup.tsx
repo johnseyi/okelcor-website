@@ -14,9 +14,29 @@ export type FetEngine = {
   fuel_type: "diesel" | "petrol" | "both";
   fet_model: string;
   notes?: string | null;
+  /**
+   * Retail price for this engine's FET tier, served by the API. Null until
+   * finance sets one — the API deliberately serves no figure rather than
+   * falling back to what the unit costs us.
+   */
+  price?: string | null;
+  currency?: string | null;
+  fet_tier?: string | null;
 };
 
 type CategoryFilter = "all" | "cars_suv" | "commercial";
+
+/** Prices arrive as decimal strings so no rounding happens in transit. */
+function formatPrice(value?: string | null, currency?: string | null): string | null {
+  if (value === null || value === undefined || value === "") return null;
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  return new Intl.NumberFormat("de-DE", {
+    style: "currency",
+    currency: currency || "EUR",
+    minimumFractionDigits: 2,
+  }).format(n);
+}
 
 const FUEL_LABELS: Record<string, string> = {
   diesel:  "Diesel",
@@ -149,7 +169,13 @@ export default function EngineLookup({ compact = false }: { compact?: boolean })
           </div>
         )}
 
-        {engines.length > 0 && (
+        {engines.length > 0 && (() => {
+          // The column only exists once there is something to put in it.
+          // Finance sets retail prices tier by tier, and a full column of
+          // dashes on a live public page reads as broken rather than as
+          // "not priced yet".
+          const showPrice = engines.some((e) => formatPrice(e.price, e.currency) !== null);
+          return (
           <div className="overflow-x-auto rounded-xl border border-[#e2e8e2]">
             <table className="w-full min-w-[540px] text-[0.8rem]">
               <thead>
@@ -159,6 +185,11 @@ export default function EngineLookup({ compact = false }: { compact?: boolean })
                       {h}
                     </th>
                   ))}
+                  {showPrice && (
+                    <th className="px-4 py-2.5 text-right text-[0.68rem] font-bold uppercase tracking-[0.1em] text-[#9ca3af]">
+                      Price
+                    </th>
+                  )}
                   <th className="px-4 py-2.5" />
                 </tr>
               </thead>
@@ -180,6 +211,17 @@ export default function EngineLookup({ compact = false }: { compact?: boolean })
                         {e.fet_model}
                       </span>
                     </td>
+                    {/*
+                      Price is per FET tier, not per engine. A tier finance has
+                      not priced yet shows a dash rather than a figure — the API
+                      never sends our supplier cost, so there is nothing to fall
+                      back to and that is deliberate.
+                    */}
+                    {showPrice && (
+                      <td className="whitespace-nowrap px-4 py-3 text-right font-semibold tabular-nums text-[#171a20]">
+                        {formatPrice(e.price, e.currency) ?? <span className="font-normal text-[#9ca3af]">&mdash;</span>}
+                      </td>
+                    )}
                     <td className="px-4 py-3">
                       <Link
                         href="/tyre-supply-quotation"
@@ -198,7 +240,8 @@ export default function EngineLookup({ compact = false }: { compact?: boolean })
               </p>
             )}
           </div>
-        )}
+          );
+        })()}
       </div>
     </div>
   );
