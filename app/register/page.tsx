@@ -308,10 +308,10 @@ export default function RegisterPage() {
 
           <div className="mb-7">
             <h1 className="text-2xl font-extrabold tracking-tight text-[var(--foreground)] md:text-3xl">
-              Request Access to Okelcor
+              Create your Okelcor account
             </h1>
             <p className="mt-1.5 text-[0.88rem] text-[var(--muted)]">
-              B2B wholesale and export platform for tyre distributors, fleet operators, and dealers.
+              Retail buyers shop right away. Trade accounts unlock wholesale terms after a short review.
             </p>
           </div>
 
@@ -319,10 +319,10 @@ export default function RegisterPage() {
           <div className="mb-6 flex items-start gap-3 rounded-md border border-blue-200 bg-blue-50 px-4 py-3.5">
             <Building2 size={16} strokeWidth={1.8} className="mt-0.5 shrink-0 text-blue-600" />
             <div>
-              <p className="text-[0.82rem] font-semibold text-blue-800">B2B access only</p>
+              <p className="text-[0.82rem] font-semibold text-blue-800">One platform, two kinds of buyer</p>
               <p className="mt-0.5 text-[0.8rem] leading-5 text-blue-700">
-                Okelcor serves wholesale buyers, exporters, tyre dealers, and fleet operators.
-                Private accounts are active immediately. Business accounts are reviewed before activation and unlock wholesale pricing.
+                Private accounts are active immediately after e-mail verification.
+                Business accounts are reviewed by our team, usually within one working day, and unlock wholesale pricing.
               </p>
             </div>
           </div>

@@ -116,7 +116,7 @@ export default function ArticleUI({ slug, article: articleProp, related: related
                       [&_a]:text-[var(--primary)] [&_a]:underline [&_a]:underline-offset-2
                       [&_img]:max-w-full [&_img]:rounded-[16px] [&_img]:my-5
                       [&_strong]:font-bold [&_strong]:text-[var(--foreground)]
-                      [&_table]:w-full [&_table]:border-collapse [&_table]:mb-5
+                      [&_table]:w-full [&_table]:border-collapse [&_table]:mb-5 max-lg:[&_table]:block max-lg:[&_table]:overflow-x-auto
                       [&_th]:border [&_th]:border-black/[0.1] [&_th]:bg-[#f5f5f5] [&_th]:px-4 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-[0.875rem] [&_th]:font-bold [&_th]:text-[var(--foreground)]
                       [&_td]:border [&_td]:border-black/[0.07] [&_td]:px-4 [&_td]:py-2.5 [&_td]:text-[0.9rem]"
                     dangerouslySetInnerHTML={{ __html: html }}

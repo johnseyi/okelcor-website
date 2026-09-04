@@ -30,7 +30,7 @@ export default function LogisticsPartners() {
                   "url('/images/pexels-einfoto-2091159.jpg')",
               }}
             />
-            <div className="absolute inset-0 bg-linear-to-b from-black/10 via-black/20 to-black/65" />
+            <div className="absolute inset-0 bg-linear-to-b from-black/30 via-black/45 to-black/80" />
 
             <div className="absolute bottom-0 left-0 right-0 z-10 p-8 md:p-10">
               <p className="text-[13px] font-bold uppercase tracking-[0.28em] text-[var(--primary)]">

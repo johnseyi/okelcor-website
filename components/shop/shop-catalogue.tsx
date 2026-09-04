@@ -589,6 +589,35 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed, 
           </button>
         </div>
 
+        {/* Mobile twin of the desktop toggle above: without it, a phone
+            guest could never reach the trade catalogue at all. */}
+        {customerType === "guest" && (
+          <div
+            role="group"
+            aria-label="Buying as"
+            className="mb-4 flex h-11 items-center gap-1 rounded-md border border-black/15 bg-white p-1 md:hidden"
+          >
+            {([
+              { seg: "b2c", label: "Private buyer" },
+              { seg: "b2b", label: "Trade buyer" },
+            ] as const).map(({ seg, label }) => (
+              <button
+                key={seg}
+                type="button"
+                aria-pressed={guestSegment === seg}
+                onClick={() => changeGuestSegment(seg)}
+                className={`h-full flex-1 rounded text-[0.85rem] font-semibold transition-colors ${
+                  guestSegment === seg
+                    ? "bg-[#171a20] text-white"
+                    : "text-[#5c5e62]"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {customerType === "guest" && guestSegment === "b2b" && (
           <p className="mb-4 rounded-md border border-black/10 bg-white px-4 py-2.5 text-[0.85rem] text-[#5c5e62]">
             You are browsing the trade catalogue. Prices shown are retail;{" "}
