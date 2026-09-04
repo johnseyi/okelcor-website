@@ -72,6 +72,23 @@ export default function Navbar() {
   const { totalItems, openCart } = useCart();
   const { locale, setLocale, t } = useLanguage();
   const { openSearch } = useSearch();
+
+  // The hint on the search field is real: / or Ctrl+K opens it, unless the
+  // visitor is already typing somewhere.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = document.activeElement;
+      const typing = el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement
+        || (el instanceof HTMLElement && el.isContentEditable);
+      if (typing) return;
+      if (e.key === "/" || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k")) {
+        e.preventDefault();
+        openSearch();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [openSearch]);
   const { customer, isAuthenticated: isAuthed, isLoading: authLoading, logout } = useCustomerAuth();
 
   type NavItem = { label: string; href: string };
@@ -469,23 +486,23 @@ export default function Navbar() {
                   <CircleHelp size={20} strokeWidth={1.9} />
                 </Link>
 
-                {/* Prominent search pill — xl+ only, keeps the icon-only trigger below that */}
+                {/*
+                  ONE search control. There used to be a pill for xl+ and an
+                  icon-only twin meant to replace it below xl, but the icon's
+                  `xl:hidden` lost to the unlayered `.tesla-icon-btn` display
+                  rule, so both rendered side by side. The field itself is the
+                  premium pattern: bordered, magnifier left, and a keyboard
+                  hint that actually works (/ or Ctrl+K opens it).
+                */}
                 <button
                   type="button"
                   onClick={openSearch}
-                  className="hidden max-w-[220px] items-center gap-2 rounded-md border border-black/15 bg-white px-3.5 py-2 text-left text-[0.8rem] text-[var(--muted)] transition-colors hover:border-black/40 xl:flex"
+                  className="flex w-[200px] items-center gap-2 rounded-md border border-black/15 bg-white py-2 pl-3 pr-2 text-left text-[0.8rem] text-[var(--muted)] transition-colors hover:border-black/40 xl:w-[230px]"
                   aria-label={t.search.ariaLabel}
                 >
                   <Search size={15} strokeWidth={2} className="shrink-0" />
-                  <span className="truncate">{t.search.placeholder}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={openSearch}
-                  className="tesla-icon-btn xl:hidden"
-                  aria-label={t.search.ariaLabel}
-                >
-                  <Search size={20} strokeWidth={1.9} />
+                  <span className="min-w-0 flex-1 truncate">{t.search.placeholder}</span>
+                  <kbd className="rounded border border-black/10 bg-black/[0.04] px-1.5 py-0.5 font-mono text-[0.65rem] font-semibold text-black/45">/</kbd>
                 </button>
 
                 <button
@@ -665,30 +682,25 @@ export default function Navbar() {
             <p className="mb-5 text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--primary)]">
               {t.lang.panelTitle}
             </p>
-            <div className="flex gap-3">
-              {LANGUAGES.map(({ code, flag }) => (
+            <div className="flex flex-wrap gap-2.5">
+              {/* No emoji flags: they render as bare letter pairs on Windows
+                  and half the buying audience is on Windows. The language
+                  names itself, in the language itself, is the premium form. */}
+              {LANGUAGES.map(({ code }) => (
                 <button
                   key={code}
                   type="button"
                   onClick={() => { setLocale(code); setOpenLang(false); }}
-                  className={`flex items-center gap-3 rounded-lg border px-5 py-3.5 text-left transition hover:border-black/20 hover:bg-black/[0.03] ${
+                  className={`flex items-baseline gap-2.5 rounded-md border px-4 py-3 text-left transition-colors ${
                     locale === code
-                      ? "border-[var(--primary)] bg-[var(--primary)]/5 font-semibold"
-                      : "border-black/10"
+                      ? "border-[#171a20] bg-[#171a20] text-white"
+                      : "border-black/15 text-[#171a20] hover:border-black/40"
                   }`}
                 >
-                  <span className="text-xl">{flag}</span>
-                  <div>
-                    <p className="text-[0.95rem] font-semibold text-black">
-                      {t.lang[code]}
-                    </p>
-                    <p className="text-[0.78rem] font-bold uppercase tracking-wider text-black/40">
-                      {code.toUpperCase()}
-                    </p>
-                  </div>
-                  {locale === code && (
-                    <span className="ml-1 h-2 w-2 rounded-full bg-[var(--primary)]" />
-                  )}
+                  <span className={`font-mono text-[0.7rem] font-bold ${locale === code ? "text-white/60" : "text-black/40"}`}>
+                    {code.toUpperCase()}
+                  </span>
+                  <span className="text-[0.92rem] font-semibold">{t.lang[code]}</span>
                 </button>
               ))}
             </div>
@@ -718,7 +730,7 @@ export default function Navbar() {
                       key={label}
                       href={href}
                       onClick={() => setOpenShopMega(false)}
-                      className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition hover:bg-black/[0.04]"
+                      className="flex items-center gap-3 rounded-md px-3 py-2.5 transition hover:bg-black/[0.04]"
                     >
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#f5f5f5]">
                         <Icon size={16} strokeWidth={1.8} className="text-[#5c5e62]" />
@@ -752,7 +764,7 @@ export default function Navbar() {
                   onClick={() => setOpenShopMega(false)}
                   className="mt-4 inline-flex items-center gap-1 text-[0.8rem] font-semibold text-[var(--primary)] transition hover:underline"
                 >
-                  View all 31 brands <ChevronRight size={13} strokeWidth={2.5} />
+                  View all brands <ChevronRight size={13} strokeWidth={2.5} />
                 </Link>
               </div>
 
@@ -763,14 +775,14 @@ export default function Navbar() {
                   <Link
                     href="/shop?tab=car"
                     onClick={() => setOpenShopMega(false)}
-                    className="flex items-center justify-between rounded-xl border border-black/[0.08] px-4 py-3 text-[0.88rem] font-semibold text-[#171a20] transition hover:border-[var(--primary)]/30 hover:bg-[#fff8f6]"
+                    className="flex items-center justify-between rounded-md border border-black/15 px-4 py-3 text-[0.88rem] font-semibold text-[#171a20] transition hover:border-[var(--primary)]/30 hover:bg-[#fff8f6]"
                   >
                     Search by Car <ChevronRight size={14} strokeWidth={2} />
                   </Link>
                   <Link
                     href="/shop?tab=size"
                     onClick={() => setOpenShopMega(false)}
-                    className="flex items-center justify-between rounded-xl border border-black/[0.08] px-4 py-3 text-[0.88rem] font-semibold text-[#171a20] transition hover:border-[var(--primary)]/30 hover:bg-[#fff8f6]"
+                    className="flex items-center justify-between rounded-md border border-black/15 px-4 py-3 text-[0.88rem] font-semibold text-[#171a20] transition hover:border-[var(--primary)]/30 hover:bg-[#fff8f6]"
                   >
                     Search by Size <ChevronRight size={14} strokeWidth={2} />
                   </Link>
@@ -799,7 +811,7 @@ export default function Navbar() {
               <div>
                 <div className="mb-3 inline-flex items-center gap-1.5 rounded bg-[#fff3ee] px-3 py-1">
                   <span className="h-1.5 w-1.5 rounded-full bg-[#f4511e]" aria-hidden="true" />
-                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#166534]">{t.fetMega.badge}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#b8460f]">{t.fetMega.badge}</span>
                 </div>
                 <h3 className="mb-3 text-[1.1rem] font-extrabold leading-snug text-[#111111]">
                   {t.fetMega.heading}
@@ -826,10 +838,10 @@ export default function Navbar() {
                 <div className="mb-4 flex flex-col gap-2">
                   {([
                     { stat: "13.9%",       label: t.fetMega.labelFuelSavings   },
-                    { stat: "€900–€1,300", label: t.fetMega.labelAnnualSavings },
-                    { stat: "3–5 months",  label: t.fetMega.labelPayback       },
+                    { stat: "€900 to €1,300", label: t.fetMega.labelAnnualSavings },
+                    { stat: "3 to 5 months", label: t.fetMega.labelPayback       },
                   ] as const).map(({ stat, label }) => (
-                    <div key={stat} className="flex items-center gap-3 rounded-xl bg-[#f0f4f0] px-4 py-3">
+                    <div key={stat} className="flex items-center gap-3 rounded-md border border-black/10 bg-white px-4 py-3">
                       <Zap size={15} strokeWidth={2} className="shrink-0 text-[#f4511e]" />
                       <span className="text-[0.93rem] font-extrabold text-[#111111]">{stat}</span>
                       <span className="text-[0.8rem] text-[#5c5e62]">{label}</span>

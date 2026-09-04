@@ -2,12 +2,11 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { ShieldCheck, BadgeCheck } from "lucide-react";
+import { ShieldCheck, BadgeCheck, Phone, Mail, MapPin, Clock } from "lucide-react";
 import NewsletterStrip from "@/components/newsletter-strip";
-import FadeUp from "@/components/motion/fade-up";
 import { useLanguage } from "@/context/language-context";
 import { useSiteSettings } from "@/context/site-settings-context";
-import { COMPANY_EMAIL, COMPANY_PHONE, COMPANY_ADDRESS_STREET, COMPANY_ADDRESS_CITY } from "@/lib/constants";
+import { COMPANY_EMAIL, COMPANY_PHONE, COMPANY_HOURS, COMPANY_ADDRESS_STREET, COMPANY_ADDRESS_CITY } from "@/lib/constants";
 
 export default function Footer() {
   const { t } = useLanguage();
@@ -49,49 +48,56 @@ export default function Footer() {
   ];
 
   return (
-    <footer className="w-full bg-[#f5f5f5]">
-      {/* Premium accent hairline */}
-      <div aria-hidden="true" className="h-px w-full bg-linear-to-r from-transparent via-[var(--primary)]/40 to-transparent" />
-      <FadeUp><NewsletterStrip /></FadeUp>
-      <div className="tesla-shell">
+    <footer className="w-full">
+      <NewsletterStrip />
 
-        {/* Main footer grid */}
-        <div className="border-t border-black/[0.07] py-12 md:py-16">
-          <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
+      {/*
+        The ink footer every major distributor runs (ATD in navy, Heuver in
+        dark grey): it bookends the page with the same ground the hero bands
+        use, and it carries the practical block a wholesale buyer actually
+        scrolls down for, which is who to call and where the goods come from.
+      */}
+      <div className="bg-[#171a20] text-white">
+        <div className="tesla-shell">
+          <div className="grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr_1.3fr]">
 
-            {/* Brand column */}
+            {/* Identity */}
             <div>
               <Image
                 src="/logo/okelcor-logo.png"
                 alt="Okelcor"
-                width={120}
-                height={22}
-                style={{ height: "22px", width: "auto" }}
-                className="block object-contain"
+                width={140}
+                height={36}
+                className="block object-contain brightness-0 invert"
               />
-              <p className="mt-1 text-[9px] font-bold uppercase tracking-[0.22em] text-[var(--primary)]">
-                {t.footer.motto}
-              </p>
-              <p className="mt-4 max-w-[260px] text-[0.85rem] leading-6 text-[var(--muted)]">
+              <p className="mt-4 max-w-[280px] text-[0.85rem] leading-relaxed text-white/55">
                 {t.footer.tagline}
               </p>
-              <div className="mt-5 flex flex-col gap-1.5 text-[0.82rem] text-[var(--muted)]">
-                <span>{address}</span>
-                <span>{phone}</span>
-                <span>{email}</span>
+              <div className="mt-5 flex flex-wrap gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded border border-white/15 px-2.5 py-1.5 text-[0.68rem] font-bold uppercase tracking-wide text-white/70">
+                  <ShieldCheck size={12} strokeWidth={2} className="text-[#ff7434]" aria-hidden />
+                  ISO 9001:2015
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded border border-white/15 px-2.5 py-1.5 text-[0.68rem] font-bold uppercase tracking-wide text-white/70">
+                  <BadgeCheck size={12} strokeWidth={2} className="text-[#ff7434]" aria-hidden />
+                  REX <span className="font-mono normal-case">DEREX76000242</span>
+                </span>
               </div>
             </div>
 
-            {/* Link columns */}
+            {/* Link columns from translations, unchanged data */}
             {columns.map((col) => (
               <div key={col.heading}>
-                <p className="mb-4 text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--foreground)]">
+                <p className="mb-4 text-[0.72rem] font-bold uppercase tracking-wide text-white/40">
                   {col.heading}
                 </p>
                 <ul className="flex flex-col gap-2.5">
                   {col.links.map((link) => (
                     <li key={link.label}>
-                      <Link href={link.href} className="footer-link text-[0.88rem]">
+                      <Link
+                        href={link.href}
+                        className="text-[0.88rem] text-white/70 transition-colors hover:text-white"
+                      >
                         {link.label}
                       </Link>
                     </li>
@@ -100,33 +106,42 @@ export default function Footer() {
               </div>
             ))}
 
+            {/* The practical block: who to call, where we are, when */}
+            <div>
+              <p className="mb-4 text-[0.72rem] font-bold uppercase tracking-wide text-white/40">
+                Okelcor GmbH
+              </p>
+              <ul className="flex flex-col gap-3 text-[0.85rem] text-white/70">
+                <li className="flex items-start gap-2.5">
+                  <MapPin size={14} strokeWidth={2} className="mt-0.5 shrink-0 text-[#ff7434]" aria-hidden />
+                  <span>{address}</span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <Phone size={14} strokeWidth={2} className="mt-0.5 shrink-0 text-[#ff7434]" aria-hidden />
+                  <a href={`tel:${phone.replace(/[^+\d]/g, "")}`} className="transition-colors hover:text-white">{phone}</a>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <Mail size={14} strokeWidth={2} className="mt-0.5 shrink-0 text-[#ff7434]" aria-hidden />
+                  <a href={`mailto:${email}`} className="transition-colors hover:text-white">{email}</a>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <Clock size={14} strokeWidth={2} className="mt-0.5 shrink-0 text-[#ff7434]" aria-hidden />
+                  <span>{COMPANY_HOURS}</span>
+                </li>
+              </ul>
+            </div>
           </div>
-        </div>
 
-        {/* Trust badges — factual certifications */}
-        <div className="flex flex-wrap items-center gap-3 border-t border-black/[0.07] py-6">
-          <span className="inline-flex items-center gap-2 rounded-full border border-black/[0.08] bg-white px-3.5 py-2 text-[0.72rem] font-bold uppercase tracking-[0.14em] text-[var(--foreground)]">
-            <ShieldCheck size={14} strokeWidth={2} className="text-[var(--primary)]" />
-            ISO 9001:2015
-          </span>
-          <span className="inline-flex items-center gap-2 rounded-full border border-black/[0.08] bg-white px-3.5 py-2 text-[0.72rem] font-bold uppercase tracking-[0.14em] text-[var(--foreground)]">
-            <BadgeCheck size={14} strokeWidth={2} className="text-[var(--primary)]" />
-            REX · <span className="font-mono">DEREX76000242</span>
-          </span>
-        </div>
-
-        {/* Bottom bar */}
-        <div className="border-t border-black/[0.07] py-6">
-          <div className="flex flex-wrap items-center justify-between gap-3 text-[0.78rem] text-[var(--muted)]">
-            <span>{t.footer.copyright}</span>
+          {/* Legal row */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 py-6 text-[0.78rem] text-white/45">
+            <p>{t.footer.copyright}</p>
             <div className="flex flex-wrap gap-5">
-              <Link href="/privacy" className="footer-link">{t.footer.privacy}</Link>
-              <Link href="/terms" className="footer-link">{t.footer.terms}</Link>
-              <Link href="/imprint" className="footer-link">{t.footer.imprint}</Link>
+              <Link href="/privacy" className="transition-colors hover:text-white">{t.footer.privacy}</Link>
+              <Link href="/terms" className="transition-colors hover:text-white">{t.footer.terms}</Link>
+              <Link href="/imprint" className="transition-colors hover:text-white">{t.footer.imprint}</Link>
             </div>
           </div>
         </div>
-
       </div>
     </footer>
   );

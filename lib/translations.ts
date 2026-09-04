@@ -629,8 +629,8 @@ const en: Translations = {
   },
   cta: {
     eyebrow: "Ready to Work With Okelcor",
-    title: "Tyres for businesses. Tyres for drivers.",
-    subtitle: "Whether you need bulk supply for your business or the right tyre for your car — Okelcor delivers quality, pricing, and support for every buyer.",
+    title: "Tyres for businesses, tyres for drivers",
+    subtitle: "Whether you need bulk supply for your business or the right tyre for your car, Okelcor delivers quality, pricing and support for every buyer.",
     button: "Request a Quote",
     button2: "Browse Catalogue",
   },

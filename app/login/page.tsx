@@ -11,10 +11,10 @@ import { forgotPassword, resendVerification } from "@/lib/customer-auth";
 // ─── Input styles ─────────────────────────────────────────────────────────────
 
 const inputCls =
-  "w-full rounded-[12px] border border-black/[0.08] bg-white px-4 py-3 text-[0.93rem] text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
+  "w-full rounded-md border border-black/[0.08] bg-white px-4 py-3 text-[0.93rem] text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
 
 const inputErrCls =
-  "w-full rounded-[12px] border border-red-400 bg-red-50/50 px-4 py-3 text-[0.93rem] text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] transition focus:border-red-500";
+  "w-full rounded-md border border-red-400 bg-red-50/50 px-4 py-3 text-[0.93rem] text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] transition focus:border-red-500";
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -250,7 +250,7 @@ export default function LoginPage() {
       <main className="min-h-screen bg-[#f5f5f5]">
         <Navbar />
         <div className="flex min-h-screen items-center justify-center px-5 pt-[76px] lg:pt-20">
-          <div className="w-full max-w-[420px] rounded-[22px] bg-white p-8 text-center shadow-[0_12px_40px_rgba(0,0,0,0.07)]">
+          <div className="w-full max-w-[420px] rounded-lg border border-black/10 bg-white p-8 text-center">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-orange-100">
               <MailWarning size={26} strokeWidth={1.6} className="text-[var(--primary)]" />
             </div>
@@ -296,7 +296,7 @@ export default function LoginPage() {
       <main className="min-h-screen bg-[#f5f5f5]">
         <Navbar />
         <div className="flex min-h-screen items-center justify-center px-5 pt-[76px] lg:pt-20">
-          <div className="w-full max-w-[420px] rounded-[22px] bg-white p-8 text-center shadow-[0_12px_40px_rgba(0,0,0,0.07)]">
+          <div className="w-full max-w-[420px] rounded-lg border border-black/10 bg-white p-8 text-center">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-100">
               <Clock size={26} strokeWidth={1.6} className="text-amber-600" />
             </div>
@@ -308,7 +308,7 @@ export default function LoginPage() {
             </p>
 
             {stillPending && (
-              <div className="mt-4 flex items-center justify-center gap-2 rounded-[12px] border border-amber-200 bg-amber-50 px-4 py-2.5 text-[0.82rem] text-amber-700">
+              <div className="mt-4 flex items-center justify-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-2.5 text-[0.82rem] text-amber-700">
                 <Clock size={14} className="shrink-0" />
                 Still under review. We&apos;ll email you as soon as it&apos;s approved.
               </div>
@@ -318,7 +318,7 @@ export default function LoginPage() {
               type="button"
               onClick={checkApprovalStatus}
               disabled={checkingApproval}
-              className="mt-6 flex h-[46px] w-full items-center justify-center gap-2 rounded-full bg-[var(--primary)] text-[0.9rem] font-semibold text-white transition hover:bg-[var(--primary-hover)] disabled:opacity-60"
+              className="mt-6 flex h-[46px] w-full items-center justify-center gap-2 rounded-md bg-[var(--primary)] text-[0.9rem] font-semibold text-white transition hover:bg-[var(--primary-hover)] disabled:opacity-60"
             >
               {checkingApproval ? <Loader2 size={16} className="animate-spin" /> : <RefreshCcw size={15} />}
               {checkingApproval ? "Checking…" : "Check approval status"}
@@ -349,7 +349,7 @@ export default function LoginPage() {
       <main className="min-h-screen bg-[#f5f5f5]">
         <Navbar />
         <div className="flex min-h-screen items-center justify-center px-5 pt-[76px] lg:pt-20">
-          <div className="w-full max-w-[420px] rounded-[22px] bg-white p-8 text-center shadow-[0_12px_40px_rgba(0,0,0,0.07)]">
+          <div className="w-full max-w-[420px] rounded-lg border border-black/10 bg-white p-8 text-center">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-100">
               <XCircle size={26} strokeWidth={1.6} className="text-red-500" />
             </div>
@@ -361,7 +361,7 @@ export default function LoginPage() {
             </p>
             <a
               href="/contact"
-              className="mt-6 flex h-[46px] w-full items-center justify-center rounded-full bg-[var(--primary)] text-[0.93rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
+              className="mt-6 flex h-[46px] w-full items-center justify-center rounded-md bg-[var(--primary)] text-[0.93rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
             >
               Contact our team
             </a>
@@ -384,7 +384,7 @@ export default function LoginPage() {
       <main className="min-h-screen bg-[#f5f5f5]">
         <Navbar />
         <div className="flex min-h-screen items-center justify-center px-5 pt-[76px] lg:pt-20">
-          <div className="w-full max-w-[420px] rounded-[22px] bg-white p-8 text-center shadow-[0_12px_40px_rgba(0,0,0,0.07)]">
+          <div className="w-full max-w-[420px] rounded-lg border border-black/10 bg-white p-8 text-center">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
               <ShieldOff size={26} strokeWidth={1.6} className="text-gray-500" />
             </div>
@@ -396,7 +396,7 @@ export default function LoginPage() {
             </p>
             <a
               href="/contact"
-              className="mt-6 flex h-[46px] w-full items-center justify-center rounded-full bg-[var(--primary)] text-[0.93rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
+              className="mt-6 flex h-[46px] w-full items-center justify-center rounded-md bg-[var(--primary)] text-[0.93rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
             >
               Contact our team
             </a>
@@ -442,7 +442,7 @@ export default function LoginPage() {
               <ul className="mt-8 flex flex-col gap-3.5">
                 {["Real-time order tracking", "Wholesale pricing for B2B clients", "Dedicated account manager"].map((point) => (
                   <li key={point} className="flex items-center gap-3">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--primary)]/20">
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[var(--primary)]/20">
                       <Check size={13} strokeWidth={2.5} className="text-[var(--primary)]" />
                     </div>
                     <span className="text-[0.9rem] text-white/85">{point}</span>
@@ -473,7 +473,7 @@ export default function LoginPage() {
 
             {/* ── Verified=true banner ────────────────────────────────────── */}
             {verifiedParam === "true" && (
-              <div role="status" className="mb-5 flex items-start gap-3 rounded-[12px] border border-emerald-200 bg-emerald-50 px-4 py-3.5 text-[0.85rem] text-emerald-800">
+              <div role="status" className="mb-5 flex items-start gap-3 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3.5 text-[0.85rem] text-emerald-800">
                 <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-emerald-500" />
                 <span>Your email has been verified. You can now log in.</span>
               </div>
@@ -481,7 +481,7 @@ export default function LoginPage() {
 
             {/* ── Verified=false banner ───────────────────────────────────── */}
             {verifiedParam === "false" && (
-              <div className="mb-5 rounded-[12px] border border-red-200 bg-red-50 px-4 py-4 text-[0.85rem]">
+              <div className="mb-5 rounded-md border border-red-200 bg-red-50 px-4 py-4 text-[0.85rem]">
                 <p className="font-semibold text-red-700">Verification link is invalid or has expired.</p>
                 <p className="mt-1 text-red-600">Enter your email address to receive a new verification link.</p>
                 {reVerifyDone ? (
@@ -556,7 +556,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="flex h-[50px] w-full items-center justify-center rounded-full bg-[var(--primary)] text-[0.95rem] font-semibold text-white transition hover:bg-[var(--primary-hover)] disabled:opacity-60"
+                className="flex h-[50px] w-full items-center justify-center rounded-md bg-[var(--primary)] text-[0.95rem] font-semibold text-white transition hover:bg-[var(--primary-hover)] disabled:opacity-60"
               >
                 {submitting ? (
                   <span className="flex items-center gap-2.5">

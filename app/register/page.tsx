@@ -10,13 +10,13 @@ import { COUNTRIES } from "@/lib/countries";
 // ─── Input styles ─────────────────────────────────────────────────────────────
 
 const inputCls =
-  "w-full rounded-[12px] border border-black/[0.08] bg-white px-4 py-3 text-[0.93rem] text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
+  "w-full rounded-md border border-black/[0.08] bg-white px-4 py-3 text-[0.93rem] text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
 
 const inputErrCls =
-  "w-full rounded-[12px] border border-red-400 bg-red-50/50 px-4 py-3 text-[0.93rem] text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] transition";
+  "w-full rounded-md border border-red-400 bg-red-50/50 px-4 py-3 text-[0.93rem] text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] transition";
 
 const selectCls =
-  "w-full rounded-[12px] border border-black/[0.08] bg-white px-4 py-3 text-[0.93rem] text-[var(--foreground)] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 appearance-none";
+  "w-full rounded-md border border-black/[0.08] bg-white px-4 py-3 text-[0.93rem] text-[var(--foreground)] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 appearance-none";
 
 // ─── Countries ────────────────────────────────────────────────────────────────
 
@@ -227,7 +227,7 @@ export default function RegisterPage() {
       <main className="min-h-screen bg-[#f5f5f5]">
         <Navbar />
         <div className="flex min-h-screen items-center justify-center px-5 pt-[76px] lg:pt-20">
-          <div className="w-full max-w-[460px] rounded-[22px] bg-white p-10 text-center shadow-[0_12px_40px_rgba(0,0,0,0.07)]">
+          <div className="w-full max-w-[460px] rounded-lg bg-white p-10 text-center shadow-[0_12px_40px_rgba(0,0,0,0.07)]">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-100">
               <Clock size={26} strokeWidth={1.6} className="text-amber-600" />
             </div>
@@ -238,7 +238,7 @@ export default function RegisterPage() {
               Your access request has been submitted. Our team reviews all B2B account applications and will contact you at{" "}
               <strong className="text-[var(--foreground)]">{form.email}</strong> once your account is approved.
             </p>
-            <div className="mt-6 rounded-[14px] border border-amber-200 bg-amber-50 px-4 py-3 text-left">
+            <div className="mt-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-left">
               <p className="text-[0.82rem] font-semibold text-amber-800">What happens next?</p>
               <ul className="mt-2 space-y-1.5 text-[0.8rem] text-amber-700">
                 <li>1. Our team reviews your business information</li>
@@ -264,7 +264,7 @@ export default function RegisterPage() {
       <main className="min-h-screen bg-[#f5f5f5]">
         <Navbar />
         <div className="flex min-h-screen items-center justify-center px-5 pt-[76px] lg:pt-20">
-          <div className="w-full max-w-[440px] rounded-[22px] bg-white p-10 text-center shadow-[0_12px_40px_rgba(0,0,0,0.07)]">
+          <div className="w-full max-w-[440px] rounded-lg bg-white p-10 text-center shadow-[0_12px_40px_rgba(0,0,0,0.07)]">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
               <CheckCircle2 size={28} strokeWidth={1.5} className="text-green-500" />
             </div>
@@ -288,7 +288,7 @@ export default function RegisterPage() {
             </button>
             <Link
               href="/login"
-              className="mt-4 flex h-[50px] w-full items-center justify-center rounded-full bg-[var(--primary)] text-[0.95rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
+              className="mt-4 flex h-[50px] w-full items-center justify-center rounded-md bg-[var(--primary)] text-[0.95rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
             >
               Go to Login
             </Link>
@@ -316,7 +316,7 @@ export default function RegisterPage() {
           </div>
 
           {/* B2B platform notice */}
-          <div className="mb-6 flex items-start gap-3 rounded-[14px] border border-blue-200 bg-blue-50 px-4 py-3.5">
+          <div className="mb-6 flex items-start gap-3 rounded-md border border-blue-200 bg-blue-50 px-4 py-3.5">
             <Building2 size={16} strokeWidth={1.8} className="mt-0.5 shrink-0 text-blue-600" />
             <div>
               <p className="text-[0.82rem] font-semibold text-blue-800">B2B access only</p>
@@ -328,7 +328,7 @@ export default function RegisterPage() {
           </div>
 
           {/* Account type toggle */}
-          <div className="mb-7 flex rounded-[14px] bg-[#efefef] p-1">
+          <div className="mb-7 flex rounded-md bg-[#efefef] p-1">
             {(["b2b", "b2c"] as CustomerType[]).map((type) => (
               <button
                 key={type}
@@ -422,7 +422,7 @@ export default function RegisterPage() {
                       type="button"
                       onClick={handleVatValidate}
                       disabled={vatStatus === "loading" || !form.vat_number.trim()}
-                      className="shrink-0 rounded-[12px] border border-black/[0.08] bg-white px-4 text-[0.82rem] font-semibold text-[var(--foreground)] transition hover:bg-[#f0f0f0] disabled:cursor-not-allowed disabled:opacity-50"
+                      className="shrink-0 rounded-md border border-black/[0.08] bg-white px-4 text-[0.82rem] font-semibold text-[var(--foreground)] transition hover:bg-[#f0f0f0] disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {vatStatus === "loading" ? <Loader2 size={14} className="animate-spin" /> : "Validate"}
                     </button>
@@ -481,7 +481,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="flex h-[50px] w-full items-center justify-center rounded-full bg-[var(--primary)] text-[0.95rem] font-semibold text-white transition hover:bg-[var(--primary-hover)] disabled:opacity-60"
+              className="flex h-[50px] w-full items-center justify-center rounded-md bg-[var(--primary)] text-[0.95rem] font-semibold text-white transition hover:bg-[var(--primary-hover)] disabled:opacity-60"
             >
               {submitting ? (
                 <span className="flex items-center gap-2.5">
