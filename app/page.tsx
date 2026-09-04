@@ -3,27 +3,16 @@ import type { Metadata } from "next";
 import { getServerLocale } from "@/lib/locale";
 import { getPageMeta } from "@/lib/metadata-i18n";
 import Navbar from "@/components/navbar";
-import WhyOkelcor from "@/components/why-okelcor";
-import FadeUp from "@/components/motion/fade-up";
-import Logistics from "@/components/logistics";
-import WhoWeServeSection from "@/components/who-we-serve";
-import TyreHighlightsSection from "@/components/tyre-highlights";
-import RexCertified from "@/components/rex-certified";
-import CTASection from "@/components/cta-section";
+import QuoteCta from "@/components/home/quote-cta";
 import Footer from "@/components/footer";
-import HeroShowcase from "@/components/home/hero-showcase";
-import GlobalReach from "@/components/home/global-reach";
-import FetPromo from "@/components/home/fet-promo";
-import ScrollProgress from "@/components/home/scroll-progress";
-import CategoriesSection from "@/components/home/categories-section";
+import TradeTopBar from "@/components/home/trade-topbar";
+import HeroFinder from "@/components/home/hero-finder";
+import TrustStrip from "@/components/home/trust-strip";
+import FetBand from "@/components/home/fet-band";
+import RangeTiles from "@/components/home/range-tiles";
 import BrandsSection from "@/components/home/brands-section";
-import PlatformShowcase from "@/components/home/platform-showcase";
-import FetShowcase from "@/components/home/fet-showcase";
 import HowItWorks from "@/components/home/how-it-works";
-import {
-  CategoriesSkeleton,
-  BrandsSkeleton,
-} from "@/components/ui/skeleton";
+import { BrandsSkeleton } from "@/components/ui/skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getServerLocale();
@@ -45,50 +34,37 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function Home() {
+  /*
+   * Eight blocks, each earning its place — down from fourteen sections, a
+   * scroll-progress bar, a flag marquee and a delayed popup. The shape is
+   * the one every working tyre platform converges on: the finder first,
+   * concrete trust facts second, then straight into the catalogue.
+   */
   return (
     <main className="w-full">
-      <ScrollProgress />
+      <TradeTopBar />
       <Navbar />
 
-      <HeroShowcase />
+      {/* The finder is the hero — a buyer arrives knowing a sidewall size */}
+      <HeroFinder />
 
-      {/* Global reach — scrolling flag strip of markets served */}
-      <GlobalReach />
+      {/* Checkable facts, not adjectives */}
+      <TrustStrip />
 
-      {/* Social proof first — brands right under the hero */}
+      {/* Into the catalogue: the four ranges, then the brands we carry */}
+      <RangeTiles />
       <Suspense fallback={<BrandsSkeleton />}>
         <BrandsSection />
       </Suspense>
 
-      <Suspense fallback={<CategoriesSkeleton />}>
-        <CategoriesSection />
-      </Suspense>
-
-      <WhoWeServeSection />
-
-      {/* The platform / process they get */}
-      <PlatformShowcase />
-
-      {/* Global supply + product depth */}
-      <Logistics />
-      <TyreHighlightsSection />
-
-      <FadeUp><WhyOkelcor /></FadeUp>
-
-      {/* Certification trust band */}
-      <RexCertified />
-
-      {/* Second product line */}
-      <FetShowcase />
-
-      {/* How the ordering process works, before the final CTA */}
+      {/* How a first order works — genuinely useful to a new B2B buyer */}
       <HowItWorks />
 
-      <CTASection />
-      <Footer />
+      {/* The second product line, said once, calmly — no popup */}
+      <FetBand />
 
-      {/* First-visit FET spotlight (delayed, dismissible) */}
-      <FetPromo />
+      <QuoteCta />
+      <Footer />
     </main>
   );
 }

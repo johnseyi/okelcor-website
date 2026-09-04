@@ -1,24 +1,15 @@
-import Brands from "@/components/brands";
-import FadeUp from "@/components/motion/fade-up";
+import BrandRow from "@/components/home/brand-row";
 import { apiFetch, type Brand, type ApiResponse } from "@/lib/api";
 
-/** Async server component — fetches brands then renders the Brands client component. */
+/** Async server component — fetches the live brand list for the logo strip. */
 export default async function BrandsSection() {
   try {
     const res: ApiResponse<Brand[]> = await apiFetch<Brand[]>("/brands", {
       revalidate: 60,
       tags: ["brands"],
     });
-    return (
-      <FadeUp>
-        <Brands brands={res.data?.length ? res.data : undefined} />
-      </FadeUp>
-    );
+    return <BrandRow brands={res.data?.length ? res.data : undefined} />;
   } catch {
-    return (
-      <FadeUp>
-        <Brands />
-      </FadeUp>
-    );
+    return null;
   }
 }

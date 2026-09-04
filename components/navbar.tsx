@@ -775,8 +775,10 @@ export default function Navbar() {
                     Search by Size <ChevronRight size={14} strokeWidth={2} />
                   </Link>
                 </div>
+                {/* No invented stock figure — a hardcoded "11,650+" that
+                    never changes reads as fake the day someone checks. */}
                 <p className="mt-4 text-[0.78rem] font-semibold text-[#5c5e62]">
-                  11,650+ tyres in stock
+                  PCR, TBR, OTR &amp; inspected used stock
                 </p>
               </div>
 
