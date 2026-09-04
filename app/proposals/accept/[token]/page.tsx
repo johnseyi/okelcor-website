@@ -83,7 +83,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   await params;
   return {
-    title: "Proposal Acceptance — Okelcor",
+    title: "Proposal Acceptance | Okelcor",
     description: "Review and accept or decline a commercial proposal from Okelcor.",
     robots: { index: false, follow: false },
   };

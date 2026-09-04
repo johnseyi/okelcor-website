@@ -58,8 +58,8 @@ export default function PrivacyPage() {
               We process your data for the following purposes:
             </p>
             <ul className="mt-3 list-inside list-disc space-y-1.5 pl-2">
-              <li className={LI_CLS}>Responding to inquiries and quote requests (Art. 6(1)(b) GDPR — contract performance)</li>
-              <li className={LI_CLS}>Operating and improving our website (Art. 6(1)(f) GDPR — legitimate interest)</li>
+              <li className={LI_CLS}>Responding to inquiries and quote requests (Art. 6(1)(b) GDPR, contract performance)</li>
+              <li className={LI_CLS}>Operating and improving our website (Art. 6(1)(f) GDPR, legitimate interest)</li>
               <li className={LI_CLS}>Complying with legal obligations (Art. 6(1)(c) GDPR)</li>
               <li className={LI_CLS}>Analytics and performance measurement, where consent is given (Art. 6(1)(a) GDPR)</li>
             </ul>

@@ -41,7 +41,7 @@ export default function GoodyearTiresPage() {
       <CatalogueLanding
         config={{
           eyebrow: "Brand",
-          h1: "Goodyear Tires for Sale – Premium Passenger, SUV & Wholesale Tires",
+          h1: "Goodyear Tires for Sale: Premium Passenger, SUV & Wholesale Tyres",
           intro: [
             [
               "Shop premium Goodyear tires for your car, SUV, van, or fleet vehicles. Whether you are looking for ",
@@ -66,7 +66,7 @@ export default function GoodyearTiresPage() {
           faq: [
             {
               q: "Is Goodyear a premium or mid-range tyre brand?",
-              a: "Goodyear is positioned in the upper-mid to premium segment — below the 'Big 3' (Michelin, Continental, Bridgestone) in test rankings and pricing, but significantly above budget brands. It is a globally recognised first-tier brand with consistent independent test results across summer, winter, and all-season categories, making it a reliable wholesale product for diverse markets.",
+              a: "Goodyear is positioned in the upper-mid to premium segment, below the 'Big 3' (Michelin, Continental, Bridgestone) in test rankings and pricing, but significantly above budget brands. It is a globally recognised first-tier brand with consistent independent test results across summer, winter, and all-season categories, making it a reliable wholesale product for diverse markets.",
             },
             {
               q: "What is Goodyear's most popular winter tyre model?",
@@ -74,11 +74,11 @@ export default function GoodyearTiresPage() {
             },
             {
               q: "Does Goodyear own Dunlop?",
-              a: "Yes. Goodyear owns the Dunlop brand and associated intellectual property for Europe, North America, and Australia. Both brands are manufactured at shared Goodyear facilities while maintaining distinct identities — Goodyear as the mainstream premium brand, Dunlop as the sport-performance label.",
+              a: "Yes. Goodyear owns the Dunlop brand and associated intellectual property for Europe, North America, and Australia. Both brands are manufactured at shared Goodyear facilities while maintaining distinct identities: Goodyear as the mainstream premium brand, Dunlop as the sport-performance label.",
             },
             {
               q: "Does Goodyear make TBR commercial tyres?",
-              a: "Yes. Goodyear's commercial TBR range includes the KMAX (long-haul drive), FUELMAX (fuel-efficient drive and steer), and OPTITRAC (mixed-service). These are available through Goodyear commercial tyre channels. Okelcor's primary Goodyear supply focuses on the PCR range — contact our team for specific TBR enquiries.",
+              a: "Yes. Goodyear's commercial TBR range includes the KMAX (long-haul drive), FUELMAX (fuel-efficient drive and steer), and OPTITRAC (mixed-service). These are available through Goodyear commercial tyre channels. Okelcor's primary Goodyear supply focuses on the PCR range. Contact our team for specific TBR enquiries.",
             },
           ],
           relatedGroups: [

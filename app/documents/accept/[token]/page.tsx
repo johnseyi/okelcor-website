@@ -69,7 +69,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { token } = await params;
   return {
-    title: "Document Acceptance — Okelcor",
+    title: "Document Acceptance | Okelcor",
     description: "Review and accept or decline an Okelcor document.",
     robots: { index: false, follow: false },
   };

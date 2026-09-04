@@ -41,7 +41,7 @@ export default function PirelliTiresPage() {
       <CatalogueLanding
         config={{
           eyebrow: "Brand",
-          h1: "Pirelli Tires for Sale – Premium Performance for Passenger Cars, SUVs & Fleets",
+          h1: "Pirelli Tires for Sale: Premium Performance for Cars, SUVs & Fleets",
           intro: [
             [
               "Shop premium Pirelli tires at ",
@@ -80,7 +80,7 @@ export default function PirelliTiresPage() {
             },
             {
               q: "Is Pirelli a strong wholesale product for export markets?",
-              a: "Yes. Pirelli's global brand recognition — reinforced by its F1 presence and luxury car associations — makes it a compelling export product for markets where aspirational brands carry real value. Gulf states, Nigeria, South Africa, and parts of Southeast Asia represent strong Pirelli wholesale destinations. Okelcor handles export documentation and international freight for these markets.",
+              a: "Yes. Pirelli's global brand recognition, reinforced by its F1 presence and luxury car associations, makes it a compelling export product for markets where aspirational brands carry real value. Gulf states, Nigeria, South Africa, and parts of Southeast Asia represent strong Pirelli wholesale destinations. Okelcor handles export documentation and international freight for these markets.",
             },
           ],
           relatedGroups: [

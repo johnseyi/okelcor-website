@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     type: "website",
   },
   twitter: {
-    title: "Get Instant Tyre Supply Quotation — Okelcor",
+    title: "Get Instant Tyre Supply Quotation | Okelcor",
     description:
       "Bulk PCR, TBR, and used tyre supplies at competitive prices. International logistics. Response within 1 business day.",
   },

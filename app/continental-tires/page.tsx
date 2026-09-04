@@ -41,7 +41,7 @@ export default function ContinentalTiresPage() {
       <CatalogueLanding
         config={{
           eyebrow: "Brand",
-          h1: "Continental Tires for Sale – Premium Tyres For Passenger cars, SUV & Fleets",
+          h1: "Continental Tires for Sale: Premium Tyres for Passenger Cars, SUVs & Fleets",
           intro: [
             [
               "Find premium Continental tires at ",

@@ -135,7 +135,7 @@ function InvoiceCard({ order }: { order: Order }) {
       ? order.declaration_status === "signed"
         ? "We've received your EU entry certificate and are finalising your invoice."
         : order.declaration_status === "acknowledged"
-        ? "Your certificate is confirmed — your invoice will be available here shortly."
+        ? "Your certificate is confirmed. Your invoice will be available here shortly."
         : "Please sign your EU entry certificate above to release your invoice."
       : "Your invoice is being prepared and will be available here shortly.";
 

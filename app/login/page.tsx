@@ -486,7 +486,7 @@ export default function LoginPage() {
                 <p className="mt-1 text-red-600">Enter your email address to receive a new verification link.</p>
                 {reVerifyDone ? (
                   <div className="mt-3 flex items-center gap-2 text-[0.83rem] text-emerald-700">
-                    <CheckCircle2 size={14} /> Verification email sent — check your inbox.
+                    <CheckCircle2 size={14} /> Verification email sent. Check your inbox.
                   </div>
                 ) : (
                   <div className="mt-3 flex flex-col gap-2">

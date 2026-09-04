@@ -41,7 +41,7 @@ export default function BridgestoneTiresPage() {
       <CatalogueLanding
         config={{
           eyebrow: "Brand",
-          h1: "Bridgestone Tires for Sale – Passenger, SUV & Light Truck Tyres",
+          h1: "Bridgestone Tires for Sale: Passenger, SUV & Light Truck Tyres",
           intro: [
             [
               "Find premium Bridgestone tires for ",
@@ -70,7 +70,7 @@ export default function BridgestoneTiresPage() {
             },
             {
               q: "How does Bridgestone compare to Michelin in quality?",
-              a: "Both Bridgestone and Michelin occupy the premium tier of the global tyre market. Bridgestone typically performs strongly in wet weather and winter traction tests; Michelin often scores marginally higher in longevity and fuel efficiency metrics. In practice, both are considered first-tier premium brands — the difference is minor at product level, while Michelin carries slightly higher brand premium in some markets.",
+              a: "Both Bridgestone and Michelin occupy the premium tier of the global tyre market. Bridgestone typically performs strongly in wet weather and winter traction tests; Michelin often scores marginally higher in longevity and fuel efficiency metrics. In practice, both are considered first-tier premium brands. The difference is minor at product level, while Michelin carries slightly higher brand premium in some markets.",
             },
             {
               q: "What are the most traded Bridgestone models for wholesale?",

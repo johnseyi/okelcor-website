@@ -5,7 +5,7 @@ const CAPABILITIES = [
   {
     icon: ShieldCheck,
     title: "Fresh Rubber & Full Warranties",
-    body: "We guarantee recent DOT production dates and facilitate standard manufacturer warranties. Never worry about stagnant stock — give your customers the safety and performance they expect.",
+    body: "We guarantee recent DOT production dates and facilitate standard manufacturer warranties. Never worry about stagnant stock. Give your customers the safety and performance they expect.",
   },
   {
     icon: BadgeCheck,

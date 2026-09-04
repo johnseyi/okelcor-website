@@ -41,7 +41,7 @@ export default function FalkenTiresPage() {
       <CatalogueLanding
         config={{
           eyebrow: "Brand",
-          h1: "Falken Tires for Sale – Performance Passenger Cars, SUVs & Light Truck Tyres",
+          h1: "Falken Tires for Sale: Performance Passenger, SUV & Light Truck Tyres",
           intro: [
             [
               "Shop top-performance Falken tires for ",

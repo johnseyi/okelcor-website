@@ -41,7 +41,7 @@ export default function MichelinTiresPage() {
       <CatalogueLanding
         config={{
           eyebrow: "Brand",
-          h1: "Michelin Tires for Sale – Passenger and SUV Tires - Best Prices",
+          h1: "Michelin Tires for Sale: Passenger and SUV Tyres at the Best Prices",
           intro: [
             [
               "Find premium Michelin tires at ",

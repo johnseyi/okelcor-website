@@ -272,7 +272,7 @@ export default function RegisterPage() {
               Verify your email
             </h2>
             <p className="mt-2 text-[0.9rem] leading-6 text-[var(--muted)]">
-              We&apos;ve sent a verification link to <strong className="text-[var(--foreground)]">{form.email}</strong>. Verify your email first — then our team will review your business account before activating full access. We&apos;ll email you as soon as it&apos;s approved.
+              We&apos;ve sent a verification link to <strong className="text-[var(--foreground)]">{form.email}</strong>. Verify your email first, then our team will review your business account before activating full access. We&apos;ll email you as soon as it&apos;s approved.
             </p>
             <button
               type="button"
@@ -456,7 +456,7 @@ export default function RegisterPage() {
                   )}
                   {vatStatus === "unavailable" && (
                     <p className="mt-1 flex items-center gap-1.5 text-[0.75rem] font-medium text-amber-600">
-                      <AlertTriangle size={13} strokeWidth={2} /> Validation unavailable — you can still proceed.
+                      <AlertTriangle size={13} strokeWidth={2} /> Validation unavailable. You can still proceed.
                     </p>
                   )}
                 </Field>

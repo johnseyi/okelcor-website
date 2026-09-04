@@ -235,7 +235,7 @@ export default function WholesalerLeadForm() {
           <div id="wf-notes">
             <label htmlFor="quote-notes" className={LABEL}>Quote Notes</label>
             <textarea id="quote-notes" name="notes" rows={5} value={form.notes} onChange={set("notes")}
-              placeholder="Describe your requirements in detail — tyre specs, intended use, volume, any other relevant information…"
+              placeholder="Describe your requirements in detail: tyre specs, intended use, volume, any other relevant information…"
               aria-invalid={!!errors.notes} className={`${cls("notes")} resize-none`} />
             {errors.notes && <p role="alert" className="mt-1 text-[0.78rem] text-red-500">{errors.notes}</p>}
           </div>

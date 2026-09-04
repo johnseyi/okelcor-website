@@ -41,7 +41,7 @@ export default function DunlopTiresPage() {
       <CatalogueLanding
         config={{
           eyebrow: "Brand",
-          h1: "Dunlop Tires for Sale – Performance Passenger cars, SUVs & Light Trucks",
+          h1: "Dunlop Tires for Sale: Performance for Passenger Cars, SUVs & Light Trucks",
           intro: [
             [
               "Shop high-quality Dunlop tires for ",
@@ -64,11 +64,11 @@ export default function DunlopTiresPage() {
           faq: [
             {
               q: "Who owns Dunlop tyres?",
-              a: "Dunlop's European tyre business is owned by Goodyear, which acquired the Dunlop tyre rights for Europe, North America, and Australia. Both brands share Goodyear manufacturing facilities while operating distinct product ranges — Goodyear as the mainstream premium brand, Dunlop as the sport-performance label. Dunlop tyre operations in Asia and Africa are run under separate licensing arrangements by Sumitomo Rubber Industries.",
+              a: "Dunlop's European tyre business is owned by Goodyear, which acquired the Dunlop tyre rights for Europe, North America, and Australia. Both brands share Goodyear manufacturing facilities while operating distinct product ranges: Goodyear as the mainstream premium brand, Dunlop as the sport-performance label. Dunlop tyre operations in Asia and Africa are run under separate licensing arrangements by Sumitomo Rubber Industries.",
             },
             {
               q: "Is Dunlop a premium brand?",
-              a: "Dunlop sits in the upper-mid to premium tier — below the 'Big 3' (Michelin, Continental, Bridgestone) in pricing, but consistently above standard mid-range brands in independent test results. Its sport and performance heritage makes it a popular wholesale choice for distributors targeting driving-enthusiast buyers or markets where performance credentials add value.",
+              a: "Dunlop sits in the upper-mid to premium tier, below the 'Big 3' (Michelin, Continental, Bridgestone) in pricing but consistently above standard mid-range brands in independent test results. Its sport and performance heritage makes it a popular wholesale choice for distributors targeting driving-enthusiast buyers or markets where performance credentials add value.",
             },
             {
               q: "What is Dunlop's most traded product range?",

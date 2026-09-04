@@ -42,7 +42,7 @@ export default function WholesalerFaq() {
             Wholesale FAQs
           </p>
           <h2 className="mt-2 text-2xl font-extrabold tracking-tight text-[var(--foreground)] md:text-3xl">
-            Buying tyres at wholesale — answered
+            Buying tyres at wholesale, answered
           </h2>
           <div className="mt-6">
             {WHOLESALER_FAQS.map((faq) => (

@@ -41,7 +41,7 @@ export default function LightTruckTiresPage() {
       <CatalogueLanding
         config={{
           eyebrow: "Tyre Category",
-          h1: "Light Truck Tires for Sale – Browse our complete TBR Tyres",
+          h1: "Light Truck Tires for Sale: Browse Our Complete TBR Range",
           intro: [
             [
               "Shop durable light truck tires at ",

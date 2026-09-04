@@ -10,7 +10,7 @@ import { getCustomerFromCookie } from "@/lib/get-customer";
 
 export const metadata: Metadata = {
   title: "Notifications",
-  description: "Your Okelcor portal notifications — order, payment, document and quote updates.",
+  description: "Your Okelcor portal notifications: order, payment, document and quote updates.",
 };
 
 export default async function NotificationsPage() {

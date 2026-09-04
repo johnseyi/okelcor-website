@@ -41,7 +41,7 @@ export default function AllSeasonTiresPage() {
       <CatalogueLanding
         config={{
           eyebrow: "Season",
-          h1: "All-Season Tires for Sale – Year-Round Tyres Available",
+          h1: "All-Season Tires for Sale: Year-Round Tyres Available",
           intro: [
             [
               "Shop versatile all-season tires at ",
@@ -74,7 +74,7 @@ export default function AllSeasonTiresPage() {
             },
             {
               q: "Is demand for all-season tyres growing?",
-              a: "Yes — strongly. The all-season PCR segment has been one of the fastest-growing tyre categories in Western Europe over the past five years. Markets like the UK, Netherlands, Belgium, and Germany have seen significant consumer shifts toward all-season products, making this an increasingly attractive category for wholesale distributors building their stock portfolio.",
+              a: "Yes, strongly. The all-season PCR segment has been one of the fastest-growing tyre categories in Western Europe over the past five years. Markets like the UK, Netherlands, Belgium, and Germany have seen significant consumer shifts toward all-season products, making this an increasingly attractive category for wholesale distributors building their stock portfolio.",
             },
             {
               q: "Are all-season TBR (truck) tyres available?",

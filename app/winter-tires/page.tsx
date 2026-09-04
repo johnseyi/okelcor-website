@@ -41,7 +41,7 @@ export default function WinterTiresPage() {
       <CatalogueLanding
         config={{
           eyebrow: "Season",
-          h1: "Winter Tires for Sale – Safe & High-Performance Snow, Ice & Cold Weather Tyres",
+          h1: "Winter Tires for Sale: Snow, Ice & Cold Weather Tyres",
           intro: [
             [
               "Shop high-performance winter tires at ",
@@ -74,11 +74,11 @@ export default function WinterTiresPage() {
             },
             {
               q: "When should wholesale winter tyre orders be placed?",
-              a: "The winter tyre swap season in Europe runs October–December. Wholesale buyers should place bulk orders 8–16 weeks ahead — ideally between May and September — to secure availability and avoid pre-season price increases. Late orders often face stock shortages in popular sizes from top brands.",
+              a: "The winter tyre swap season in Europe runs from October to December. Wholesale buyers should place bulk orders 8 to 16 weeks ahead, ideally between May and September, to secure availability and avoid pre-season price increases. Late orders often face stock shortages in popular sizes from top brands.",
             },
             {
               q: "Are Nordic (studded) winter tyres available?",
-              a: "Studded winter tyres are permitted in Finland, Norway, Sweden, and parts of Russia and Canada during defined winter periods. Contact our sales team if your distribution market requires studded winter tyres — these need to be specified separately as they are a distinct product category.",
+              a: "Studded winter tyres are permitted in Finland, Norway, Sweden, and parts of Russia and Canada during defined winter periods. Contact our sales team if your distribution market requires studded winter tyres. These need to be specified separately as they are a distinct product category.",
             },
           ],
           relatedGroups: [

@@ -41,7 +41,7 @@ export default function PassengerTiresPage() {
       <CatalogueLanding
         config={{
           eyebrow: "Tyre Category",
-          h1: "Passenger Tires for Sale – Browse Available PCR Tyres",
+          h1: "Passenger Tires for Sale: Browse Available PCR Tyres",
           intro: [
             [
               "Shop premium passenger tires at ",

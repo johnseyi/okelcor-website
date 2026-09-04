@@ -41,7 +41,7 @@ export default function SummerTiresPage() {
       <CatalogueLanding
         config={{
           eyebrow: "Season",
-          h1: "Summer Tires for Sale – See Available Tyres At Competitive Prices",
+          h1: "Summer Tires for Sale: Available Tyres at Competitive Prices",
           intro: [
             [
               "Shop high-performance summer tires at ",
