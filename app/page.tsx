@@ -11,7 +11,9 @@ import TrustStrip from "@/components/home/trust-strip";
 import FetBand from "@/components/home/fet-band";
 import RangeTiles from "@/components/home/range-tiles";
 import BrandsSection from "@/components/home/brands-section";
-import HowItWorks from "@/components/home/how-it-works";
+import FeaturedStock from "@/components/home/featured-stock";
+import TradeAccountBand from "@/components/home/trade-account-band";
+import NewsTeaser from "@/components/home/news-teaser";
 import { BrandsSkeleton } from "@/components/ui/skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -51,17 +53,25 @@ export default function Home() {
       {/* Checkable facts, not adjectives */}
       <TrustStrip />
 
-      {/* Into the catalogue: the four ranges, then the brands we carry */}
+      {/* Into the catalogue: the four ranges, live stock, then the brands */}
       <RangeTiles />
+      <Suspense fallback={null}>
+        <FeaturedStock />
+      </Suspense>
       <Suspense fallback={<BrandsSkeleton />}>
         <BrandsSection />
       </Suspense>
 
-      {/* How a first order works — genuinely useful to a new B2B buyer */}
-      <HowItWorks />
+      {/* Where a distributor becomes an account, the ATD move */}
+      <TradeAccountBand />
 
-      {/* The second product line, said once, calmly — no popup */}
+      {/* The second product line, said once, calmly. No popup. */}
       <FetBand />
+
+      {/* Knowledge earns trust before anyone wires a deposit */}
+      <Suspense fallback={null}>
+        <NewsTeaser />
+      </Suspense>
 
       <QuoteCta />
       <Footer />

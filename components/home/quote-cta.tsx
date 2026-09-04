@@ -20,8 +20,8 @@ export default function QuoteCta() {
             Tell us what you need moved
           </h2>
           <p className="mt-2 max-w-xl text-pretty text-[0.95rem] leading-relaxed text-white/60">
-            Size, quantity and destination — we come back with a written
-            quote, delivery terms and the export paperwork sorted.
+            Send us the size, quantity and destination. We come back with a
+            written quote, delivery terms and the export paperwork sorted.
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-3">

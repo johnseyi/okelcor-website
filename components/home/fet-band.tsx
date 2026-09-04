@@ -18,7 +18,7 @@ export default function FetBand() {
             FET fuel efficiency technology for fleets
           </h2>
           <p className="mt-2 text-pretty text-[0.95rem] leading-relaxed text-[#5c5e62]">
-            A fitted device matched to your engine class &mdash; four models
+            A fitted device matched to your engine class, with four models
             covering everything from small petrol cars to heavy commercial
             vehicles. Check which model fits your fleet in the engine lookup.
           </p>

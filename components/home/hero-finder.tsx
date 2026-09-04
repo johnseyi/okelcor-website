@@ -33,7 +33,13 @@ async function loadBrands(): Promise<Brand[]> {
 
 async function loadProductTotal(): Promise<number | null> {
   try {
-    const res = await apiFetch<unknown[]>("/products?per_page=1", { revalidate: 300, tags: ["products-total"] });
+    // in_stock=1 is also what makes the endpoint answer at all: the public
+    // index deliberately returns nothing unfiltered.
+    const res = await apiFetch<unknown[]>("/products", {
+      params: { per_page: "1", in_stock: "1" },
+      revalidate: 300,
+      tags: ["products-total"],
+    });
     const total = res.meta?.total;
     return typeof total === "number" && total > 0 ? total : null;
   } catch {
@@ -59,12 +65,12 @@ export default async function HeroFinder() {
           <p className="mt-4 max-w-lg text-pretty text-[1.05rem] leading-relaxed text-white/65">
             Okelcor supplies PCR, TBR, OTR and inspected used tyres to
             distributors and fleets across Europe, Africa and the Middle
-            East &mdash; with export documentation handled end to end.
+            East, with export documentation handled end to end.
           </p>
 
           <dl className="mt-8 grid max-w-lg grid-cols-3 gap-6 border-t border-white/10 pt-6">
             <div>
-              <dt className="text-[0.72rem] font-medium text-white/45">In the catalogue</dt>
+              <dt className="text-[0.72rem] font-medium text-white/45">In stock today</dt>
               <dd className="mt-0.5 text-xl font-bold tabular-nums text-white">
                 {total ? `${new Intl.NumberFormat("en-GB").format(total)} tyres` : "PCR · TBR · OTR"}
               </dd>

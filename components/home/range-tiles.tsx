@@ -16,7 +16,7 @@ const RANGES = [
   {
     type: "PCR",
     title: "Passenger tyres",
-    sub: "Cars, SUVs and vans — summer, winter and all-season",
+    sub: "Cars, SUVs and vans. Summer, winter and all season",
     img: "/images/pexels-piotr-arnoldes-7862031-6063163.png",
   },
   {
