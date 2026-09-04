@@ -4,7 +4,7 @@ import {
   Zap, MessageSquare, ShieldAlert, FileCheck, Truck, Activity, ScanLine,
   BellRing, Bell, Inbox, ClipboardCheck, UserCheck, Mail, Send, Images,
   Handshake, ReceiptText, LayoutGrid, LineChart, Search, BadgeCheck,
-  MessagesSquare, Globe2, Scale,
+  MessagesSquare, Globe2, Scale, LifeBuoy,
 } from "lucide-react";
 
 /**
@@ -81,6 +81,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       { label: "Follow-ups",         href: "/admin/crm/follow-ups",         icon: BellRing,      section: "crm" , keywords: "reminders due tasks" },
       { label: "Data Quality",       href: "/admin/customers/data-quality", icon: ScanLine,      section: "customers" , keywords: "duplicates merge cleanup" },
       { label: "Live Chats",         href: "/admin/chats",                  icon: MessageSquare, section: "chats" , keywords: "live chat crisp support messages" },
+      { label: "Claims",             href: "/admin/claims",                 icon: LifeBuoy,      section: "claims" , keywords: "after sales complaint damage warranty shortage credit note queue" },
     ],
   },
   {

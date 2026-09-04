@@ -25,16 +25,16 @@ export const ROLE_ACCESS: Record<string, string[]> = {
   // order manager, who both keep the rest of the `finance` section (invoice
   // reconciliation, profitability, EC Invoices, the Sales & Orders board).
   // Keep the two apart: folding the board back under `finance` reopens it.
-  super_admin:     ["operations", "finance", "finance_snapshot", "dashboard", "products", "orders", "quotes", "articles", "hero_slides", "promotions", "fet", "brands", "categories", "media", "settings", "users", "supplier", "customers", "ebay", "analytics", "behaviour", "chats", "security", "eu_declarations", "logistics", "system_health", "crm", "marketing", "partners", "staff_team"],
-  admin:           ["operations", "finance", "dashboard", "products", "orders", "quotes", "articles", "hero_slides", "promotions", "fet", "brands", "categories", "media", "settings", "users", "supplier", "customers", "ebay", "analytics", "behaviour", "chats", "security", "eu_declarations", "logistics", "system_health", "crm", "marketing", "partners", "staff_team"],
-  order_manager:   ["dashboard", "orders", "quotes", "supplier", "eu_declarations", "logistics", "crm", "marketing", "partners", "behaviour", "operations", "finance", "staff_team"],
+  super_admin:     ["operations", "finance", "finance_snapshot", "dashboard", "products", "orders", "quotes", "articles", "hero_slides", "promotions", "fet", "brands", "categories", "media", "settings", "users", "supplier", "customers", "ebay", "analytics", "behaviour", "chats", "security", "eu_declarations", "logistics", "system_health", "crm", "marketing", "partners", "staff_team", "claims"],
+  admin:           ["operations", "finance", "dashboard", "products", "orders", "quotes", "articles", "hero_slides", "promotions", "fet", "brands", "categories", "media", "settings", "users", "supplier", "customers", "ebay", "analytics", "behaviour", "chats", "security", "eu_declarations", "logistics", "system_health", "crm", "marketing", "partners", "staff_team", "claims"],
+  order_manager:   ["dashboard", "orders", "quotes", "supplier", "eu_declarations", "logistics", "crm", "marketing", "partners", "behaviour", "operations", "finance", "staff_team", "claims"],
   // Reconciliation and the finance half of order sign-off. Deliberately narrow:
   // this role exists to hold one half of a separation of duties, so handing it
   // the rest of the panel would defeat the point of splitting it out.
   // `quotes` added: finance reconciles orders that begin life as quotes, so
   // read access to the pipeline belongs with the role. The API grants it
   // read-only (quotes.manage/view, not quotes.update).
-  finance:         ["dashboard", "orders", "quotes", "operations", "finance", "finance_snapshot"],
+  finance:         ["dashboard", "orders", "quotes", "operations", "finance", "finance_snapshot", "claims"],
   sales_manager:   ["dashboard", "orders", "quotes", "customers", "analytics", "logistics", "crm", "operations"],
   content_manager: ["dashboard", "articles", "hero_slides", "promotions", "fet", "brands", "media"],
   // Content + catalogue + campaigns — the person optimizing products and
@@ -42,7 +42,7 @@ export const ROLE_ACCESS: Record<string, string[]> = {
   // customers or finance. Settings included because the site-wide product
   // shipping/returns texts live there.
   marketing:       ["dashboard", "products", "articles", "hero_slides", "promotions", "fet", "brands", "media", "settings", "marketing", "behaviour", "analytics"],
-  support:         ["dashboard", "orders", "quotes", "customers", "chats", "logistics"],
+  support:         ["dashboard", "orders", "quotes", "customers", "chats", "logistics", "claims"],
   editor:          ["dashboard", "articles", "hero_slides", "promotions", "fet", "media", "behaviour"],
   viewer:          ["dashboard", "analytics"],
 };
@@ -88,6 +88,9 @@ export const SECTION_PERMISSION: Record<string, string> = {
   settings:        "settings.manage",
   users:           "admins.manage",
   staff_team:      "staff.view_team",
+  // The after-sales claims queue (Session 119). Gated on the read key: the
+  // page itself distinguishes read from write via claims.manage.
+  claims:          "claims.view",
 };
 
 /**
@@ -154,6 +157,7 @@ export const PATH_SECTION: Record<string, string> = {
   "/admin/analytics/markets": "behaviour",
   "/admin/analytics":       "analytics",
   "/admin/chats":           "chats",
+  "/admin/claims":          "claims",
   "/admin/eu-declarations": "eu_declarations",
   "/admin/logistics":       "logistics",
   "/admin/system-health":   "system_health",
@@ -176,6 +180,14 @@ const PERMISSION_ROLES: Record<string, string[]> = {
   // Admin management
   "admins.manage":         ["super_admin"],
   "admins.roles.assign":   ["super_admin"],
+
+  // After-sales claims queue (Session 119). Mirrors AdminPermissions.php:
+  // finance reads (an approved claim becomes a credit note) but does not
+  // write; deleting is super_admin only — a wrong claim is closed with a
+  // note, not erased.
+  "claims.view":           ["super_admin", "admin", "order_manager", "support", "finance"],
+  "claims.manage":         ["super_admin", "admin", "order_manager", "support"],
+  "claims.delete":         ["super_admin"],
 
   // Security dashboard
   "security.view":         ["super_admin", "admin", "order_manager", "sales_manager", "content_manager", "support", "editor", "viewer"],

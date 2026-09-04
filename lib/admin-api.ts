@@ -629,6 +629,18 @@ export type MyWorkItem = {
   /** todo_task: the department that raised it, e.g. "Finance". */
   department?: string | null;
   due_on?: string | null;
+  /**
+   * claim_task (Session 119): the claim's raw fields. `description` is the
+   * customer's complaint and is read-only here; `outcome_note` is the
+   * assignee's half and PATCHes via /api/admin/my-work/claims/{id}.
+   * `queue_url` is served only when the viewer may open the claims queue
+   * page — null means render no link rather than one that 403s.
+   */
+  description?: string | null;
+  outcome_note?: string | null;
+  customer?: string | null;
+  claim_type?: string | null;
+  queue_url?: string | null;
 };
 
 // CRM-7 quote request items (admin-structured line items for proposal)
@@ -2085,4 +2097,46 @@ export type TodoMeta = {
   /** Department name → count. Only departments that actually have to-dos. */
   departments?: Record<string, number>;
   staff: { id: number; name: string }[];
+};
+
+// ── After-sales claims queue (Session 119) ────────────────────────────────────
+
+export type ClaimItem = {
+  id: number;
+  /** CLM-00001 — stamped server-side from the id. */
+  ref: string | null;
+  order_id?: number | null;
+  order_number?: string | null;
+  customer_name: string;
+  customer_email?: string | null;
+  customer_company?: string | null;
+  type: string;
+  type_label: string;
+  description: string;
+  quantity?: number | null;
+  /** new | in_review | awaiting_customer | approved | rejected | closed. */
+  status: string;
+  status_label: string;
+  outcome_note?: string | null;
+  assigned_admin_id?: number | null;
+  assignee?: string | null;
+  created_by?: number | null;
+  creator?: string | null;
+  resolved_at?: string | null;
+  resolved_by_name?: string | null;
+  closed_at?: string | null;
+  created_at?: string | null;
+  /** Days from logged to decided (or to now, while open). */
+  age_days?: number | null;
+};
+
+export type ClaimMeta = {
+  claims_available: boolean;
+  counts?: Record<string, number>;
+  open_count?: number;
+  /** Logged → approved/rejected, last 90 days. Null until something decided. */
+  avg_days_to_decision?: number | null;
+  types?: { key: string; label: string }[];
+  statuses?: { key: string; label: string }[];
+  staff?: { id: number; name: string }[];
 };
