@@ -13,20 +13,21 @@ import CsvActions from "@/components/admin/csv-actions";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Products" };
 
-type SearchParams = Promise<{ q?: string; type?: string; page?: string; view?: string }>;
+type SearchParams = Promise<{ q?: string; type?: string; audience?: string; page?: string; view?: string }>;
 
 export default async function AdminProductsPage({
   searchParams,
 }: {
   searchParams: SearchParams;
 }) {
-  const { q, type, page, view } = await searchParams;
+  const { q, type, audience, page, view } = await searchParams;
   const currentView = view === "b2b" || view === "b2c" ? view : "all";
 
   function tabUrl(v: string) {
     const p = new URLSearchParams();
     if (q?.trim()) p.set("q", q.trim());
     if (type && type !== "all") p.set("type", type);
+    if (audience && audience !== "all") p.set("audience", audience);
     if (v !== "all") p.set("view", v);
     const qs = p.toString();
     return `/admin/products${qs ? `?${qs}` : ""}`;
@@ -48,6 +49,7 @@ export default async function AdminProductsPage({
   const params: Record<string, string | number> = { per_page: 100 };
   if (q?.trim())              params.q       = q.trim();
   if (type && type !== "all") params.type    = type;
+  if (audience && audience !== "all") params.audience = audience;
   if (currentView !== "all")  params.segment = currentView;
   // The pagination links have always written ?page= into the URL and the
   // label read it back — but it was never forwarded to the API, so every
@@ -134,6 +136,7 @@ export default async function AdminProductsPage({
         meta={meta}
         currentQ={q ?? ""}
         currentType={type ?? "all"}
+        currentAudience={audience ?? "all"}
         currentPage={Number(page ?? 1)}
         currentView={currentView}
       />

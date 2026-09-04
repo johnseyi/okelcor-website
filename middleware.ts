@@ -52,11 +52,22 @@ export function middleware(request: NextRequest) {
     }
 
     const role = request.cookies.get("admin_role")?.value ?? "";
-    // Effective permissions from login (per-user overrides included). Absent
-    // for sessions from before this cookie existed — role map covers those.
+
+    // A token with no role cookie is a session from before the role cookie
+    // existed — and it used to FAIL OPEN here, which is how a finance user's
+    // forgotten tab sat on /admin/products for five days generating 1,178
+    // permission denials against the API. Unknown role now re-authenticates
+    // once (login refreshes the cookies) instead of passing unchecked.
+    if (!role) {
+      const loginUrl = new URL("/admin/login", request.url);
+      loginUrl.searchParams.set("reauth", "1");
+      return NextResponse.redirect(loginUrl);
+    }
+
+    // Effective permissions from login (per-user overrides included).
     const permsCookie = request.cookies.get("admin_perms")?.value;
     const permissions = permsCookie ? permsCookie.split(",").filter(Boolean) : null;
-    if (role && !roleCanAccess(role, pathname, permissions)) {
+    if (!roleCanAccess(role, pathname, permissions)) {
       return NextResponse.redirect(new URL("/admin/unauthorized", request.url));
     }
 

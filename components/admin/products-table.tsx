@@ -23,6 +23,7 @@ type Props = {
   meta: Meta;
   currentQ: string;
   currentType: string;
+  currentAudience?: string;
   currentPage: number;
   currentView?: "all" | "b2b" | "b2c";
 };
@@ -176,12 +177,16 @@ export default function ProductsTable({
   meta,
   currentQ,
   currentType,
+  currentAudience = "all",
   currentPage,
   currentView = "all",
 }: Props) {
   const router = useRouter();
   const [q, setQ] = useState(currentQ);
   const [type, setType] = useState(currentType);
+  const [audience, setAudience] = useState(currentAudience);
+  const [bulkAudiencePending, setBulkAudiencePending] = useState(false);
+  const [confirmBulkAudience, setConfirmBulkAudience] = useState<{ audience: string; matched: number } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<AdminProduct | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<number | null>(null);
@@ -195,13 +200,15 @@ export default function ProductsTable({
 
   // ── URL navigation ──────────────────────────────────────────────────────────
 
-  const buildUrl = (overrides: { q?: string; type?: string; page?: number }) => {
+  const buildUrl = (overrides: { q?: string; type?: string; audience?: string; page?: number }) => {
     const params = new URLSearchParams();
     const qVal = overrides.q ?? q;
     const typeVal = overrides.type ?? type;
+    const audVal = overrides.audience ?? audience;
     const pageVal = overrides.page ?? 1;
     if (qVal.trim()) params.set("q", qVal.trim());
     if (typeVal && typeVal !== "all") params.set("type", typeVal);
+    if (audVal && audVal !== "all") params.set("audience", audVal);
     if (pageVal > 1) params.set("page", String(pageVal));
     if (currentView !== "all") params.set("view", currentView);
     const qs = params.toString();
@@ -216,6 +223,57 @@ export default function ProductsTable({
   const handleTypeChange = (val: string) => {
     setType(val);
     router.push(buildUrl({ type: val, page: 1 }));
+  };
+
+  const handleAudienceChange = (val: string) => {
+    setAudience(val);
+    router.push(buildUrl({ audience: val, page: 1 }));
+  };
+
+  // ── Bulk audience: survey first, then write the surveyed scope ────────────
+  const surveyBulkAudience = async (target: string) => {
+    setActionError(null);
+    setBulkAudiencePending(true);
+    try {
+      const scope: Record<string, unknown> = { audience: target, dry_run: true };
+      if (type && type !== "all") { scope.all = false; scope.type = type; }
+      else scope.all = true;
+      const res = await fetch("/api/admin/products/bulk-audience", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(scope),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) { setActionError(json.message ?? "Could not survey the change."); return; }
+      setConfirmBulkAudience({ audience: target, matched: json.matched ?? 0 });
+    } catch {
+      setActionError("Could not reach the server.");
+    } finally {
+      setBulkAudiencePending(false);
+    }
+  };
+
+  const applyBulkAudience = async () => {
+    if (!confirmBulkAudience) return;
+    setBulkAudiencePending(true);
+    try {
+      const scope: Record<string, unknown> = { audience: confirmBulkAudience.audience };
+      if (type && type !== "all") { scope.all = false; scope.type = type; }
+      else scope.all = true;
+      const res = await fetch("/api/admin/products/bulk-audience", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(scope),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) { setActionError(json.message ?? "Could not update the audience."); return; }
+      setConfirmBulkAudience(null);
+      router.refresh();
+    } catch {
+      setActionError("Could not reach the server.");
+    } finally {
+      setBulkAudiencePending(false);
+    }
   };
 
   // ── Actions ─────────────────────────────────────────────────────────────────
@@ -377,6 +435,42 @@ export default function ProductsTable({
         </div>
       )}
 
+      {confirmBulkAudience && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-[440px] rounded-2xl bg-white p-8 shadow-2xl">
+            <h3 className="text-[1rem] font-extrabold text-[#1a1a1a]">Change who these are listed for?</h3>
+            <p className="mt-2 text-[0.875rem] leading-6 text-[#5c5e62]">
+              This sets{" "}
+              <span className="font-semibold text-[#1a1a1a]">
+                {confirmBulkAudience.matched.toLocaleString()} product{confirmBulkAudience.matched === 1 ? "" : "s"}
+              </span>{" "}
+              ({type !== "all" ? `type ${type}` : "the whole catalogue"}) to{" "}
+              <span className="font-semibold text-[#1a1a1a]">
+                {confirmBulkAudience.audience === "both" ? "both audiences" : confirmBulkAudience.audience === "b2b" ? "trade only" : "retail only"}
+              </span>
+              . The figure comes from a dry run just now, not a guess.
+            </p>
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setConfirmBulkAudience(null)}
+                className="flex h-10 flex-1 items-center justify-center rounded-full border border-black/10 bg-white text-[0.875rem] font-semibold text-[#1a1a1a] transition hover:bg-[#f0f2f5]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void applyBulkAudience()}
+                disabled={bulkAudiencePending}
+                className="flex h-10 flex-1 items-center justify-center rounded-full bg-[#E85C1A] text-[0.875rem] font-semibold text-white transition hover:bg-[#d44f12] disabled:opacity-60"
+              >
+                {bulkAudiencePending ? "Applying…" : "Confirm"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Delete modal */}
       {confirmDelete && (
         <ConfirmDeleteModal
@@ -398,7 +492,23 @@ export default function ProductsTable({
       )}
 
       {/* Bulk stock toolbar */}
-      <div className="mb-3 flex items-center justify-end gap-2">
+      <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
+        {/* Bulk audience: pick a target, see the surveyed row count, confirm.
+            The scope is the current Type filter, or the whole catalogue. */}
+        <select
+          value=""
+          disabled={bulkAudiencePending}
+          onChange={(e) => { if (e.target.value) void surveyBulkAudience(e.target.value); e.target.value = ""; }}
+          aria-label="Set audience for the current scope"
+          className="h-[38px] cursor-pointer rounded-xl border border-black/[0.09] bg-white px-3 text-[0.8rem] font-semibold text-[#5c5e62] outline-none transition hover:border-[#E85C1A] disabled:opacity-50"
+        >
+          <option value="">
+            {bulkAudiencePending ? "Surveying…" : `Set audience: ${type !== "all" ? type : "all products"}…`}
+          </option>
+          <option value="both">→ Both audiences</option>
+          <option value="b2b">→ Trade only (B2B)</option>
+          <option value="b2c">→ Retail only (B2C)</option>
+        </select>
         <button
           type="button"
           onClick={() => setConfirmBulkInStock(true)}
@@ -461,6 +571,19 @@ export default function ProductsTable({
             </button>
           ))}
         </div>
+
+        {/* Audience filter — who a listing is for (Session 116) */}
+        <select
+          value={audience}
+          onChange={(e) => handleAudienceChange(e.target.value)}
+          aria-label="Filter by audience"
+          className="h-10 cursor-pointer rounded-xl border border-black/[0.09] bg-white px-3 text-[0.8rem] font-semibold text-[#5c5e62] outline-none transition hover:border-[#E85C1A]"
+        >
+          <option value="all">All audiences</option>
+          <option value="both">Both</option>
+          <option value="b2b">Trade only</option>
+          <option value="b2c">Retail only</option>
+        </select>
       </div>
 
       {/* Table */}
@@ -557,6 +680,15 @@ export default function ProductsTable({
                       {/* Type */}
                       <td className="px-4 py-3">
                         <TypeBadge type={product.type} />
+                        {product.audience && product.audience !== "both" && (
+                          <span className={`ml-1 inline-flex items-center rounded px-1.5 py-0.5 text-[0.62rem] font-bold uppercase ${
+                            product.audience === "b2b"
+                              ? "bg-blue-50 text-blue-700"
+                              : "bg-emerald-50 text-emerald-700"
+                          }`}>
+                            {product.audience === "b2b" ? "Trade" : "Retail"}
+                          </span>
+                        )}
                       </td>
 
                       {/* Size */}
