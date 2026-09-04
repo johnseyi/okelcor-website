@@ -101,6 +101,11 @@ export default function ArticleUI({ slug, article: articleProp, related: related
                       [&_h2]:mt-5 [&_h2]:mb-2 [&_h2]:text-[1.3rem] [&_h2]:font-bold [&_h2]:text-[var(--foreground)]
                       [&_h3]:mt-4 [&_h3]:mb-2 [&_h3]:text-[1.1rem] [&_h3]:font-bold [&_h3]:text-[var(--foreground)]
                       [&_p]:mb-5
+                      [&_img]:max-w-full [&_img]:rounded-lg [&_img]:my-5
+                      [&_img.img-left]:float-left [&_img.img-left]:mr-5 [&_img.img-left]:mb-3 [&_img.img-left]:max-w-[50%]
+                      [&_img.img-right]:float-right [&_img.img-right]:ml-5 [&_img.img-right]:mb-3 [&_img.img-right]:max-w-[50%]
+                      [&_img.img-center]:mx-auto [&_img.img-center]:block
+                      [&_img.img-w25]:w-1/4 [&_img.img-w50]:w-1/2 [&_img.img-w75]:w-3/4 [&_img.img-w100]:w-full
                       [&_a]:font-bold [&_a]:text-[var(--primary)] [&_a]:underline [&_a]:decoration-[var(--primary)]/40 [&_a]:underline-offset-2 [&_a:hover]:decoration-[var(--primary)]
                       [&_ul]:mb-5 [&_ul]:ml-5 [&_ul]:list-disc [&_ul]:space-y-1.5
                       [&_ol]:mb-5 [&_ol]:ml-5 [&_ol]:list-decimal [&_ol]:space-y-1.5

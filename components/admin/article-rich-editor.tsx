@@ -4,7 +4,7 @@ import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
-import Image from "@tiptap/extension-image";
+import TipTapImage from "@tiptap/extension-image";
 import { Table, TableRow, TableHeader, TableCell } from "@tiptap/extension-table";
 import Placeholder from "@tiptap/extension-placeholder";
 import TextAlign from "@tiptap/extension-text-align";
@@ -18,10 +18,35 @@ import {
   AlignLeft, AlignCenter, AlignRight,
   Undo2, Redo2,
   Code, Code2,
-  Eye, Pen, FileCode,
+  Eye, Pen, FileCode, Trash2,
 } from "lucide-react";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+/**
+ * The stock Image node drops unknown attributes. Alignment and size travel
+ * as CLASSES (img-left / img-center / img-right, img-w25..img-w100) because
+ * the backend sanitizer passes class through untouched, while style
+ * declarations survive only per-property — classes cannot be half-stripped.
+ */
+const ArticleImage = TipTapImage.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      class: { default: null },
+    };
+  },
+});
+
+/** Swap one token family inside the image's class string. */
+function swapImgClass(current: string | null | undefined, family: string[], next: string | null): string | null {
+  const kept = (current ?? "").split(/\s+/).filter((c) => c && !family.includes(c));
+  if (next) kept.push(next);
+  return kept.length ? kept.join(" ") : null;
+}
+
+const IMG_ALIGN = ["img-left", "img-center", "img-right"];
+const IMG_SIZE  = ["img-w25", "img-w50", "img-w75", "img-w100"];
 
 function sanitizeHtml(html: string): string {
   if (typeof window === "undefined") return html;
@@ -274,6 +299,15 @@ function Toolbar({
     editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
   };
 
+  // ── Selected-image controls ─────────────────────────────────────────────
+  const imgSelected = editor.isActive("image");
+  const imgClass = (editor.getAttributes("image").class ?? "") as string;
+  const setImgClassToken = (family: string[], next: string | null) => {
+    editor.chain().focus().updateAttributes("image", {
+      class: swapImgClass(imgClass, family, next),
+    }).run();
+  };
+
   return (
     <div className="relative flex flex-wrap items-center gap-0.5 border-b border-black/[0.07] bg-[#fafafa] px-3 py-2">
 
@@ -398,6 +432,41 @@ function Toolbar({
         <TableIcon size={13} strokeWidth={2} />
       </ToolBtn>
 
+      {/* Selected image: align, size, remove. Appears only while an image
+          is selected, which is when those questions exist. */}
+      {imgSelected && (
+        <>
+          <Divider />
+          <span className="px-1 text-[0.68rem] font-bold uppercase tracking-wide text-[#8c8f94]">Image</span>
+          <ToolBtn onClick={() => setImgClassToken(IMG_ALIGN, imgClass.includes("img-left") ? null : "img-left")} active={imgClass.includes("img-left")} title="Float image left, text wraps">
+            <AlignLeft size={13} strokeWidth={2} />
+          </ToolBtn>
+          <ToolBtn onClick={() => setImgClassToken(IMG_ALIGN, imgClass.includes("img-center") ? null : "img-center")} active={imgClass.includes("img-center")} title="Centre image">
+            <AlignCenter size={13} strokeWidth={2} />
+          </ToolBtn>
+          <ToolBtn onClick={() => setImgClassToken(IMG_ALIGN, imgClass.includes("img-right") ? null : "img-right")} active={imgClass.includes("img-right")} title="Float image right, text wraps">
+            <AlignRight size={13} strokeWidth={2} />
+          </ToolBtn>
+          {(["img-w25", "img-w50", "img-w75"] as const).map((cls) => (
+            <button
+              key={cls}
+              type="button"
+              onMouseDown={(e) => { e.preventDefault(); setImgClassToken(IMG_SIZE, imgClass.includes(cls) ? null : cls); }}
+              title={`Image width ${cls.slice(5)}%`}
+              className={[
+                "flex h-7 items-center justify-center rounded-lg px-1.5 font-mono text-[0.68rem] font-bold transition",
+                imgClass.includes(cls) ? "bg-[#E85C1A] text-white" : "text-[#5c5e62] hover:bg-[#f0f2f5] hover:text-[#1a1a1a]",
+              ].join(" ")}
+            >
+              {cls.slice(5)}%
+            </button>
+          ))}
+          <ToolBtn onClick={() => editor.chain().focus().deleteSelection().run()} title="Remove image">
+            <Trash2 size={13} strokeWidth={2} />
+          </ToolBtn>
+        </>
+      )}
+
       {/* HTML/Source mode toggle */}
       <div className="ml-auto">
         <ToolBtn onClick={onToggleHtml} title="Edit raw HTML source">
@@ -461,7 +530,7 @@ export default function ArticleRichEditor({
       StarterKit.configure({ link: false, underline: false }),
       Underline,
       Link.configure({ openOnClick: false, HTMLAttributes: { rel: "noopener noreferrer" } }),
-      Image.configure({ inline: false, allowBase64: false }),
+      ArticleImage.configure({ inline: false, allowBase64: false }),
       Table.configure({ resizable: false }),
       TableRow,
       TableHeader,
@@ -605,6 +674,11 @@ export default function ArticleRichEditor({
           [&_.article-editor-content_pre]:rounded-xl [&_.article-editor-content_pre]:bg-[#1a1a1a] [&_.article-editor-content_pre]:p-4 [&_.article-editor-content_pre]:font-mono [&_.article-editor-content_pre]:text-[0.82rem] [&_.article-editor-content_pre]:text-[#e0e0e0] [&_.article-editor-content_pre]:mb-3 [&_.article-editor-content_pre]:overflow-x-auto
           [&_.article-editor-content_a]:text-[#E85C1A] [&_.article-editor-content_a]:underline
           [&_.article-editor-content_img]:max-w-full [&_.article-editor-content_img]:rounded-xl [&_.article-editor-content_img]:my-3
+          [&_.article-editor-content_img.img-left]:float-left [&_.article-editor-content_img.img-left]:mr-4 [&_.article-editor-content_img.img-left]:mb-2 [&_.article-editor-content_img.img-left]:max-w-[50%]
+          [&_.article-editor-content_img.img-right]:float-right [&_.article-editor-content_img.img-right]:ml-4 [&_.article-editor-content_img.img-right]:mb-2 [&_.article-editor-content_img.img-right]:max-w-[50%]
+          [&_.article-editor-content_img.img-center]:mx-auto [&_.article-editor-content_img.img-center]:block
+          [&_.article-editor-content_img.img-w25]:w-1/4 [&_.article-editor-content_img.img-w50]:w-1/2 [&_.article-editor-content_img.img-w75]:w-3/4 [&_.article-editor-content_img.img-w100]:w-full
+          [&_.article-editor-content_img.ProseMirror-selectednode]:ring-2 [&_.article-editor-content_img.ProseMirror-selectednode]:ring-[#E85C1A]
           [&_.article-editor-content_table]:w-full [&_.article-editor-content_table]:border-collapse [&_.article-editor-content_table]:mb-3
           [&_.article-editor-content_th]:border [&_.article-editor-content_th]:border-black/[0.12] [&_.article-editor-content_th]:bg-[#f5f5f5] [&_.article-editor-content_th]:px-3 [&_.article-editor-content_th]:py-2 [&_.article-editor-content_th]:text-left [&_.article-editor-content_th]:text-[0.82rem] [&_.article-editor-content_th]:font-bold
           [&_.article-editor-content_td]:border [&_.article-editor-content_td]:border-black/[0.09] [&_.article-editor-content_td]:px-3 [&_.article-editor-content_td]:py-2 [&_.article-editor-content_td]:text-[0.85rem]
@@ -630,6 +704,10 @@ export default function ArticleRichEditor({
             [&_pre]:rounded-xl [&_pre]:bg-[#1a1a1a] [&_pre]:p-4 [&_pre]:font-mono [&_pre]:text-[0.82rem] [&_pre]:text-[#e0e0e0] [&_pre]:mb-3 [&_pre]:overflow-x-auto
             [&_a]:text-[#E85C1A] [&_a]:underline
             [&_img]:max-w-full [&_img]:rounded-xl [&_img]:my-3
+            [&_img.img-left]:float-left [&_img.img-left]:mr-4 [&_img.img-left]:mb-2 [&_img.img-left]:max-w-[50%]
+            [&_img.img-right]:float-right [&_img.img-right]:ml-4 [&_img.img-right]:mb-2 [&_img.img-right]:max-w-[50%]
+            [&_img.img-center]:mx-auto [&_img.img-center]:block
+            [&_img.img-w25]:w-1/4 [&_img.img-w50]:w-1/2 [&_img.img-w75]:w-3/4 [&_img.img-w100]:w-full
             [&_table]:w-full [&_table]:border-collapse [&_table]:mb-3
             [&_th]:border [&_th]:border-black/[0.12] [&_th]:bg-[#f5f5f5] [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-[0.82rem] [&_th]:font-bold
             [&_td]:border [&_td]:border-black/[0.09] [&_td]:px-3 [&_td]:py-2 [&_td]:text-[0.85rem]"
