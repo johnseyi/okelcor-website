@@ -53,11 +53,14 @@ export default function ProductCard({
   product,
   priority = false,
   customerType = "guest",
+  guestSegment = "b2c",
   activeCampaign,
 }: {
   product: Product;
   priority?: boolean;
   customerType?: CustomerType;
+  /** Which tab a guest is browsing; the wholesale nudge shows only on "b2b". */
+  guestSegment?: "b2b" | "b2c";
   activeCampaign?: ActiveCampaign | null;
 }) {
   const { t } = useLanguage();
@@ -67,7 +70,12 @@ export default function ProductCard({
   const [showSpecs, setShowSpecs] = useState(false);
 
   const imageUrl = resolveImage(product);
-  const { displayPrice, badge, showGuestNudge } = resolvePrice(product, customerType);
+  const { displayPrice, badge, showGuestNudge: nudgePossible } = resolvePrice(product, customerType);
+  // Private buyer = retail, Trade buyer = wholesale. A guest browsing the
+  // RETAIL tab gets no wholesale nudge: signing in would show them the same
+  // retail prices they are already looking at. The nudge belongs on the
+  // trade tab, where it is true.
+  const showGuestNudge = nudgePossible && guestSegment === "b2b";
   const comparing = isComparing(product.id);
 
   // Both degrade to null when the backend has not supplied the data.

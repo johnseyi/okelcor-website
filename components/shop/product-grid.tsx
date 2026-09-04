@@ -15,6 +15,7 @@ type Props = {
   view: CatalogueView;
   onViewChange: (view: CatalogueView) => void;
   customerType?: "b2b" | "b2c" | "guest";
+  guestSegment?: "b2b" | "b2c";
   activeCampaign?: ActiveCampaign | null;
 };
 
@@ -24,7 +25,7 @@ function resolveListPrice(p: Product, customerType?: "b2b" | "b2c" | "guest"): n
   return p.price_b2c ?? p.price;
 }
 
-export default function ProductGrid({ products, total, sortBy, onSortChange, view, onViewChange, customerType, activeCampaign }: Props) {
+export default function ProductGrid({ products, total, sortBy, onSortChange, view, onViewChange, customerType, guestSegment, activeCampaign }: Props) {
   const { t } = useLanguage();
 
   const toggleBtn = (target: CatalogueView, Icon: typeof LayoutGrid, label: string) => (
@@ -90,7 +91,7 @@ export default function ProductGrid({ products, total, sortBy, onSortChange, vie
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {products.map((product, i) => (
-            <ProductCard key={product.id} product={product} priority={i < 3} customerType={customerType} activeCampaign={activeCampaign} />
+            <ProductCard key={product.id} product={product} priority={i < 3} customerType={customerType} guestSegment={guestSegment} activeCampaign={activeCampaign} />
           ))}
         </div>
       )}

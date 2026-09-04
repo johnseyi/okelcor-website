@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { Crisp } from "crisp-sdk-web";
 import { usePathname } from "next/navigation";
-import { MessageCircle } from "lucide-react";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 
 declare global {
@@ -43,9 +42,12 @@ export default function CrispChat() {
 
     if (typeof window !== "undefined") {
       window.$crisp = window.$crisp || [];
-      // Never show Crisp's own launcher — ours is the only entry point.
-      window.$crisp.push(["config", "hide:on:load", [true]]);
       window.$crisp.push(["safe", true]);
+      // Never show Crisp's own launcher — ours is the only entry point.
+      // The DO command queues and applies whenever Crisp finishes loading;
+      // the hide:on:load config flag raced the loader and lost, which is
+      // how the site briefly showed TWO chat buttons.
+      window.$crisp.push(["do", "chat:hide"]);
 
       window.$crisp.push(["on", "chat:opened", () => { setOpen(true); setUnread(false); }]);
       window.$crisp.push(["on", "chat:closed", () => {
@@ -82,20 +84,55 @@ export default function CrispChat() {
   return (
     <button
       type="button"
-      aria-label="Chat with us"
-      title="Chat with us"
+      aria-label="Talk to us"
       onClick={() => {
         try {
           window.$crisp.push(["do", "chat:show"]);
           window.$crisp.push(["do", "chat:open"]);
         } catch { /* crisp unavailable */ }
       }}
-      className="fixed bottom-5 right-5 z-40 flex h-11 w-11 items-center justify-center rounded-full bg-[#171a20] text-white shadow-md transition-transform hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f4511e]"
+      className="group fixed bottom-5 right-5 z-40 flex items-center gap-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f4511e]"
     >
-      <MessageCircle size={19} strokeWidth={2} aria-hidden />
-      {unread && (
-        <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-white bg-[#f4511e]" aria-hidden />
-      )}
+      {/* The label rolls out on hover, like a chalk board being turned round */}
+      <span className="pointer-events-none max-w-0 overflow-hidden whitespace-nowrap rounded-l-full bg-[#171a20] text-[0.8rem] font-semibold text-white opacity-0 transition-all duration-300 group-hover:mr-[-22px] group-hover:max-w-[130px] group-hover:py-2.5 group-hover:pl-4 group-hover:pr-7 group-hover:opacity-100">
+        Talk to us
+      </span>
+
+      {/* A tyre, not a bubble: tread ring, sidewall, orange hub. It rolls a
+          quarter turn on hover. Nobody else's chat button is a tyre. */}
+      <span className="relative block h-12 w-12 transition-transform duration-300 group-hover:rotate-90">
+        <svg viewBox="0 0 48 48" className="h-12 w-12 drop-shadow-md" aria-hidden>
+          {/* tread blocks */}
+          <g fill="#171a20">
+            {Array.from({ length: 12 }).map((_, i) => {
+              const a = (i * 30 * Math.PI) / 180;
+              const x = 24 + 21 * Math.cos(a);
+              const y = 24 + 21 * Math.sin(a);
+              return <circle key={i} cx={x} cy={y} r={3.4} />;
+            })}
+          </g>
+          {/* tyre body */}
+          <circle cx="24" cy="24" r="21" fill="#171a20" />
+          {/* sidewall groove */}
+          <circle cx="24" cy="24" r="15.5" fill="none" stroke="#3a3e46" strokeWidth="1.5" />
+          {/* rim */}
+          <circle cx="24" cy="24" r="10.5" fill="#f5f5f5" />
+          {/* hub */}
+          <circle cx="24" cy="24" r="4.2" fill="#f4511e" />
+          {/* wheel bolts */}
+          <g fill="#c9ccd1">
+            {Array.from({ length: 5 }).map((_, i) => {
+              const a = ((i * 72 - 90) * Math.PI) / 180;
+              const x = 24 + 7.4 * Math.cos(a);
+              const y = 24 + 7.4 * Math.sin(a);
+              return <circle key={i} cx={x} cy={y} r={1.3} />;
+            })}
+          </g>
+        </svg>
+        {unread && (
+          <span className="absolute -right-0.5 -top-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-[#f4511e]" aria-hidden />
+        )}
+      </span>
     </button>
   );
 }

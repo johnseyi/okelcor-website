@@ -696,6 +696,7 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed, 
                   view={view}
                   onViewChange={changeView}
                   customerType={customerType}
+                  guestSegment={guestSegment}
                   activeCampaign={activeCampaign}
                 />
               </>

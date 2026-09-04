@@ -138,7 +138,7 @@ export default function ProductInfo({ product }: { product: Product }) {
           href="/login?redirect=/shop"
           className="mt-2 inline-block text-[0.82rem] font-semibold text-[var(--primary)] hover:underline"
         >
-          Sign in for wholesale pricing
+          Trade buyer? Sign in for wholesale pricing
         </Link>
       )}
 
