@@ -101,7 +101,7 @@ export default function ArticleUI({ slug, article: articleProp, related: related
                       [&_h2]:mt-5 [&_h2]:mb-2 [&_h2]:text-[1.3rem] [&_h2]:font-bold [&_h2]:text-[var(--foreground)]
                       [&_h3]:mt-4 [&_h3]:mb-2 [&_h3]:text-[1.1rem] [&_h3]:font-bold [&_h3]:text-[var(--foreground)]
                       [&_p]:mb-5
-                      [&_a]:font-semibold [&_a]:text-[var(--primary)] [&_a]:underline [&_a]:decoration-[var(--primary)]/40 [&_a]:underline-offset-2 [&_a:hover]:decoration-[var(--primary)]
+                      [&_a]:font-bold [&_a]:text-[var(--primary)] [&_a]:underline [&_a]:decoration-[var(--primary)]/40 [&_a]:underline-offset-2 [&_a:hover]:decoration-[var(--primary)]
                       [&_ul]:mb-5 [&_ul]:ml-5 [&_ul]:list-disc [&_ul]:space-y-1.5
                       [&_ol]:mb-5 [&_ol]:ml-5 [&_ol]:list-decimal [&_ol]:space-y-1.5
                       [&_blockquote]:border-l-4 [&_blockquote]:border-[var(--primary)] [&_blockquote]:pl-5 [&_blockquote]:italic [&_blockquote]:text-[var(--muted)] [&_blockquote]:mb-5
