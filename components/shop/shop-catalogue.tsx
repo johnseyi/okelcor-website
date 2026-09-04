@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Search, Loader2, RotateCcw } from "lucide-react";
-import ProductGrid from "./product-grid";
+import { Search, Loader2, SlidersHorizontal } from "lucide-react";
+import ProductGrid, { type CatalogueView } from "./product-grid";
+import CatalogueFilters from "./catalogue-filters";
 import ShopPromoBanner, { type ShopPromotion } from "./shop-promo-banner";
 import ShopCampaignBanner, { type CampaignPromotion } from "./shop-campaign-banner";
 import SpecialsProductList from "./specials-product-list";
@@ -122,6 +123,24 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed, 
   const [selLoad,      setSelLoad]      = useState("");
   const [sortBy,       setSortBy]       = useState("");
 
+  // Grid for people who shop with their eyes, list for people with a
+  // spreadsheet open. Remembered per browser; storage can be unavailable
+  // (private windows), so both sides are wrapped.
+  const [view, setView] = useState<CatalogueView>("grid");
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem("shop-view");
+      if (stored === "list" || stored === "grid") setView(stored);
+    } catch { /* storage unavailable */ }
+  }, []);
+
+  const changeView = useCallback((v: CatalogueView) => {
+    setView(v);
+    try { window.localStorage.setItem("shop-view", v); } catch { /* storage unavailable */ }
+  }, []);
+
   // ── Results ──────────────────────────────────────────────────────────────────
   const [products,    setProducts]    = useState<Product[]>([]);
   const [isLoading,   setIsLoading]   = useState(false);
@@ -155,9 +174,13 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed, 
   // Triggers runSearch() one render after prefilledSize state is applied
   const [pendingAutoSearch, setPendingAutoSearch] = useState(false);
 
-  // Apply URL initialFilters on first render and auto-search
+  // Apply URL initialFilters on first render and auto-search. With no
+  // filters at all, still search: browse mode shows the in-stock catalogue.
   useEffect(() => {
-    if (!initialFilters || Object.keys(initialFilters).length === 0) return;
+    if (!initialFilters || Object.keys(initialFilters).length === 0) {
+      setPendingAutoSearch(true);
+      return;
+    }
     if (initialFilters.q)           setSearchText(initialFilters.q);
     if (initialFilters.type)        setSelType(initialFilters.type);
     if (initialFilters.brand)       setSelBrand(initialFilters.brand);
@@ -192,7 +215,7 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed, 
   useEffect(() => {
     if (!pendingAutoSearch) return;
     setPendingAutoSearch(false);
-    runSearch();
+    runSearch(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingAutoSearch]);
 
@@ -296,11 +319,15 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed, 
 
   // ── Search handler ───────────────────────────────────────────────────────────
 
-  const runSearch = useCallback(() => {
+  const runSearch = useCallback((force = false) => {
     const hasInput =
       searchText.trim() || priceMin || priceMax || selBrand || selType ||
       selWidth || selHeight || selRim || selSeason || selSpeed || selLoad;
-    if (!hasInput) return;
+    // Browse mode: with nothing selected the shop shows everything in stock
+    // rather than an empty page. An empty shop reads as a broken shop, and
+    // no real platform greets a buyer with a search prompt and no products.
+    const browsing = !hasInput;
+    if (browsing && !force) return;
 
     // Cancel any previous in-flight request
     abortRef.current?.abort();
@@ -308,6 +335,7 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed, 
     abortRef.current = controller;
 
     const params = new URLSearchParams({ locale });
+    if (browsing) params.set("in_stock", "1");
     if (searchText.trim()) params.set("q",             searchText.trim());
     if (priceMin)          params.set("price_min",     priceMin);
     if (priceMax)          params.set("price_max",     priceMax);
@@ -385,9 +413,20 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed, 
       .finally(() => setIsLoading(false));
   }, [searchText, priceMin, priceMax, selBrand, selType, selWidth, selHeight, selRim, selSeason, selSpeed, selLoad, sortBy, locale, customerType]);
 
+  // Every filter applies itself, debounced so three quick changes cost one
+  // request. The old design made nothing happen until a Filter button was
+  // found and pressed.
+  const filtersReady = useRef(false);
+  useEffect(() => {
+    if (!filtersReady.current) { filtersReady.current = true; return; }
+    const t = setTimeout(() => runSearch(true), 350);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [priceMin, priceMax, selBrand, selType, selWidth, selHeight, selRim, selSeason, selSpeed, selLoad]);
+
   // Re-fetch when sort changes after results are already showing
   useEffect(() => {
-    if (hasSearched) runSearch();
+    if (hasSearched) runSearch(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortBy]);
 
@@ -396,10 +435,9 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed, 
     setPriceMin(""); setPriceMax(""); setSelBrand(""); setSelType("");
     setSelWidth(""); setSelHeight(""); setSelRim("");
     setSelSeason(""); setSelSpeed(""); setSelLoad(""); setSortBy("");
-    setHasSearched(false);
-    setProducts([]);
-    setResultCount(0);
     setApiError(null);
+    // Back to browse mode rather than an empty page.
+    setPendingAutoSearch(true);
   };
 
   const hasActiveFilters =
@@ -457,126 +495,74 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed, 
     <section className="w-full bg-[#f5f5f5] py-6 md:py-10">
       <div className="tesla-shell">
 
-        {/* ── Filter bar ── */}
-        <div className="mb-6 overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-sm">
-
-          {/* Row 1 — text search */}
-          <div className="flex items-center gap-2 border-b border-[#f0f0f0] px-4 py-3 sm:gap-3 sm:px-5 sm:py-4">
-            <div className="relative flex-1">
-              <Search
-                size={16}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#9ca3af] sm:left-3.5"
-              />
-              <input
-                type="search"
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && runSearch()}
-                placeholder="Search by brand, size or article number"
-                className="h-10 w-full rounded-lg border border-[#e5e7eb] bg-[#fafafa] pl-9 pr-3 text-[0.85rem] text-[#171a20] outline-none placeholder:text-[#9ca3af] transition focus:border-[#f4511e] focus:bg-white focus:ring-1 focus:ring-[#f4511e]/20 sm:h-11 sm:pl-10 sm:pr-4 sm:text-[0.88rem]"
-              />
-            </div>
-            {/* Icon-only on mobile, icon + label on sm+ */}
-            <button
-              type="button"
-              onClick={runSearch}
-              className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#f4511e] text-white transition hover:bg-[#d14f14] sm:h-11 sm:w-auto sm:gap-2 sm:px-6 sm:text-[0.88rem] sm:font-semibold"
-            >
-              <Search size={15} strokeWidth={2.2} />
-              <span className="hidden sm:inline">Search</span>
-            </button>
+        {/* ── Search row ── */}
+        <div className="mb-5 flex items-center gap-2 sm:gap-3">
+          <div className="relative flex-1">
+            <Search
+              size={16}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#9ca3af] sm:left-3.5"
+            />
+            <input
+              type="search"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && runSearch(true)}
+              placeholder="Search by brand, size or article number"
+              className="h-11 w-full rounded-md border border-black/15 bg-white pl-9 pr-3 text-[0.88rem] text-[#171a20] outline-none placeholder:text-[#9ca3af] transition-colors focus:border-[#f4511e] sm:pl-10"
+            />
           </div>
-
-          {/* Row 2 — dropdowns + action buttons */}
-          {/* Mobile: 2-col grid so each dropdown gets a proper half-width cell.    */}
-          {/* sm+: revert to flex-wrap (original behaviour).                        */}
-          <div className="grid grid-cols-2 gap-2 px-4 py-3 sm:flex sm:flex-wrap sm:items-center sm:px-5">
-
-            {/* Min price */}
-            <select value={priceMin} onChange={(e) => setPriceMin(e.target.value)} className={sel}>
-              <option value="">Min price</option>
-              {PRICES.map((p) => <option key={p} value={p}>{price(p, { compact: true })}</option>)}
-            </select>
-
-            {/* Max price */}
-            <select value={priceMax} onChange={(e) => setPriceMax(e.target.value)} className={sel}>
-              <option value="">Max price</option>
-              {PRICES.map((p) => <option key={p} value={p}>{price(p, { compact: true })}</option>)}
-            </select>
-
-            {/* Brand */}
-            <select value={selBrand} onChange={(e) => setSelBrand(e.target.value)} className={sel}>
-              <option value="">Brand</option>
-              {brands.map((b) => <option key={b} value={b}>{b}</option>)}
-            </select>
-
-            {/* Width */}
-            <select value={selWidth} onChange={(e) => setSelWidth(e.target.value)} className={sel}>
-              <option value="">Width</option>
-              {widths.map((w) => <option key={w} value={w}>{w}</option>)}
-            </select>
-
-            {/* Height */}
-            <select value={selHeight} onChange={(e) => setSelHeight(e.target.value)} className={sel}>
-              <option value="">Height</option>
-              {heights.map((h) => <option key={h} value={h}>{h}</option>)}
-            </select>
-
-            {/* Rim */}
-            <select value={selRim} onChange={(e) => setSelRim(e.target.value)} className={sel}>
-              <option value="">Rim</option>
-              {rims.map((r) => <option key={r} value={r}>{r}</option>)}
-            </select>
-
-            {/* Season */}
-            <select value={selSeason} onChange={(e) => setSelSeason(e.target.value)} className={sel}>
-              <option value="">Season</option>
-              {SEASONS.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-
-            {/* Speed index */}
-            <select value={selSpeed} onChange={(e) => setSelSpeed(e.target.value)} className={sel}>
-              <option value="">Speed</option>
-              {speeds.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-
-            {/* Load index */}
-            <select value={selLoad} onChange={(e) => setSelLoad(e.target.value)} className={sel}>
-              <option value="">Load index</option>
-              {loadIndexes.map((l) => <option key={l} value={l}>{l}</option>)}
-            </select>
-
-            {/* Spacer — only on md+ to push buttons right */}
-            <div className="hidden flex-1 md:block" />
-
-            {/* Filter button — spans both columns on mobile, normal flex item on sm+ */}
-            <button
-              type="button"
-              onClick={runSearch}
-              className="col-span-2 flex h-10 items-center justify-center gap-2 rounded-lg bg-[#f4511e] text-[0.82rem] font-semibold text-white transition hover:bg-[#d14f14] sm:col-auto sm:flex-none sm:px-5"
-            >
-              {isLoading ? (
-                <Loader2 size={14} className="animate-spin" />
-              ) : (
-                <Search size={14} strokeWidth={2.2} />
-              )}
-              Filter
-            </button>
-
-            {/* Reset — spans both columns on mobile, normal flex item on sm+ */}
-            {hasActiveFilters && (
-              <button
-                type="button"
-                onClick={reset}
-                className="col-span-2 flex h-10 items-center justify-center gap-1.5 rounded-lg border border-[#e5e7eb] text-[0.82rem] font-semibold text-[#5c5e62] transition hover:border-[#f4511e]/40 hover:text-[#f4511e] sm:col-auto sm:flex-none sm:px-4"
-              >
-                <RotateCcw size={13} strokeWidth={2} />
-                Reset
-              </button>
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={() => runSearch(true)}
+            className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-md bg-[#f4511e] text-white transition-colors hover:bg-[#df4618] sm:w-auto sm:gap-2 sm:px-6 sm:text-[0.88rem] sm:font-bold"
+          >
+            {isLoading ? <Loader2 size={15} className="animate-spin" /> : <Search size={15} strokeWidth={2.2} />}
+            <span className="hidden sm:inline">Search</span>
+          </button>
+          {/* Mobile: the sidebar folds behind this */}
+          <button
+            type="button"
+            onClick={() => setMobileFiltersOpen((v) => !v)}
+            aria-expanded={mobileFiltersOpen}
+            className="flex h-11 items-center gap-1.5 rounded-md border border-black/15 bg-white px-3 text-[0.85rem] font-semibold text-[#171a20] lg:hidden"
+          >
+            <SlidersHorizontal size={14} strokeWidth={2.2} aria-hidden />
+            Filters
+          </button>
         </div>
 
+        {/* ── Sidebar + results ── */}
+        <div className="lg:grid lg:grid-cols-[256px_1fr] lg:items-start lg:gap-6">
+          <aside className={`${mobileFiltersOpen ? "mb-5 block" : "hidden"} lg:sticky lg:top-[calc(var(--bar-h,0px)+92px)] lg:block`}>
+            <CatalogueFilters
+              values={{
+                type: selType, width: selWidth, height: selHeight, rim: selRim,
+                season: selSeason, brand: selBrand, priceMin, priceMax,
+                speed: selSpeed, load: selLoad,
+              }}
+              onChange={(patch) => {
+                if (patch.type      !== undefined) setSelType(patch.type);
+                if (patch.width     !== undefined) setSelWidth(patch.width);
+                if (patch.height    !== undefined) setSelHeight(patch.height);
+                if (patch.rim       !== undefined) setSelRim(patch.rim);
+                if (patch.season    !== undefined) setSelSeason(patch.season);
+                if (patch.brand     !== undefined) setSelBrand(patch.brand);
+                if (patch.priceMin  !== undefined) setPriceMin(patch.priceMin);
+                if (patch.priceMax  !== undefined) setPriceMax(patch.priceMax);
+                if (patch.speed     !== undefined) setSelSpeed(patch.speed);
+                if (patch.load      !== undefined) setSelLoad(patch.load);
+              }}
+              onReset={reset}
+              options={{
+                brands, widths, heights, rims,
+                seasons: SEASONS, speeds, loadIndexes, prices: PRICES,
+              }}
+              formatPrice={(v) => price(v, { compact: true })}
+              hasActive={Boolean(hasActiveFilters)}
+            />
+          </aside>
+
+          <div className="min-w-0">
         {/* ── Campaign banner + specials — below filter, above results ── */}
         {/* Hidden on SEO landing pages so the page's primary filtered results are not pushed down. */}
         {source !== "seo-landing" && campaignBrand && campaignPromoRaw && (
@@ -636,16 +622,13 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed, 
                     {searchText.trim() && <span className="inline-flex items-center gap-1 rounded-full bg-[#f0f0f0] px-3 py-1 text-[0.72rem] font-semibold text-[#171a20]">&ldquo;{searchText}&rdquo; <button onClick={() => { setSearchText(""); runSearch(); }} className="ml-0.5 opacity-60 hover:opacity-100">×</button></span>}
                   </div>
                 )}
-                {/* Result count */}
-                <p className="mb-4 text-[0.85rem] text-[#5c5e62]">
-                  <span className="font-semibold text-[#171a20]">{resultCount}</span>{" "}
-                  {resultCount === 1 ? t.shop.catalogue.product : t.shop.catalogue.products} found
-                </p>
                 <ProductGrid
                   products={products}
                   total={resultCount}
                   sortBy={sortBy}
                   onSortChange={setSortBy}
+                  view={view}
+                  onViewChange={changeView}
                   customerType={customerType}
                   activeCampaign={activeCampaign}
                 />
@@ -654,18 +637,16 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed, 
           </div>
         )}
 
-        {/* ── Empty prompt (before first search) ── */}
+        {/* Browse mode searches on arrival, so this is only ever a brief
+            first-paint state. */}
         {!hasSearched && (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-sm">
-              <Search size={22} className="text-[#9ca3af]" />
-            </div>
-            <p className="text-[0.95rem] font-semibold text-[#171a20]">Find your tyres</p>
-            <p className="mt-1 max-w-[300px] text-[0.83rem] leading-6 text-[#5c5e62]">
-              Use the filters above or type a brand, size or article number to search the catalogue.
-            </p>
+          <div className="flex items-center justify-center py-24">
+            <Loader2 size={28} className="animate-spin text-[#9ca3af]" />
           </div>
         )}
+
+          </div>
+        </div>
 
       </div>
     </section>

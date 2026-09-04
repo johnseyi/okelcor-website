@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ChevronDown, Car } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import CarFinder from "@/components/shop/car-finder";
@@ -19,6 +20,13 @@ export default function ShopPageClient({
   const { isAuthenticated, isLoading } = useCustomerAuth();
   const router = useRouter();
   const [prefilledSize, setPrefilledSize] = useState("");
+
+  // Arriving with filters means the buyer already knows what they want; the
+  // car finder folds away so the results are the first thing on screen.
+  // Arriving bare, it stays open as the guided way in.
+  const [carFinderOpen, setCarFinderOpen] = useState(
+    !initialFilters || Object.keys(initialFilters).length === 0,
+  );
 
   useEffect(() => {
     if (SHOP_REQUIRES_LOGIN && !isLoading && !isAuthenticated) {
@@ -43,7 +51,23 @@ export default function ShopPageClient({
 
   return (
     <div style={noNavbarPad ? undefined : { paddingTop: "calc(var(--bar-h, 0px) + 76px)" }}>
-      <CarFinder onSizeSelect={setPrefilledSize} />
+      {carFinderOpen ? (
+        <CarFinder onSizeSelect={setPrefilledSize} />
+      ) : (
+        <div className="tesla-shell pt-4">
+          <button
+            type="button"
+            onClick={() => setCarFinderOpen(true)}
+            className="flex w-full items-center justify-between rounded-lg border border-black/10 bg-white px-4 py-3 text-[0.88rem] font-semibold text-[#171a20] transition-colors hover:border-black/30"
+          >
+            <span className="flex items-center gap-2">
+              <Car size={15} strokeWidth={2.2} className="text-[#f4511e]" aria-hidden />
+              Not sure of the size? Search by car instead
+            </span>
+            <ChevronDown size={15} strokeWidth={2.2} className="text-[#8c8f94]" aria-hidden />
+          </button>
+        </div>
+      )}
       <div id="shop-catalogue">
         <ShopCatalogue
           prefilledSize={prefilledSize}

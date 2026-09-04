@@ -107,11 +107,11 @@ export default function ProductCard({
       </div>
 
       {/* Content */}
-      <div className="flex flex-1 flex-col border-t border-hairline p-4 pt-7">
+      <div className="flex flex-1 flex-col border-t border-hairline p-4">
         {/* Floating primary CTA — straddles the image/content boundary */}
         <Link
           href={productPath(product)}
-          className="relative z-10 -mt-11 mb-3 flex h-[42px] w-full items-center justify-center gap-1.5 rounded-full bg-brand text-[0.83rem] font-bold text-white shadow-[0_10px_24px_rgba(244,81,30,0.32)] transition hover:bg-brand-hover hover:shadow-[0_12px_28px_rgba(244,81,30,0.4)]"
+          className="mb-3 flex h-10 w-full items-center justify-center gap-1.5 rounded-md bg-brand text-[0.83rem] font-bold text-white transition-colors hover:bg-brand-hover"
         >
           {t.shop.card.viewDetails}
           <ArrowRight size={14} strokeWidth={2.4} />
