@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   Package, FileText, Receipt, Building2, ShieldCheck,
   MapPin, User, ChevronRight, BadgeCheck, MailCheck, MailWarning,
-  ShoppingCart, Tag, Clock, Mail,
+  ShoppingCart, Tag, Clock, Mail, LifeBuoy,
 } from "lucide-react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
@@ -163,6 +163,12 @@ function B2CDashboard() {
         description="E-mails from the Okelcor team about your orders"
       />
       <DashCard
+        href="/account/claims"
+        icon={LifeBuoy}
+        title="Claims & Returns"
+        description="Report a problem with a delivery and track it"
+      />
+      <DashCard
         href="/account/addresses"
         icon={MapPin}
         title="Saved Addresses"
@@ -206,6 +212,12 @@ function B2BDashboard() {
         icon={Mail}
         title="Messages"
         description="E-mails from the Okelcor team about your orders and quotes"
+      />
+      <DashCard
+        href="/account/claims"
+        icon={LifeBuoy}
+        title="Claims & Returns"
+        description="Report a shipment problem and track its resolution"
       />
       <DashCard
         href="/account/company"

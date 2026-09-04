@@ -450,6 +450,23 @@ export default async function OrderDetailPage({ params }: Props) {
 
           </div>
 
+          {/* Something wrong with this delivery? The claims loop (Session
+              120) starts here with the order already attached. */}
+          <div className="flex flex-col items-start justify-between gap-3 rounded-[18px] border border-black/[0.06] bg-white px-4 py-4 shadow-[0_4px_20px_rgba(0,0,0,0.04)] sm:flex-row sm:items-center sm:rounded-[22px] sm:px-6 sm:py-5">
+            <div>
+              <p className="text-[0.9rem] font-bold text-[var(--foreground)]">Problem with this delivery?</p>
+              <p className="mt-0.5 text-[0.8rem] text-[var(--muted)]">
+                Damaged, wrong or missing items? File a claim and track it from your account.
+              </p>
+            </div>
+            <Link
+              href={`/account/claims?order=${encodeURIComponent(order.ref)}`}
+              className="shrink-0 rounded-full border border-black/[0.08] px-5 py-2.5 text-[0.85rem] font-semibold text-[var(--foreground)] transition hover:border-[var(--primary)]/40 hover:text-[var(--primary)]"
+            >
+              Report a problem
+            </Link>
+          </div>
+
         </div>
       </div>
 
