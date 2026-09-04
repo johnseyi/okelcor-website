@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Tag, Globe, Headphones, ChevronDown } from "lucide-react";
 import { StaggerParent, StaggerChild } from "@/components/motion/stagger";
-import Reveal from "@/components/motion/reveal";
 import { useLanguage } from "@/context/language-context";
 
 const TRUST_ICONS = [Tag, Globe, Headphones];
@@ -51,8 +50,8 @@ export default function QuoteTrust() {
             const Icon = TRUST_ICONS[i];
             return (
             <StaggerChild key={block.title}>
-              <div className="flex flex-col rounded-[22px] bg-[#efefef] p-7">
-                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--primary)]/10">
+              <div className="flex flex-col rounded-lg border border-black/10 bg-white p-7">
+                <div className="flex h-11 w-11 items-center justify-center rounded-md bg-[var(--primary)]/10">
                   <Icon size={19} strokeWidth={1.8} className="text-[var(--primary)]" />
                 </div>
                 <h3 className="mt-5 text-[1rem] font-extrabold text-[var(--foreground)]">{block.title}</h3>
@@ -64,7 +63,7 @@ export default function QuoteTrust() {
         </StaggerParent>
 
         {/* FAQ */}
-        <Reveal className="rounded-[22px] bg-[#efefef] px-7 py-6 md:px-10 md:py-8">
+        <div className="rounded-lg border border-black/10 bg-white px-7 py-6 md:px-10 md:py-8">
           <p className="text-[13px] font-bold uppercase tracking-[0.28em] text-[var(--primary)]">
             {t.quote.trust.faqEyebrow}
           </p>
@@ -98,7 +97,7 @@ export default function QuoteTrust() {
               DB Schenker
             </a>
           </div>
-        </Reveal>
+        </div>
 
       </div>
     </section>

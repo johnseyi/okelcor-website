@@ -488,20 +488,20 @@ const en: Translations = {
     },
     services: {
       eyebrow: "What We Offer",
-      heading: "Services built around your supply needs.",
+      heading: "Services built around your supply needs",
       subtitle: "From first enquiry to final delivery, Okelcor supports every stage of your tyre procurement journey.",
       items: [
-        { eyebrow: "1-on-1 Consultation", heading: "Expert guidance for every order.", body: "Our team provides personalised tyre selection advice, matching your requirements across PCR, TBR, LT and used stock. From specification to volume planning, we help you make the right call every time." },
-        { eyebrow: "Logistics Handling", heading: "Global freight, end-to-end.", body: "We coordinate international shipping through trusted freight partnerships including Hapag-Lloyd and DB Schenker, so tyres reach their destination efficiently and on schedule, wherever in the world you operate." },
-        { eyebrow: "After Sales Support", heading: "Support that continues after delivery.", body: "Okelcor's after sales team remains available after delivery for claims handling, documentation follow up and supply continuity, giving you full confidence throughout the procurement process." },
+        { eyebrow: "1-on-1 Consultation", heading: "Expert guidance for every order", body: "Our team provides personalised tyre selection advice, matching your requirements across PCR, TBR, LT and used stock. From specification to volume planning, we help you make the right call every time." },
+        { eyebrow: "Logistics Handling", heading: "Global freight, end to end", body: "We coordinate international shipping through trusted freight partnerships including Hapag-Lloyd and DB Schenker, so tyres reach their destination efficiently and on schedule, wherever in the world you operate." },
+        { eyebrow: "After Sales Support", heading: "Support that continues after delivery", body: "Okelcor's after sales team remains available after delivery for claims handling, documentation follow up and supply continuity, giving you full confidence throughout the procurement process." },
       ],
     },
     logistics: {
       eyebrow: "Logistics Reach",
-      heading: "Tyres delivered to any corner of the world.",
+      heading: "Tyres delivered to any corner of the world",
       body: "Okelcor coordinates end-to-end freight management for international tyre shipments, with full tracking and documentation support.",
       partnersEyebrow: "Trusted Partners",
-      partnersHeading: "Networks built for reliability.",
+      partnersHeading: "Networks built for reliability",
       partnersBody: "From freight coordination to tyre brand supply, our trusted partners ensure quality and delivery at every step.",
       categoryOcean: "Ocean Freight", categoryLogistics: "Logistics & Transport", categoryBrand: "Tyre Brand Partner",
     },
@@ -513,7 +513,7 @@ const en: Translations = {
       subtitle: "Whether you are stocking a retail tire shop or outfitting a commercial fleet, Okelcor delivers. Share your inventory requirements below to receive a custom quote and lock in your exclusive wholesale rates.",
     },
     form: {
-      eyebrow: "Quote Request Form", heading: "Tell us what you need.",
+      eyebrow: "Quote Request Form", heading: "Tell us what you need",
       requiredNote: "Fields marked * are required.",
       sectionBusiness: "Business / Customer Information",
       sectionProduct: "Product Request Information",
@@ -554,15 +554,15 @@ const en: Translations = {
       successButton: "Submit Another Request",
     },
     summary: {
-      stepsEyebrow: "What Happens Next", stepsHeading: "Fast, simple, and transparent.",
+      stepsEyebrow: "What Happens Next", stepsHeading: "Fast, simple and transparent",
       steps: [
         { title: "We review your request", body: "Our sales team carefully reviews your tyre specifications, quantities, and delivery requirements." },
         { title: "We prepare your quotation", body: "You receive a tailored price sheet within one business day, including product availability and logistics costs." },
         { title: "We confirm and ship", body: "Once you approve the quote, we arrange sourcing, packaging, and international freight coordination." },
       ],
-      whyEyebrow: "Why Okelcor", whyHeading: "Your direct supply partner.",
+      whyEyebrow: "Why Okelcor", whyHeading: "Your direct supply partner",
       whyItems: ["Response within 1 business day", "Tailored wholesale pricing", "International logistics support", "Trusted supply from vetted brands"],
-      contactEyebrow: "Prefer to call us?", contactHeading: "Reach our sales team directly.",
+      contactEyebrow: "Prefer to call us?", contactHeading: "Reach our sales team directly",
     },
     trust: {
       blocks: [

@@ -2,7 +2,6 @@
 
 import PageHero from "@/components/page-hero";
 import NewsCard from "@/components/news/news-card";
-import Reveal from "@/components/motion/reveal";
 import { StaggerParent, StaggerChild } from "@/components/motion/stagger";
 import FadeUp from "@/components/motion/fade-up";
 import { useLanguage } from "@/context/language-context";
@@ -32,9 +31,9 @@ export default function NewsPageUI({ articles }: NewsPageUIProps) {
         <div className="tesla-shell flex flex-col gap-6">
 
           {/* Featured article */}
-          <Reveal>
+          <div>
             <NewsCard article={featured} featured />
-          </Reveal>
+          </div>
 
           {/* Divider */}
           <div className="flex items-center gap-4 py-2">

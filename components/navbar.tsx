@@ -473,7 +473,7 @@ export default function Navbar() {
                 <button
                   type="button"
                   onClick={openSearch}
-                  className="hidden max-w-[220px] items-center gap-2 rounded-full border border-black/[0.08] bg-black/[0.03] px-4 py-2 text-left text-[0.8rem] text-[var(--muted)] transition hover:border-black/15 hover:bg-black/[0.05] xl:flex"
+                  className="hidden max-w-[220px] items-center gap-2 rounded-md border border-black/15 bg-white px-3.5 py-2 text-left text-[0.8rem] text-[var(--muted)] transition-colors hover:border-black/40 xl:flex"
                   aria-label={t.search.ariaLabel}
                 >
                   <Search size={15} strokeWidth={2} className="shrink-0" />
@@ -671,7 +671,7 @@ export default function Navbar() {
                   key={code}
                   type="button"
                   onClick={() => { setLocale(code); setOpenLang(false); }}
-                  className={`flex items-center gap-3 rounded-[14px] border px-5 py-3.5 text-left transition hover:border-black/20 hover:bg-black/[0.03] ${
+                  className={`flex items-center gap-3 rounded-lg border px-5 py-3.5 text-left transition hover:border-black/20 hover:bg-black/[0.03] ${
                     locale === code
                       ? "border-[var(--primary)] bg-[var(--primary)]/5 font-semibold"
                       : "border-black/10"
@@ -741,7 +741,7 @@ export default function Navbar() {
                       key={brand}
                       href={`/shop?brand=${brand.toUpperCase()}`}
                       onClick={() => setOpenShopMega(false)}
-                      className="rounded-full border border-black/[0.09] px-3 py-1.5 text-[0.78rem] font-semibold text-[#5c5e62] transition hover:border-[var(--primary)]/40 hover:bg-[#fff5f3] hover:text-[var(--primary)]"
+                      className="rounded-md border border-black/15 px-3 py-1.5 text-[0.78rem] font-semibold text-[#5c5e62] transition hover:border-[var(--primary)]/40 hover:bg-[#fff5f3] hover:text-[var(--primary)]"
                     >
                       {brand}
                     </Link>
@@ -797,7 +797,7 @@ export default function Navbar() {
 
               {/* Col 1 — Product Overview */}
               <div>
-                <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-[#dcfce7] px-3 py-1">
+                <div className="mb-3 inline-flex items-center gap-1.5 rounded bg-[#fff3ee] px-3 py-1">
                   <span className="h-1.5 w-1.5 rounded-full bg-[#f4511e]" aria-hidden="true" />
                   <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#166534]">{t.fetMega.badge}</span>
                 </div>
@@ -815,7 +815,7 @@ export default function Navbar() {
                 <Link
                   href="/fet"
                   onClick={() => setOpenFetMega(false)}
-                  className="inline-flex items-center gap-2 rounded-full bg-[#f4511e] px-5 py-2.5 text-[0.85rem] font-semibold text-white transition hover:bg-[#df4618]"
+                  className="inline-flex items-center gap-2 rounded-md bg-[#f4511e] px-5 py-2.5 text-[0.85rem] font-semibold text-white transition hover:bg-[#df4618]"
                 >
                   {t.fetMega.learnMore} <ChevronRight size={13} strokeWidth={2.5} />
                 </Link>
@@ -839,7 +839,7 @@ export default function Navbar() {
                 <Link
                   href="/tyre-supply-quotation"
                   onClick={() => setOpenFetMega(false)}
-                  className="flex w-full items-center justify-center gap-2 rounded-full bg-[var(--primary)] px-5 py-2.5 text-[0.85rem] font-semibold text-white transition hover:bg-[#d44519]"
+                  className="flex w-full items-center justify-center gap-2 rounded-md bg-[var(--primary)] px-5 py-2.5 text-[0.85rem] font-semibold text-white transition hover:bg-[#d44519]"
                 >
                   {t.fetMega.requestQuote} <ChevronRight size={13} strokeWidth={2.5} />
                 </Link>

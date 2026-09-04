@@ -1,7 +1,6 @@
 ﻿"use client";
 
 import Link from "next/link";
-import Reveal from "@/components/motion/reveal";
 import { useLanguage } from "@/context/language-context";
 
 export default function CompanyStory() {
@@ -14,10 +13,10 @@ export default function CompanyStory() {
   return (
     <section className="w-full bg-[#f5f5f5] py-8">
       <div className="tesla-shell">
-        <Reveal className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-stretch">
+        <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-stretch">
 
           {/* Image panel */}
-          <div className="relative min-h-[420px] overflow-hidden rounded-[22px] lg:min-h-[600px]">
+          <div className="relative min-h-[420px] overflow-hidden rounded-lg lg:min-h-[600px]">
             <div
               className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-[1.03]"
               style={{
@@ -32,7 +31,7 @@ export default function CompanyStory() {
               {STATS.map((s) => (
                 <div
                   key={s.label}
-                  className="rounded-[14px] bg-white/10 px-3 py-3 backdrop-blur-sm"
+                  className="rounded-md bg-black/50 px-3 py-3"
                 >
                   <p className="text-xl font-bold text-white">{s.value}</p>
                   <p className="mt-0.5 text-[0.73rem] leading-4 text-white/80">
@@ -44,7 +43,7 @@ export default function CompanyStory() {
           </div>
 
           {/* Content panel */}
-          <div className="flex flex-col justify-center rounded-[22px] bg-[#efefef] p-6 sm:p-8 md:p-10 lg:p-12">
+          <div className="flex flex-col justify-center rounded-lg border border-black/10 bg-white p-6 sm:p-8 md:p-10 lg:p-12">
             <p className="text-[13px] font-bold uppercase tracking-[0.28em] text-[var(--primary)]">
               {t.about.story.eyebrow}
             </p>
@@ -70,7 +69,7 @@ export default function CompanyStory() {
             </div>
           </div>
 
-        </Reveal>
+        </div>
       </div>
     </section>
   );

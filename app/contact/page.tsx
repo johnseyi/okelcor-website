@@ -142,7 +142,7 @@ export default function ContactPage() {
             <div className="flex flex-col gap-5">
 
               {/* Contact details */}
-              <div className="rounded-[22px] bg-[#efefef] p-6 sm:p-8 md:p-10">
+              <div className="rounded-lg border border-black/10 bg-white p-6 sm:p-8 md:p-10">
                 <p className="text-[13px] font-bold uppercase tracking-[0.28em] text-[var(--primary)]">
                   {t.contact.officeEyebrow}
                 </p>
@@ -156,7 +156,7 @@ export default function ContactPage() {
                 <div className="mt-8 flex flex-col gap-6">
                   {INFO_ITEMS.map(({ Icon, label, lines }) => (
                     <div key={label} className="flex items-start gap-4">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-white">
                         <Icon size={15} strokeWidth={1.8} className="text-[var(--primary)]" />
                       </div>
                       <div>
@@ -175,7 +175,7 @@ export default function ContactPage() {
               </div>
 
               {/* What we handle */}
-              <div className="rounded-[22px] bg-[#efefef] p-6 sm:p-8 md:p-10">
+              <div className="rounded-lg border border-black/10 bg-white p-6 sm:p-8 md:p-10">
                 <p className="text-[13px] font-bold uppercase tracking-[0.28em] text-[var(--primary)]">
                   {t.contact.helpEyebrow}
                 </p>
@@ -185,8 +185,8 @@ export default function ContactPage() {
                 <ul className="mt-5 flex flex-col gap-3">
                   {t.contact.helpItems.map((item) => (
                     <li key={item} className="flex items-center gap-3">
-                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--primary)]/10">
-                        <span className="h-1.5 w-1.5 rounded-full bg-[var(--primary)]" />
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-[var(--primary)]/10">
+                        <span className="h-1.5 w-1.5 rounded-md bg-[var(--primary)]" />
                       </span>
                       <span className="text-[0.9rem] text-[var(--muted)]">{item}</span>
                     </li>
@@ -197,7 +197,7 @@ export default function ContactPage() {
             </div>
 
             {/* Right column — form */}
-            <div className="rounded-[22px] bg-[#efefef] p-6 sm:p-8 md:p-10 lg:p-12">
+            <div className="rounded-lg border border-black/10 bg-white p-6 sm:p-8 md:p-10 lg:p-12">
               {submitted ? (
                 <div className="flex min-h-[480px] flex-col items-center justify-center py-8 text-center">
                   <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
@@ -217,7 +217,7 @@ export default function ContactPage() {
                       setSubmitted(false);
                       setForm({ name: "", email: "", subject: "", inquiry: "" });
                     }}
-                    className="mt-8 rounded-full bg-[var(--primary)] px-8 py-3 text-[0.9rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
+                    className="mt-8 rounded-md bg-[var(--primary)] px-8 py-3 text-[0.9rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
                   >
                     {t.contact.successButton}
                   </button>
@@ -330,7 +330,7 @@ export default function ContactPage() {
                     <button
                       type="submit"
                       disabled={submitting}
-                      className="flex h-[52px] w-full items-center justify-center rounded-full bg-[var(--primary)] text-[0.95rem] font-semibold text-white transition hover:bg-[var(--primary-hover)] disabled:opacity-60"
+                      className="flex h-[52px] w-full items-center justify-center rounded-md bg-[var(--primary)] text-[0.95rem] font-semibold text-white transition hover:bg-[var(--primary-hover)] disabled:opacity-60"
                     >
                       {submitting ? (
                         <span className="flex items-center gap-2">
@@ -373,7 +373,7 @@ export default function ContactPage() {
           </div>
 
           {/* Map container */}
-          <div className="relative overflow-hidden rounded-[22px]">
+          <div className="relative overflow-hidden rounded-lg">
             {mapConsent === "accepted" ? (
               <div className="h-[300px] sm:h-[380px] md:h-[480px]">
                 <iframe
@@ -387,7 +387,7 @@ export default function ContactPage() {
                 />
               </div>
             ) : (
-              <div className="flex h-[300px] flex-col items-center justify-center gap-5 rounded-[22px] bg-[#efefef] px-6 text-center sm:h-[380px] md:h-[480px]">
+              <div className="flex h-[300px] flex-col items-center justify-center gap-5 rounded-lg border border-black/10 bg-white px-6 text-center sm:h-[380px] md:h-[480px]">
                 <MapPin size={36} strokeWidth={1.6} className="text-[var(--muted)]" />
                 <div>
                   <p className="text-[1rem] font-semibold text-[var(--foreground)]">
@@ -400,7 +400,7 @@ export default function ContactPage() {
                 <button
                   type="button"
                   onClick={() => setConsent("accepted")}
-                  className="inline-flex h-[48px] items-center justify-center rounded-full bg-[var(--primary)] px-6 text-[0.88rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
+                  className="inline-flex h-[48px] items-center justify-center rounded-md bg-[var(--primary)] px-6 text-[0.88rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
                 >
                   {t.contact.mapEnableBtn}
                 </button>
@@ -412,7 +412,7 @@ export default function ContactPage() {
 
             {/* Address overlay card — only shown when map is live */}
             {mapConsent === "accepted" && (
-              <div className="absolute bottom-5 left-5 max-w-[220px] rounded-[16px] bg-white px-5 py-4 shadow-[0_8px_32px_rgba(0,0,0,0.14)]">
+              <div className="absolute bottom-5 left-5 max-w-[220px] rounded-lg bg-white px-5 py-4 shadow-[0_8px_32px_rgba(0,0,0,0.14)]">
                 <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[var(--primary)]">
                   OKELCOR GmbH
                 </p>

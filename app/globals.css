@@ -223,11 +223,12 @@ a {
   min-width: max-content;
   height: 38px;
   margin: 0 2px;
-  padding: 0 16px;
-  border-radius: 999px;
+  padding: 0 13px;
+  border-radius: 0;
+  border-bottom: 2px solid transparent;
   color: var(--foreground);
-  font-size: 0.95rem;
-  font-weight: 500;
+  font-size: 0.92rem;
+  font-weight: 600;
   letter-spacing: 0;
   white-space: nowrap;
   cursor: pointer;
@@ -239,7 +240,7 @@ a {
 }
 
 .tesla-nav-link:hover {
-  background: rgba(23, 26, 32, 0.08);
+  border-bottom-color: rgba(23, 26, 32, 0.25);
   color: var(--foreground);
 }
 
@@ -249,8 +250,8 @@ a {
 }
 
 .tesla-nav-link-active {
-  background: rgba(23, 26, 32, 0.08);
-  color: var(--primary);
+  border-bottom-color: var(--primary);
+  color: var(--foreground);
 }
 
 .tesla-icon-btn {

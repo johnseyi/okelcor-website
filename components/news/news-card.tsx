@@ -53,10 +53,10 @@ export default function NewsCard({ article, featured = false }: Props) {
 
   if (featured) {
     return (
-      <div ref={featuredRef} className="rounded-[22px]">
+      <div ref={featuredRef} className="rounded-lg">
       <Link
         href={`/news/${article.slug}`}
-        className="group grid overflow-hidden rounded-[22px] bg-[#efefef] md:grid-cols-[1.4fr_1fr]"
+        className="group grid overflow-hidden rounded-lg border border-black/10 bg-white md:grid-cols-[1.4fr_1fr]"
       >
         {/* Image */}
         <div className="relative aspect-[16/10] overflow-hidden md:aspect-auto md:min-h-[380px]">
@@ -73,7 +73,7 @@ export default function NewsCard({ article, featured = false }: Props) {
               No image
             </div>
           )}
-          <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--primary)] backdrop-blur-sm">
+          <span className="absolute left-4 top-4 rounded-md bg-white/90 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--primary)] backdrop-blur-sm">
             {article.category}
           </span>
         </div>
@@ -103,10 +103,10 @@ export default function NewsCard({ article, featured = false }: Props) {
   }
 
   return (
-    <div ref={cardRef} className="rounded-[22px]">
+    <div ref={cardRef} className="rounded-lg">
     <Link
       href={`/news/${article.slug}`}
-      className="group flex flex-col overflow-hidden rounded-[22px] bg-[#efefef]"
+      className="group flex flex-col overflow-hidden rounded-lg border border-black/10 bg-white"
     >
       {/* Image */}
       <div className="relative aspect-[16/10] overflow-hidden">
@@ -123,7 +123,7 @@ export default function NewsCard({ article, featured = false }: Props) {
             No image
           </div>
         )}
-        <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--primary)] backdrop-blur-sm">
+        <span className="absolute left-3 top-3 rounded-md bg-white/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--primary)] backdrop-blur-sm">
           {article.category}
         </span>
       </div>

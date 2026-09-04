@@ -22,7 +22,7 @@ export default function LogisticsPartners() {
         <div className="grid gap-6 md:grid-cols-[1.25fr_0.75fr] md:items-stretch">
 
           {/* Large image card */}
-          <div className="relative min-h-[360px] overflow-hidden rounded-[22px] md:min-h-[480px]">
+          <div className="relative min-h-[360px] overflow-hidden rounded-lg md:min-h-[480px]">
             <div
               className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-[1.03]"
               style={{
@@ -46,7 +46,7 @@ export default function LogisticsPartners() {
           </div>
 
           {/* Partners card */}
-          <div className="flex flex-col justify-between rounded-[22px] bg-[#efefef] p-8 md:p-10">
+          <div className="flex flex-col justify-between rounded-lg border border-black/10 bg-white p-8 md:p-10">
             <div>
               <p className="text-[13px] font-bold uppercase tracking-[0.28em] text-[var(--primary)]">
                 {t.about.logistics.partnersEyebrow}
@@ -88,14 +88,14 @@ export default function LogisticsPartners() {
                     href={p.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-4 rounded-[14px] bg-white px-5 py-4 transition hover:shadow-sm"
+                    className="flex items-center gap-4 rounded-md border border-black/10 bg-white px-5 py-4 transition hover:shadow-sm"
                   >
                     {inner}
                   </a>
                 ) : (
                   <div
                     key={p.name}
-                    className="flex items-center gap-4 rounded-[14px] bg-white px-5 py-4"
+                    className="flex items-center gap-4 rounded-md border border-black/10 bg-white px-5 py-4"
                   >
                     {inner}
                   </div>

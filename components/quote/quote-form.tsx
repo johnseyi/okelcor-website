@@ -425,7 +425,7 @@ export default function QuoteForm() {
 
   if (submitted) {
     return (
-      <div className="flex flex-col items-center rounded-[22px] bg-[#efefef] px-8 py-16 text-center md:px-12">
+      <div className="flex flex-col items-center rounded-lg border border-black/10 bg-white px-8 py-16 text-center md:px-12">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
           <CheckCircle2 size={32} strokeWidth={1.5} className="text-green-500" />
         </div>
@@ -435,7 +435,7 @@ export default function QuoteForm() {
         <p className="mx-auto mt-3 max-w-md text-[0.95rem] leading-7 text-[var(--muted)]">
           {t.quote.form.successBody}
         </p>
-        <div className="mt-6 rounded-[14px] bg-white px-6 py-4">
+        <div className="mt-6 rounded-md bg-white px-6 py-4">
           <p className="text-[0.78rem] text-[var(--muted)]">{t.quote.form.refLabel}</p>
           <p className="mt-0.5 text-[1.2rem] font-extrabold tracking-wider text-[var(--foreground)]">
             {refNumber}
@@ -443,7 +443,7 @@ export default function QuoteForm() {
         </div>
         <p className="mt-4 text-[0.82rem] text-[var(--muted)]">{t.quote.form.refNote}</p>
         <button type="button" onClick={handleReset}
-          className="mt-8 rounded-full bg-[var(--primary)] px-8 py-3 text-[0.9rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]">
+          className="mt-8 rounded-md bg-[var(--primary)] px-8 py-3 text-[0.9rem] font-semibold text-white transition hover:bg-[var(--primary-hover)]">
           {t.quote.form.successButton}
         </button>
       </div>
@@ -453,7 +453,7 @@ export default function QuoteForm() {
   // ── Form ──────────────────────────────────────────────────────────────────
 
   return (
-    <div className="rounded-[22px] bg-[#efefef] p-7 md:p-10">
+    <div className="rounded-lg border border-black/10 bg-white p-7 md:p-10">
       <p className="text-[13px] font-bold uppercase tracking-[0.28em] text-[var(--primary)]">
         {t.quote.form.eyebrow}
       </p>
@@ -512,7 +512,7 @@ export default function QuoteForm() {
 
           {/* Export note — B2B non-EU only */}
           {showExportNote && (
-            <div className="col-span-full flex items-start gap-3 rounded-[14px] border border-blue-200 bg-blue-50 px-4 py-3.5">
+            <div className="col-span-full flex items-start gap-3 rounded-md border border-blue-200 bg-blue-50 px-4 py-3.5">
               <Info size={14} strokeWidth={1.8} className="mt-0.5 shrink-0 text-blue-600" />
               <p className="text-[0.85rem] leading-relaxed text-blue-800">
                 Export order — VAT exempt. No VAT number required for this destination.
@@ -597,7 +597,7 @@ export default function QuoteForm() {
               {TYRE_CONDITIONS.map(({ value, label }) => (
                 <button key={value} type="button" onClick={() => setTyreCondition(value)}
                   className={[
-                    "flex-1 rounded-full border-2 py-2.5 text-[0.88rem] font-semibold transition",
+                    "flex-1 rounded-md border-2 py-2.5 text-[0.88rem] font-semibold transition",
                     form.tyreCondition === value
                       ? "border-[var(--primary)] bg-[var(--primary)] text-white"
                       : "border-black/[0.08] bg-white text-[var(--foreground)] hover:border-[var(--primary)]/40",
@@ -661,7 +661,7 @@ export default function QuoteForm() {
               ))}
             </div>
             <button type="button" onClick={addTyreRow}
-              className="mt-2.5 flex items-center gap-1.5 rounded-full border border-black/[0.08] bg-white px-4 py-2 text-[0.82rem] font-semibold text-[var(--foreground)] transition hover:border-[var(--primary)]/40 hover:text-[var(--primary)]">
+              className="mt-2.5 flex items-center gap-1.5 rounded-md border border-black/[0.08] bg-white px-4 py-2 text-[0.82rem] font-semibold text-[var(--foreground)] transition hover:border-[var(--primary)]/40 hover:text-[var(--primary)]">
               <Plus size={13} strokeWidth={2.5} />
               Add another size
             </button>
@@ -789,7 +789,7 @@ export default function QuoteForm() {
                   </div>
                 </div>
                 <button type="button" onClick={removeFile}
-                  className="ml-3 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-black/[0.08] text-[var(--muted)] transition hover:border-red-200 hover:bg-red-50 hover:text-red-500"
+                  className="ml-3 flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-black/[0.08] text-[var(--muted)] transition hover:border-red-200 hover:bg-red-50 hover:text-red-500"
                   aria-label="Remove attached file">
                   <X size={13} strokeWidth={2.5} />
                 </button>
@@ -815,7 +815,7 @@ export default function QuoteForm() {
 
         <div className="mt-7">
           <button type="submit" disabled={submitting}
-            className="flex h-[54px] w-full items-center justify-center rounded-full bg-[var(--primary)] text-[1rem] font-semibold text-white transition hover:bg-[var(--primary-hover)] disabled:opacity-60">
+            className="flex h-[54px] w-full items-center justify-center rounded-md bg-[var(--primary)] text-[1rem] font-semibold text-white transition hover:bg-[var(--primary-hover)] disabled:opacity-60">
             {submitting ? (
               <span className="flex items-center gap-2.5">
                 <svg className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">

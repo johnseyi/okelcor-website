@@ -14,7 +14,7 @@ export default function QuoteSummary() {
     <div className="flex flex-col gap-5">
 
       {/* What happens next */}
-      <div className="rounded-[22px] bg-[#efefef] p-7 md:p-8">
+      <div className="rounded-lg border border-black/10 bg-white p-7 md:p-8">
         <p className="text-[13px] font-bold uppercase tracking-[0.28em] text-[var(--primary)]">
           {t.quote.summary.stepsEyebrow}
         </p>
@@ -25,7 +25,7 @@ export default function QuoteSummary() {
         <div className="mt-6 flex flex-col gap-5">
           {t.quote.summary.steps.map((step, i) => (
             <div key={i} className="flex gap-4">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--primary)]/10">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[var(--primary)]/10">
                 <span className="text-[0.7rem] font-extrabold text-[var(--primary)]">{STEP_NUMS[i]}</span>
               </div>
               <div>
@@ -38,7 +38,7 @@ export default function QuoteSummary() {
       </div>
 
       {/* Why Okelcor */}
-      <div className="rounded-[22px] bg-[#efefef] p-7 md:p-8">
+      <div className="rounded-lg border border-black/10 bg-white p-7 md:p-8">
         <p className="text-[13px] font-bold uppercase tracking-[0.28em] text-[var(--primary)]">
           {t.quote.summary.whyEyebrow}
         </p>
@@ -50,7 +50,7 @@ export default function QuoteSummary() {
             const Icon = WHY_ICONS[i];
             return (
             <li key={text} className="flex items-center gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white">
                 <Icon size={14} strokeWidth={1.8} className="text-[var(--primary)]" />
               </div>
               <span className="text-[0.88rem] text-[var(--muted)]">{text}</span>
@@ -61,7 +61,7 @@ export default function QuoteSummary() {
       </div>
 
       {/* Contact fallback */}
-      <div className="rounded-[22px] bg-[var(--primary)] p-7 md:p-8">
+      <div className="rounded-lg bg-[var(--primary)] p-7 md:p-8">
         <p className="text-[13px] font-bold uppercase tracking-[0.28em] text-white/70">
           {t.quote.summary.contactEyebrow}
         </p>
@@ -83,7 +83,7 @@ export default function QuoteSummary() {
       </div>
 
       {/* Internal SEO link */}
-      <div className="rounded-[22px] bg-[#efefef] px-7 py-4">
+      <div className="rounded-lg border border-black/10 bg-white px-7 py-4">
         <Link
           href="/wholesale-tire-distributors-europe"
           className="flex items-center gap-2 text-[0.85rem] font-semibold text-[var(--primary)] hover:underline"

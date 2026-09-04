@@ -1,8 +1,6 @@
 "use client";
 
 import { MessageCircle, Truck, Headphones } from "lucide-react";
-import Reveal from "@/components/motion/reveal";
-import { StaggerParent, StaggerChild } from "@/components/motion/stagger";
 import type { LucideIcon } from "lucide-react";
 import { useLanguage } from "@/context/language-context";
 
@@ -15,29 +13,29 @@ export default function Services() {
       <div className="tesla-shell">
 
         {/* Section header */}
-        <Reveal className="mb-8 text-center">
+        <div className="mb-8">
           <p className="text-[13px] font-bold uppercase tracking-[0.28em] text-[var(--primary)]">
             {t.about.services.eyebrow}
           </p>
-          <h2 className="mx-auto mt-3 max-w-2xl text-3xl font-extrabold tracking-tight text-[var(--foreground)] md:text-4xl">
+          <h2 className="mt-3 max-w-2xl text-3xl font-extrabold tracking-tight text-[var(--foreground)] md:text-4xl">
             {t.about.services.heading}
           </h2>
-          <p className="mx-auto mt-4 max-w-xl text-[1rem] leading-7 text-[var(--muted)]">
+          <p className="mt-4 max-w-xl text-[1rem] leading-7 text-[var(--muted)]">
             {t.about.services.subtitle}
           </p>
-        </Reveal>
+        </div>
 
         {/* Cards */}
-        <StaggerParent className="grid gap-5 md:grid-cols-3">
+        <div className="grid gap-5 md:grid-cols-3">
           {t.about.services.items.map((item, i) => {
             const Icon = ICONS[i];
             return (
-            <StaggerChild key={item.eyebrow}>
+            <div key={item.eyebrow}>
             <div
-              className="flex flex-col rounded-[22px] bg-[#efefef] p-6 sm:p-8"
+              className="flex flex-col rounded-lg border border-black/10 bg-white p-6 sm:p-8"
             >
               {/* Icon */}
-              <div className="flex h-[52px] w-[52px] items-center justify-center rounded-full bg-[var(--primary)]/10">
+              <div className="flex h-[52px] w-[52px] items-center justify-center rounded-md bg-[#fff3ee]">
                 <Icon
                   size={22}
                   strokeWidth={1.8}
@@ -60,10 +58,10 @@ export default function Services() {
                 {item.body}
               </p>
             </div>
-            </StaggerChild>
+            </div>
             );
           })}
-        </StaggerParent>
+        </div>
 
       </div>
     </section>
