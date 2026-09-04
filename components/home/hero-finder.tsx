@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { apiFetch, type ApiResponse, type Brand } from "@/lib/api";
 import FinderCard from "@/components/home/finder-card";
 
@@ -52,12 +53,31 @@ export default async function HeroFinder() {
 
   return (
     <section
-      className="bg-[#171a20]"
+      className="relative overflow-hidden bg-[#171a20]"
       /* The navbar is fixed and sits below the utility bar; the hero clears
          both the same way the shop pages do — the --bar-h contract. */
       style={{ paddingTop: "calc(var(--bar-h, 0px) + 76px)" }}
     >
-      <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 py-12 sm:py-14 lg:grid-cols-[1fr_auto] lg:gap-16 lg:px-8 lg:py-16">
+      {/*
+        The yard, faintly. The photograph (tyre stacks under the container
+        cranes) sits behind the band at low presence, anchored right and
+        washed back into the ink with a gradient so the headline side stays
+        near-solid. Texture, not a picture competing with the words.
+      */}
+      <div aria-hidden className="absolute inset-0">
+        <Image
+          src="/images/tyre-primary.png"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-[70%_center] opacity-45"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#171a20] via-[#171a20]/85 to-[#171a20]/35" />
+        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#171a20] to-transparent" />
+      </div>
+
+      <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 py-12 sm:py-14 lg:grid-cols-[1fr_auto] lg:gap-16 lg:px-8 lg:py-16">
         <div className="max-w-xl">
           <h1 className="text-balance text-4xl font-bold leading-[1.08] tracking-tight text-white sm:text-[2.9rem]">
             Tyres by the container, from Munich to your market

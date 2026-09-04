@@ -12,6 +12,17 @@ import ArticleRichEditor from "@/components/admin/article-rich-editor";
 const SEASONS = ["Summer", "Winter", "All Season", "All-Terrain"] as const;
 const TYPES   = ["PCR", "TBR", "Used", "OTR"] as const;
 
+/**
+ * Who the listing is for (Session 116). "Both" is every product's default;
+ * "Trade only" keeps container lots away from retail visitors, "Retail
+ * only" keeps consumer promotions out of the trade view.
+ */
+const AUDIENCES = [
+  { value: "both", label: "Both audiences" },
+  { value: "b2b",  label: "Trade only (B2B)" },
+  { value: "b2c",  label: "Retail only (B2C)" },
+] as const;
+
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const inputCls =
@@ -102,6 +113,7 @@ export default function ProductForm(props: Props) {
   const [spec,        setSpec]        = useState(initial?.spec        ?? "");
   const [season,      setSeason]      = useState(initial?.season      ?? "Summer");
   const [type,        setType]        = useState(initial?.type        ?? "PCR");
+  const [audience,    setAudience]    = useState(initial?.audience    ?? "both");
   const [price,       setPrice]       = useState(String(initial?.price ?? ""));
   const [description, setDescription] = useState(initial?.description ?? "");
   const [isActive,    setIsActive]    = useState(initial?.is_active   ?? true);
@@ -189,6 +201,7 @@ export default function ProductForm(props: Props) {
       spec: spec.trim(),
       season,
       type,
+      audience,
       price: parseFloat(price) || 0,
       description: description.trim(),
       is_active: isActive,
@@ -363,6 +376,18 @@ export default function ProductForm(props: Props) {
           >
             {TYPES.map((t) => (
               <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+        </Field>
+
+        <Field label="Listed for" error={errors.audience}>
+          <select
+            value={audience}
+            onChange={(e) => setAudience(e.target.value)}
+            className={ic("audience")}
+          >
+            {AUDIENCES.map((a) => (
+              <option key={a.value} value={a.value}>{a.label}</option>
             ))}
           </select>
         </Field>

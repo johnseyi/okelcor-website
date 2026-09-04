@@ -40,6 +40,7 @@ export type ProductInput = {
   spec: string;
   season: string;
   type: string;
+  audience?: string;
   price: number;
   description: string;
   is_active: boolean;

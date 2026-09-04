@@ -12,9 +12,12 @@ export default function Footer() {
   const { t } = useLanguage();
   const s = useSiteSettings();
 
-  const address  = s.company_address ?? `${COMPANY_ADDRESS_STREET}, ${COMPANY_ADDRESS_CITY}`;
-  const phone    = s.company_phone   ?? COMPANY_PHONE;
-  const email    = s.company_email   ?? COMPANY_EMAIL;
+  // `||`, not `??`: the admin settings can hold a key as an EMPTY STRING
+  // (company_address does on production right now), and ?? happily renders
+  // it — a map pin with no words next to it.
+  const address  = s.company_address || `${COMPANY_ADDRESS_STREET}, ${COMPANY_ADDRESS_CITY}`;
+  const phone    = s.company_phone   || COMPANY_PHONE;
+  const email    = s.company_email   || COMPANY_EMAIL;
 
   const columns = [
     {
@@ -133,7 +136,7 @@ export default function Footer() {
           </div>
 
           {/* Legal row */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 py-6 text-[0.78rem] text-white/45">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 py-6 pr-16 text-[0.78rem] text-white/45 sm:pr-20">
             <p>{t.footer.copyright}</p>
             <div className="flex flex-wrap gap-5">
               <Link href="/privacy" className="transition-colors hover:text-white">{t.footer.privacy}</Link>

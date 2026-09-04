@@ -54,9 +54,9 @@ export default function ContactPage() {
         ? [s.company_address]
         : [COMPANY_ADDRESS_STREET, `${COMPANY_ADDRESS_CITY}, ${COMPANY_ADDRESS_COUNTRY}`],
     },
-    { Icon: INFO_ICONS[1], label: t.contact.infoPhone, lines: [s.company_phone  ?? COMPANY_PHONE] },
-    { Icon: INFO_ICONS[2], label: t.contact.infoFax,   lines: [s.company_fax    ?? COMPANY_FAX] },
-    { Icon: INFO_ICONS[3], label: t.contact.infoEmail, lines: [s.company_email  ?? COMPANY_EMAIL] },
+    { Icon: INFO_ICONS[1], label: t.contact.infoPhone, lines: [s.company_phone  || COMPANY_PHONE] },
+    { Icon: INFO_ICONS[2], label: t.contact.infoFax,   lines: [s.company_fax    || COMPANY_FAX] },
+    { Icon: INFO_ICONS[3], label: t.contact.infoEmail, lines: [s.company_email  || COMPANY_EMAIL] },
     { Icon: INFO_ICONS[4], label: t.contact.infoHours, lines: ["Mon \u2013 Fri: 08:00 \u2013 17:00 CET"] },
   ];
 

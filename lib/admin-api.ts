@@ -69,6 +69,8 @@ export type AdminProduct = {
   spec?: string;
   season?: string;
   type: string;
+  /** Listing audience: both | b2b | b2c (Session 116). */
+  audience?: string;
   price: number;
   price_b2b?: number | null;
   price_b2c?: number | null;
