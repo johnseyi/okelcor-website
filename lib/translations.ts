@@ -770,7 +770,7 @@ const en: Translations = {
     card: { shipping: "Excl. tax · Free shipping", viewDetails: "View Details", quote: "Quote", inStock: "In Stock", showSpecs: "Show specs", compare: "Compare", comparing: "Comparing" },
     info: {
       quantity: "Quantity", addToCart: "Add to Cart", addedToCart: "Added to Cart",
-      requestQuote: "Request Quote", shipping: "Excluding sales tax · Free shipping", share: "Share", inStock: "In Stock — Ready to Order",
+      requestQuote: "Request Quote", shipping: "Excluding sales tax · Free shipping", share: "Share", inStock: "In stock, ready to order",
     },
     trust: { iso: "ISO 9001:2015 Certified", rex: "REX Certified Sourcing", inspected: "Quality Inspected" },
     accordion: {

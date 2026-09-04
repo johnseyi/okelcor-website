@@ -46,7 +46,7 @@ export default function ProductInfo({ product }: { product: Product }) {
   const inStock = product.in_stock !== false;
 
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
-    `Hi, I would like to request a quote for: ${product.brand} ${product.name} ${product.size} (SKU: ${product.sku}) — Qty: ${qty}`
+    `Hi, I would like to request a quote for: ${product.brand} ${product.name} ${product.size} (SKU: ${product.sku}), quantity ${qty}`
   )}`;
 
   return (
@@ -133,12 +133,41 @@ export default function ProductInfo({ product }: { product: Product }) {
         </p>
       </div>
 
+      {customerType === "guest" && (product.price_b2b ?? 0) > 0 && (
+        <Link
+          href="/login?redirect=/shop"
+          className="mt-2 inline-block text-[0.82rem] font-semibold text-[var(--primary)] hover:underline"
+        >
+          Sign in for wholesale pricing
+        </Link>
+      )}
+
       {/* Quantity */}
       <div className="mt-5">
         <p className="mb-2 text-[0.88rem] font-semibold text-[var(--foreground)]">
           {t.shop.info.quantity}
         </p>
-        <div className="inline-flex items-center gap-0 overflow-hidden rounded-full border border-black/10 bg-white">
+        {/* Tyres sell in sets. The presets save the tap-tap-tap, and the
+            line total below does the sum a buyer would otherwise do on a
+            phone calculator. */}
+        <div className="mb-2 flex gap-1.5">
+          {[2, 4, 6].map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => setQty(n)}
+              aria-pressed={qty === n}
+              className={`h-9 w-12 rounded-md border text-[0.85rem] font-semibold transition-colors ${
+                qty === n
+                  ? "border-[#171a20] bg-[#171a20] text-white"
+                  : "border-black/15 bg-white text-[var(--foreground)] hover:border-black/40"
+              }`}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+        <div className="inline-flex items-center gap-0 overflow-hidden rounded-md border border-black/10 bg-white">
           <button
             type="button"
             onClick={() => setQty((q) => Math.max(1, q - 1))}
@@ -161,13 +190,22 @@ export default function ProductInfo({ product }: { product: Product }) {
         </div>
       </div>
 
+      {qty > 1 && (
+        <p className="mt-2.5 text-[0.9rem] text-[var(--muted)]">
+          {qty} &times; {price(displayPrice, { currency: product.currency })} ={" "}
+          <span className="font-bold tabular-nums text-[var(--foreground)]">
+            {price(displayPrice * qty, { currency: product.currency })}
+          </span>
+        </p>
+      )}
+
       {/* CTA */}
       <div className="mt-5 flex flex-col gap-3">
         <button
           type="button"
           onClick={handleAddToCart}
           disabled={!inStock}
-          className={`flex h-[50px] w-full items-center justify-center gap-2 rounded-full text-[0.95rem] font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50 ${
+          className={`flex h-[50px] w-full items-center justify-center gap-2 rounded-md text-[0.95rem] font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-50 ${
             added
               ? "bg-green-600 hover:bg-green-700"
               : "bg-[var(--primary)] hover:bg-[var(--primary-hover)]"
@@ -189,7 +227,7 @@ export default function ProductInfo({ product }: { product: Product }) {
         <div className="flex gap-3">
           <Link
             href="/tyre-supply-quotation"
-            className="flex h-[44px] flex-1 items-center justify-center rounded-full border border-black/10 bg-white text-[0.9rem] font-semibold text-[var(--foreground)] transition hover:bg-[#f5f5f5]"
+            className="flex h-[44px] flex-1 items-center justify-center rounded-md border border-black/10 bg-white text-[0.9rem] font-semibold text-[var(--foreground)] transition hover:bg-[#f5f5f5]"
           >
             {t.shop.info.requestQuote}
           </Link>
@@ -197,7 +235,7 @@ export default function ProductInfo({ product }: { product: Product }) {
             href={whatsappUrl}
             target="_blank"
             rel="noreferrer"
-            className="flex h-[44px] flex-1 items-center justify-center rounded-full border border-black/10 bg-white text-[0.9rem] font-semibold text-[var(--foreground)] transition hover:bg-[#f5f5f5]"
+            className="flex h-[44px] flex-1 items-center justify-center rounded-md border border-black/10 bg-white text-[0.9rem] font-semibold text-[var(--foreground)] transition hover:bg-[#f5f5f5]"
           >
             WhatsApp
           </a>

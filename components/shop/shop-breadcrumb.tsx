@@ -18,7 +18,10 @@ export default function ShopBreadcrumb({ product }: { product: Product }) {
       </Link>
       <ChevronRight size={13} className="shrink-0 opacity-50" />
       <span className="max-w-[200px] truncate text-[var(--foreground)] font-medium sm:max-w-none">
-        {product.brand} {product.name}
+        {/* Names usually begin with the brand already; avoid "Rapid Rapid". */}
+        {product.name.toLowerCase().startsWith(product.brand.toLowerCase())
+          ? product.name
+          : `${product.brand} ${product.name}`}
       </span>
     </nav>
   );

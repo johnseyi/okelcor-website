@@ -49,14 +49,23 @@ function Row({ label, value }: { label: string; value: string }) {
 
 export default function ProductAccordion({ product }: { product: Product }) {
   const { t, locale } = useLanguage();
-  const [open, setOpen] = useState<string | null>("size");
+  // The data a buyer decides on (specs, size, load) starts open; the prose
+  // (shipping, returns, disclaimer) stays folded. One-open-at-a-time forced a
+  // buyer to close the size table to read the load index.
+  const [open, setOpen] = useState<Set<string>>(new Set(["specifications", "size", "loadspeed"]));
+  const toggle = (key: string) =>
+    setOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
 
   const parsed = parseTyreSize(product.size);
   const specParsed = parseSpec(product.spec);
 
   const a = t.shop.accordion;
 
-  // The Artikelmerkmale sheet arrives assembled from the backend — labels in
+  // The Artikelmerkmale sheet arrives assembled from the backend: labels in
   // both languages, empties already skipped, order fixed by the catalogue.
   // German UI gets the German labels the marketing brief was written in.
   const specSheet = product.specifications ?? [];
@@ -64,7 +73,7 @@ export default function ProductAccordion({ product }: { product: Product }) {
     locale === "de" ? row.label_de : row.label_en;
 
   const items: AccordionItem[] = [
-    // Rich description first when the marketer has written one — it is the
+    // Rich description first when the marketer has written one: it is the
     // content this page exists to show. Sanitized server-side at save time.
     ...(product.description_html
       ? [{
@@ -129,7 +138,7 @@ export default function ProductAccordion({ product }: { product: Product }) {
                 label={a.speedIndex}
                 value={`${specParsed.speedIndex}${
                   SPEED_DESC[specParsed.speedIndex]
-                    ? ` — ${SPEED_DESC[specParsed.speedIndex]}`
+                    ? `: ${SPEED_DESC[specParsed.speedIndex]}`
                     : ""
                 }`}
               />
@@ -143,7 +152,7 @@ export default function ProductAccordion({ product }: { product: Product }) {
         </div>
       ),
     },
-    // Shipping — only when the marketer has set the text (site-wide in
+    // Shipping: only when the marketer has set the text (site-wide in
     // Settings, or per product). Absent text hides the section entirely.
     ...(product.shipping_info
       ? [{
@@ -160,7 +169,7 @@ export default function ProductAccordion({ product }: { product: Product }) {
     {
       key: "return",
       title: a.returnPolicy,
-      // The marketer's own returns text wins when set — one editable text in
+      // The marketer's own returns text wins when set: one editable text in
       // Settings instead of copy frozen into the translation files. Until it
       // is set, the existing translated copy keeps rendering unchanged.
       content: product.returns_info ? (
@@ -201,7 +210,7 @@ export default function ProductAccordion({ product }: { product: Product }) {
     },
   ];
 
-  // No GSAP needed — CSS grid-rows transition handles open/close with zero layout thrash.
+  // No GSAP needed: CSS grid-rows transition handles open/close with zero layout thrash.
 
   return (
     <>
@@ -212,12 +221,12 @@ export default function ProductAccordion({ product }: { product: Product }) {
       </div>
       <div className="divide-y divide-black/[0.07] rounded-[22px] bg-[#efefef]">
         {items.map((item) => {
-          const isOpen = open === item.key;
+          const isOpen = open.has(item.key);
           return (
             <div key={item.key}>
               <button
                 type="button"
-                onClick={() => setOpen(isOpen ? null : item.key)}
+                onClick={() => toggle(item.key)}
                 className="flex w-full items-center justify-between px-6 py-5 text-left"
               >
                 <span className="text-[1rem] font-semibold text-[var(--foreground)]">
