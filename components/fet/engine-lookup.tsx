@@ -79,7 +79,7 @@ export default function EngineLookup({ compact = false }: { compact?: boolean })
   }
 
   const fetModelColor = (model: string) => {
-    if (model.toLowerCase().includes("car") || model.includes("01"))  return "bg-[#dcfce7] text-[#166534]";
+    if (model.toLowerCase().includes("car") || model.includes("01"))  return "bg-[#fff3ee] text-[#166534]";
     if (model.toLowerCase().includes("van") || model.includes("02"))  return "bg-blue-50 text-blue-700";
     if (model.toLowerCase().includes("truck") || model.includes("03")) return "bg-amber-50 text-amber-700";
     return "bg-purple-50 text-purple-700";
@@ -89,7 +89,7 @@ export default function EngineLookup({ compact = false }: { compact?: boolean })
     <div className={compact ? "" : "rounded-2xl border border-[#e2e8e2] bg-white p-6 shadow-sm"}>
       {!compact && (
         <div className="mb-5">
-          <p className="text-[0.7rem] font-bold uppercase tracking-[0.22em] text-[#22c55e]">
+          <p className="text-[0.7rem] font-bold uppercase tracking-[0.22em] text-[#f4511e]">
             Engine Lookup
           </p>
           <h3 className="mt-0.5 text-[1.1rem] font-extrabold text-[#111111]">
@@ -110,7 +110,7 @@ export default function EngineLookup({ compact = false }: { compact?: boolean })
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search manufacturer, model or engine code…"
-            className="h-10 w-full rounded-xl border border-[#e2e8e2] bg-[#f9fafb] pl-9 pr-3 text-[0.83rem] text-[#111111] outline-none transition focus:border-[#22c55e] focus:bg-white focus:ring-2 focus:ring-[#22c55e]/15"
+            className="h-10 w-full rounded-xl border border-[#e2e8e2] bg-[#f9fafb] pl-9 pr-3 text-[0.83rem] text-[#111111] outline-none transition focus:border-[#f4511e] focus:bg-white focus:ring-2 focus:ring-[#f4511e]/15"
           />
           {loading && (
             <Loader2 size={13} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-[#9ca3af]" />
@@ -126,8 +126,8 @@ export default function EngineLookup({ compact = false }: { compact?: boolean })
               className={[
                 "flex h-10 items-center gap-1.5 rounded-xl px-3 text-[0.78rem] font-semibold transition",
                 category === cat
-                  ? "bg-[#22c55e] text-white shadow-sm"
-                  : "border border-[#e2e8e2] bg-white text-[#5c5e62] hover:border-[#22c55e]/40 hover:text-[#111111]",
+                  ? "bg-[#f4511e] text-white shadow-sm"
+                  : "border border-[#e2e8e2] bg-white text-[#5c5e62] hover:border-[#f4511e]/40 hover:text-[#111111]",
               ].join(" ")}
             >
               {cat === "all"        && "All"}
@@ -225,7 +225,7 @@ export default function EngineLookup({ compact = false }: { compact?: boolean })
                     <td className="px-4 py-3">
                       <Link
                         href="/tyre-supply-quotation"
-                        className="flex items-center gap-1 text-[0.75rem] font-semibold text-[#22c55e] hover:underline"
+                        className="flex items-center gap-1 text-[0.75rem] font-semibold text-[#f4511e] hover:underline"
                       >
                         Quote <ChevronRight size={11} />
                       </Link>

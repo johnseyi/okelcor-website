@@ -26,7 +26,7 @@ const VEHICLES: Vehicle[] = [
 // ─── Input styles ─────────────────────────────────────────────────────────────
 
 const inputCls =
-  "w-full rounded-[10px] border border-[#e2e8e2] bg-white px-4 py-3 text-[0.93rem] text-[#111111] outline-none placeholder:text-[#9ca3af] transition focus:border-[#22c55e] focus:ring-2 focus:ring-[#22c55e]/20";
+  "w-full rounded-[10px] border border-[#e2e8e2] bg-white px-4 py-3 text-[0.93rem] text-[#111111] outline-none placeholder:text-[#9ca3af] transition focus:border-[#f4511e] focus:ring-2 focus:ring-[#f4511e]/20";
 
 const labelCls = "mb-1.5 block text-[0.78rem] font-semibold uppercase tracking-wider text-[#6b7280]";
 
@@ -87,8 +87,8 @@ export default function AmortizationCalculator() {
               className={[
                 "rounded-[10px] border px-3 py-2.5 text-left text-[0.78rem] font-semibold transition",
                 vehicleIdx === i
-                  ? "border-[#22c55e] bg-[#dcfce7] text-[#166534]"
-                  : "border-[#e2e8e2] bg-white text-[#6b7280] hover:border-[#22c55e]/40 hover:text-[#111111]",
+                  ? "border-[#f4511e] bg-[#fff3ee] text-[#166534]"
+                  : "border-[#e2e8e2] bg-white text-[#6b7280] hover:border-[#f4511e]/40 hover:text-[#111111]",
               ].join(" ")}
             >
               {v.label}
@@ -154,7 +154,7 @@ export default function AmortizationCalculator() {
       <div className="mt-5">
         <div className="mb-2 flex items-center justify-between">
           <label className={labelCls + " mb-0"}>Expected Fuel Savings</label>
-          <span className="text-[1rem] font-extrabold text-[#22c55e]">{savingsPct}%</span>
+          <span className="text-[1rem] font-extrabold text-[#f4511e]">{savingsPct}%</span>
         </div>
         <input
           type="range"
@@ -163,7 +163,7 @@ export default function AmortizationCalculator() {
           step="1"
           value={savingsPct}
           onChange={(e) => setSavingsPct(Number(e.target.value))}
-          className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-[#e2e8e2] accent-[#22c55e]"
+          className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-[#e2e8e2] accent-[#f4511e]"
         />
         <div className="mt-1 flex justify-between text-[0.72rem] text-[#9ca3af]">
           <span>Conservative 8%</span>
@@ -181,9 +181,9 @@ export default function AmortizationCalculator() {
           <p className="mt-0.5 text-[0.72rem] text-[#9ca3af]">Without FET</p>
         </div>
 
-        <div className="rounded-[14px] border border-[#22c55e]/30 bg-[#dcfce7] p-4 text-center">
+        <div className="rounded-[14px] border border-[#f4511e]/30 bg-[#fff3ee] p-4 text-center">
           <p className="text-[0.72rem] font-bold uppercase tracking-wider text-[#166534]">Annual Savings</p>
-          <p className="mt-1.5 text-[1.4rem] font-extrabold text-[#16a34a]">
+          <p className="mt-1.5 text-[1.4rem] font-extrabold text-[#df4618]">
             €{fmt(results.annualSavings)}
           </p>
           <p className="mt-0.5 text-[0.72rem] text-[#166534]/70">Per year with FET</p>

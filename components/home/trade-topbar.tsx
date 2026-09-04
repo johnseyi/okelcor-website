@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { Phone, Mail, PackageSearch } from "lucide-react";
-import { COMPANY_PHONE, COMPANY_EMAIL } from "@/lib/constants";
+import { COMPANY_PHONE, COMPANY_EMAIL, COMPANY_HOURS } from "@/lib/constants";
 
 /**
  * The utility bar every serious tyre trader runs above the nav — phone,
@@ -48,7 +48,7 @@ export default function TradeTopBar() {
             <Mail size={12} strokeWidth={2} aria-hidden />
             {COMPANY_EMAIL}
           </a>
-          <span className="hidden text-white/40 xl:inline">Munich, Germany &middot; Shipping EU &amp; worldwide</span>
+          <span className="hidden text-white/40 xl:inline">{COMPANY_HOURS}</span>
         </div>
         <div className="flex items-center gap-6">
           {/* Tracking lives in the customer portal — there is no /tracking page. */}

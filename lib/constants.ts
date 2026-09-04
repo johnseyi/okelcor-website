@@ -11,6 +11,9 @@ export const COMPANY_EMAIL = "support@okelcor.com";
 export const COMPANY_NOREPLY_EMAIL = "noreply@okelcor.com";
 
 export const COMPANY_PHONE = "+49 (0) 89 / 545 583 60";
+
+/** Shown in the utility bar and on the contact page. One source, not two. */
+export const COMPANY_HOURS = "Mon to Fri, 08:00 to 17:00 CET";
 export const COMPANY_FAX = "+49 (0) 89 / 545 583 33";
 
 export const COMPANY_ADDRESS_STREET = "Landsberger Str. 155";

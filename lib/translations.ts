@@ -474,26 +474,26 @@ const en: Translations = {
   about: {
     hero: {
       eyebrow: "About Okelcor",
-      title: "European Wholesale Tire Distributor",
+      title: "European wholesale tyre distributor",
       subtitle: "Headquartered in Munich. Supplying premium PCR, TBR, LT, and used tyres to wholesalers and distributors in over 30 countries.",
     },
     story: {
       eyebrow: "Our Story",
-      title1: "Munich-based.", title2: "Globally distributed.",
-      p1: "Okelcor is headquartered in Munich and supplies customers worldwide with premium new and used tyres — including PCR, LT, TBR, and bus tyres — from the world's most trusted brands.",
+      title1: "Based in Munich,", title2: "distributing worldwide",
+      p1: "Okelcor is headquartered in Munich and supplies customers worldwide with premium new and used tyres, covering PCR, LT, TBR and bus ranges from the world's most trusted brands.",
       p2: "The company maintains an expanding catalogue of high-quality products, balancing advanced technology with cost-effective options to serve wholesale buyers and international distributors.",
-      p3: "With over 500,000 tyres available daily, Okelcor ensures transparent pricing, efficient ordering, and dependable logistics — providing a full-service supply solution across Germany, Europe, and beyond.",
+      p3: "With more than 15,000 tyres in stock at any time, Okelcor offers transparent pricing, efficient ordering and dependable logistics: a full service supply solution across Germany, Europe and beyond.",
       workWithUs: "Work With Us",
-      statDaily: "Tyres available daily", statCountries: "Countries served", statBrands: "Premium brands",
+      statDaily: "Tyres in stock", statCountries: "Countries served", statBrands: "Premium brands",
     },
     services: {
       eyebrow: "What We Offer",
       heading: "Services built around your supply needs.",
       subtitle: "From first enquiry to final delivery, Okelcor supports every stage of your tyre procurement journey.",
       items: [
-        { eyebrow: "1-on-1 Consultation", heading: "Expert guidance for every order.", body: "Our team provides personalised tyre selection advice, matching your requirements across PCR, TBR, LT, and used stock. From specification to volume planning — we help you make the right call every time." },
-        { eyebrow: "Logistics Handling", heading: "Global freight, end-to-end.", body: "We coordinate international shipping through trusted freight partnerships including Hapag-Lloyd and DB Schenker, ensuring tyres reach their destination efficiently and on schedule — wherever in the world you operate." },
-        { eyebrow: "After Sales Support", heading: "Support that continues after delivery.", body: "Okelcor's after-sales team remains available post-delivery for claims handling, documentation follow-up, and supply continuity — giving you full confidence throughout the entire procurement process." },
+        { eyebrow: "1-on-1 Consultation", heading: "Expert guidance for every order.", body: "Our team provides personalised tyre selection advice, matching your requirements across PCR, TBR, LT and used stock. From specification to volume planning, we help you make the right call every time." },
+        { eyebrow: "Logistics Handling", heading: "Global freight, end-to-end.", body: "We coordinate international shipping through trusted freight partnerships including Hapag-Lloyd and DB Schenker, so tyres reach their destination efficiently and on schedule, wherever in the world you operate." },
+        { eyebrow: "After Sales Support", heading: "Support that continues after delivery.", body: "Okelcor's after sales team remains available after delivery for claims handling, documentation follow up and supply continuity, giving you full confidence throughout the procurement process." },
       ],
     },
     logistics: {
@@ -582,7 +582,7 @@ const en: Translations = {
   contact: {
     hero: {
       eyebrow: "Contact",
-      title: "Talk to us about your next tyre supply order.",
+      title: "Talk to us about your next tyre supply order",
       subtitle: "Reach out for catalogue access, wholesale pricing, sourcing support, and partnership discussions.",
     },
     officeEyebrow: "Our Office", officeTagline: "Global tyre supply — Munich headquarters",
@@ -619,7 +619,7 @@ const en: Translations = {
   news: {
     hero: {
       eyebrow: "News & Insights",
-      title: "Insights, updates, and tyre supply knowledge.",
+      title: "Insights, updates and tyre supply knowledge",
       subtitle: "Stay informed with practical articles and updates for distributors, partners, and international buyers.",
     },
     latestArticles: "Latest Articles",

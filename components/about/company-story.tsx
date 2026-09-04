@@ -7,7 +7,7 @@ import { useLanguage } from "@/context/language-context";
 export default function CompanyStory() {
   const { t } = useLanguage();
   const STATS = [
-    { value: "500k+", label: t.about.story.statDaily },
+    { value: "15k+", label: t.about.story.statDaily },
     { value: "30+", label: t.about.story.statCountries },
     { value: "15+", label: t.about.story.statBrands },
   ];
