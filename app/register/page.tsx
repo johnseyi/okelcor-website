@@ -115,7 +115,7 @@ type FormState = {
 type FormErrors = Partial<Record<keyof FormState, string>>;
 
 export default function RegisterPage() {
-  const [customerType, setCustomerType] = useState<CustomerType>("b2b");
+  const [customerType, setCustomerType] = useState<CustomerType>("b2c");
   const [form, setForm] = useState<FormState>({
     first_name: "", last_name: "", email: "", password: "", confirm_password: "",
     phone: "", country: "", company_name: "", vat_number: "", industry: "", terms: false,
@@ -322,25 +322,39 @@ export default function RegisterPage() {
               <p className="text-[0.82rem] font-semibold text-blue-800">B2B access only</p>
               <p className="mt-0.5 text-[0.8rem] leading-5 text-blue-700">
                 Okelcor serves wholesale buyers, exporters, tyre dealers, and fleet operators.
-                Business accounts are reviewed before activation. Approved customers gain access to wholesale pricing and the full catalogue.
+                Private accounts are active immediately. Business accounts are reviewed before activation and unlock wholesale pricing.
               </p>
             </div>
           </div>
 
-          {/* Account type toggle */}
-          <div className="mb-7 flex rounded-md bg-[#efefef] p-1">
-            {(["b2b", "b2c"] as CustomerType[]).map((type) => (
+          {/*
+            The fork, stated honestly at the point of choice. A private buyer
+            gets an account immediately (e-mail verification only); the trade
+            path is reviewed by a person because wholesale terms should be.
+            Tyre24 states its audience in the first sentence of its hero;
+            this is the same candour one screen earlier.
+          */}
+          <div className="mb-7 grid gap-2 sm:grid-cols-2">
+            {(["b2c", "b2b"] as CustomerType[]).map((type) => (
               <button
                 key={type}
                 type="button"
+                aria-pressed={customerType === type}
                 onClick={() => setCustomerType(type)}
-                className={`flex-1 rounded-[11px] py-2.5 text-[0.88rem] font-semibold transition ${
+                className={`rounded-md border p-3.5 text-left transition-colors ${
                   customerType === type
-                    ? "bg-[var(--primary)] text-white shadow-sm"
-                    : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                    ? "border-[#171a20] bg-[#171a20] text-white"
+                    : "border-black/15 bg-white text-[#171a20] hover:border-black/40"
                 }`}
               >
-                {type === "b2b" ? "Business" : "Individual"}
+                <p className="text-[0.92rem] font-bold">
+                  {type === "b2b" ? "Business account" : "Private buyer"}
+                </p>
+                <p className={`mt-0.5 text-[0.78rem] leading-snug ${customerType === type ? "text-white/65" : "text-[#5c5e62]"}`}>
+                  {type === "b2b"
+                    ? "Wholesale terms. Reviewed by our team, usually within one working day."
+                    : "Shop retail prices right away. Just verify your e-mail address."}
+                </p>
               </button>
             ))}
           </div>

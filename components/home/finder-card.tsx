@@ -28,10 +28,12 @@ type Specs = {
 type BrandOption = { name: string; slug?: string | null };
 
 const CATEGORIES = [
-  { type: "PCR", label: "Passenger (PCR)", sub: "Cars, SUVs & vans" },
-  { type: "TBR", label: "Truck & Bus (TBR)", sub: "Fleet & logistics" },
-  { type: "OTR", label: "Off-the-road (OTR)", sub: "Agri & construction" },
-  { type: "USED", label: "Quality used", sub: "Inspected, graded stock" },
+  { type: "PCR", label: "Passenger (PCR)", sub: "Cars, SUVs & vans", href: "/shop?type=PCR" },
+  { type: "TBR", label: "Truck & Bus (TBR)", sub: "Fleet & logistics", href: "/shop?type=TBR" },
+  // Real business, zero catalogue rows: these orders happen at the quote
+  // desk, so that is where the buttons go.
+  { type: "OTR", label: "Off-the-road (OTR)", sub: "On request", href: "/tyre-supply-quotation" },
+  { type: "USED", label: "Quality used", sub: "By the container, on request", href: "/tyre-supply-quotation" },
 ] as const;
 
 const SEASONS = [
@@ -153,7 +155,7 @@ export default function FinderCard({ specs, brands }: { specs: Specs | null; bra
             <button
               key={c.type}
               type="button"
-              onClick={() => router.push(`/shop?type=${c.type}`)}
+              onClick={() => router.push(c.href)}
               className="flex items-baseline justify-between rounded-md border border-black/10 px-3.5 py-3 text-left transition-colors hover:border-[#f4511e]"
             >
               <span className="text-[0.9rem] font-semibold text-[#171a20]">{c.label}</span>

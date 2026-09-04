@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { Search, Loader2, SlidersHorizontal } from "lucide-react";
 import ProductGrid, { type CatalogueView } from "./product-grid";
 import CatalogueFilters from "./catalogue-filters";
@@ -108,6 +109,29 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed, 
   const { customer } = useCustomerAuth();
   const customerType: "b2b" | "b2c" | "guest" =
     customer?.customer_type === "b2b" ? "b2b" : customer ? "b2c" : "guest";
+
+  // A guest picks which side of the catalogue they are browsing. Signed-in
+  // customers already have a type; for everyone else this drives the
+  // audience and price filters, remembered per browser. Defaults to the
+  // retail view — a private buyer should never need to know what B2B means.
+  const [guestSegment, setGuestSegment] = useState<"b2c" | "b2b">("b2c");
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem("shop-segment");
+      if (stored === "b2b" || stored === "b2c") setGuestSegment(stored);
+    } catch { /* storage unavailable */ }
+  }, []);
+
+  const changeGuestSegment = (seg: "b2c" | "b2b") => {
+    setGuestSegment(seg);
+    try { window.localStorage.setItem("shop-segment", seg); } catch { /* storage unavailable */ }
+  };
+
+  // The segment the API filters by: the account's own type wins; a guest's
+  // toggle decides otherwise.
+  const effectiveSegment: "b2b" | "b2c" =
+    customerType === "guest" ? guestSegment : customerType;
 
   // ── Filter state ─────────────────────────────────────────────────────────────
   const [searchText, setSearchText] = useState("");
@@ -345,10 +369,10 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed, 
     if (selSpeed)          params.set("speed",         selSpeed);
     if (selLoad)           params.set("load_index",    selLoad);
     if (sortBy)            params.set("sort",          sortBy);
-    // Segment-aware filtering: backend returns only products priced for this tier
-    if (customerType === "b2b" || customerType === "b2c") {
-      params.set("segment", customerType);
-    }
+    // Segment-aware filtering: the backend now honours this for every
+    // visitor, guests included — it decides both the tier prices and which
+    // audience's listings appear at all.
+    params.set("segment", effectiveSegment);
 
     // Build size string from width / height / rim components
     let sizeStr = "";
@@ -411,7 +435,7 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed, 
         }
       })
       .finally(() => setIsLoading(false));
-  }, [searchText, priceMin, priceMax, selBrand, selType, selWidth, selHeight, selRim, selSeason, selSpeed, selLoad, sortBy, locale, customerType]);
+  }, [searchText, priceMin, priceMax, selBrand, selType, selWidth, selHeight, selRim, selSeason, selSpeed, selLoad, sortBy, locale, customerType, effectiveSegment]);
 
   // Every filter applies itself, debounced so three quick changes cost one
   // request. The old design made nothing happen until a Filter button was
@@ -423,6 +447,12 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed, 
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [priceMin, priceMax, selBrand, selType, selWidth, selHeight, selRim, selSeason, selSpeed, selLoad]);
+
+  // A guest flipping the audience toggle re-searches the other catalogue.
+  useEffect(() => {
+    if (hasSearched && customerType === "guest") runSearch(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [guestSegment]);
 
   // Re-fetch when sort changes after results are already showing
   useEffect(() => {
@@ -519,6 +549,34 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed, 
             {isLoading ? <Loader2 size={15} className="animate-spin" /> : <Search size={15} strokeWidth={2.2} />}
             <span className="hidden sm:inline">Search</span>
           </button>
+          {/* Guests choose their side of the catalogue; accounts have one */}
+          {customerType === "guest" && (
+            <div
+              role="group"
+              aria-label="Buying as"
+              className="hidden h-11 shrink-0 items-center gap-1 rounded-md border border-black/15 bg-white p-1 md:flex"
+            >
+              {([
+                { seg: "b2c", label: "Private buyer" },
+                { seg: "b2b", label: "Trade buyer" },
+              ] as const).map(({ seg, label }) => (
+                <button
+                  key={seg}
+                  type="button"
+                  aria-pressed={guestSegment === seg}
+                  onClick={() => changeGuestSegment(seg)}
+                  className={`h-full rounded px-3 text-[0.82rem] font-semibold transition-colors ${
+                    guestSegment === seg
+                      ? "bg-[#171a20] text-white"
+                      : "text-[#5c5e62] hover:text-[#171a20]"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Mobile: the sidebar folds behind this */}
           <button
             type="button"
@@ -530,6 +588,14 @@ export default function ShopCatalogue({ prefilledSize, onPrefilledSizeConsumed, 
             Filters
           </button>
         </div>
+
+        {customerType === "guest" && guestSegment === "b2b" && (
+          <p className="mb-4 rounded-md border border-black/10 bg-white px-4 py-2.5 text-[0.85rem] text-[#5c5e62]">
+            You are browsing the trade catalogue. Prices shown are retail;{" "}
+            <Link href="/register" className="font-semibold text-[#f4511e] hover:underline">open a trade account</Link>{" "}
+            for wholesale terms, reviewed within one working day.
+          </p>
+        )}
 
         {/* ── Sidebar + results ── */}
         <div className="lg:grid lg:grid-cols-[256px_1fr] lg:items-start lg:gap-6">

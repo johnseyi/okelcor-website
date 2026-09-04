@@ -16,26 +16,30 @@ const RANGES = [
   {
     type: "PCR",
     title: "Passenger tyres",
+    onRequest: false,
     sub: "Cars, SUVs and vans. Summer, winter and all season",
     img: "/images/pexels-piotr-arnoldes-7862031-6063163.png",
   },
   {
     type: "TBR",
     title: "Truck & bus tyres",
+    onRequest: false,
     sub: "Built for mileage and commercial durability",
     img: "/images/pexels-furkanakt-29235902.png",
   },
   {
     type: "OTR",
     title: "OTR tyres",
-    sub: "Agriculture, construction and industrial plant",
+    sub: "Agriculture and construction, quoted per order",
     img: "/images/OTR tyres.png",
+    onRequest: true,
   },
   {
     type: "USED",
     title: "Quality used tyres",
-    sub: "Inspected and graded, with batch documentation",
+    sub: "Inspected and graded, sold by the container",
     img: "/images/Used tyres.png",
+    onRequest: true,
   },
 ] as const;
 
@@ -63,12 +67,24 @@ export default function RangeTiles() {
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {RANGES.map((r) => (
+            /*
+              OTR and used stock are real business but have never had a
+              single catalogue row (checked in the database, not assumed:
+              15,005 PCR, 260 TBR, zero of each of these). A tile that
+              opens an empty shop is a broken promise; these two go to the
+              quote desk, which is where those orders actually happen.
+            */
             <Link
               key={r.type}
-              href={`/shop?type=${r.type}`}
+              href={r.onRequest ? "/tyre-supply-quotation" : `/shop?type=${r.type}`}
               className="group overflow-hidden rounded-lg border border-black/10 bg-white transition-shadow hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f4511e]"
             >
               <div className="relative aspect-[4/3] overflow-hidden bg-[#e8e9eb]">
+                {r.onRequest && (
+                  <span className="absolute left-2 top-2 z-10 rounded bg-[#171a20]/85 px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-wide text-white">
+                    On request
+                  </span>
+                )}
                 <Image
                   src={r.img}
                   alt={r.title}

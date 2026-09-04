@@ -723,8 +723,8 @@ export default function Navbar() {
                   {([
                     { Icon: Car,       label: "PCR",  sub: "Passenger",   href: "/shop?type=PCR"  },
                     { Icon: Truck,     label: "TBR",  sub: "Truck & Bus", href: "/shop?type=TBR"  },
-                    { Icon: Tractor,   label: "OTR",  sub: "Off-Road",    href: "/shop?type=OTR"  },
-                    { Icon: RotateCcw, label: "Used", sub: "Used Tyres",  href: "/shop?type=USED" },
+                    { Icon: Tractor,   label: "OTR",  sub: "On request",  href: "/tyre-supply-quotation" },
+                    { Icon: RotateCcw, label: "Used", sub: "On request",  href: "/tyre-supply-quotation" },
                   ] as const).map(({ Icon, label, sub, href }) => (
                     <Link
                       key={label}
