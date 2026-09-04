@@ -798,7 +798,7 @@ export default function Navbar() {
               {/* Col 1 — Product Overview */}
               <div>
                 <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-[#dcfce7] px-3 py-1">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#22c55e]" aria-hidden="true" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#f4511e]" aria-hidden="true" />
                   <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#166534]">{t.fetMega.badge}</span>
                 </div>
                 <h3 className="mb-3 text-[1.1rem] font-extrabold leading-snug text-[#111111]">
@@ -807,7 +807,7 @@ export default function Navbar() {
                 <ul className="mb-5 flex flex-col gap-2">
                   {t.fetMega.benefits.map((point) => (
                     <li key={point} className="flex items-center gap-2 text-[0.85rem] text-[#5c5e62]">
-                      <CheckCircle2 size={14} strokeWidth={2} className="shrink-0 text-[#22c55e]" />
+                      <CheckCircle2 size={14} strokeWidth={2} className="shrink-0 text-[#f4511e]" />
                       {point}
                     </li>
                   ))}
@@ -815,7 +815,7 @@ export default function Navbar() {
                 <Link
                   href="/fet"
                   onClick={() => setOpenFetMega(false)}
-                  className="inline-flex items-center gap-2 rounded-full bg-[#22c55e] px-5 py-2.5 text-[0.85rem] font-semibold text-white transition hover:bg-[#16a34a]"
+                  className="inline-flex items-center gap-2 rounded-full bg-[#f4511e] px-5 py-2.5 text-[0.85rem] font-semibold text-white transition hover:bg-[#df4618]"
                 >
                   {t.fetMega.learnMore} <ChevronRight size={13} strokeWidth={2.5} />
                 </Link>
@@ -830,7 +830,7 @@ export default function Navbar() {
                     { stat: "3–5 months",  label: t.fetMega.labelPayback       },
                   ] as const).map(({ stat, label }) => (
                     <div key={stat} className="flex items-center gap-3 rounded-xl bg-[#f0f4f0] px-4 py-3">
-                      <Zap size={15} strokeWidth={2} className="shrink-0 text-[#22c55e]" />
+                      <Zap size={15} strokeWidth={2} className="shrink-0 text-[#f4511e]" />
                       <span className="text-[0.93rem] font-extrabold text-[#111111]">{stat}</span>
                       <span className="text-[0.8rem] text-[#5c5e62]">{label}</span>
                     </div>
@@ -897,7 +897,7 @@ export default function Navbar() {
               <div>
                 <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--primary)]">Certifications</p>
                 <div className="mb-4 flex items-start gap-3 rounded-xl border border-[#e2e8e2] bg-[#f0f4f0] p-4">
-                  <ShieldCheck size={28} strokeWidth={1.6} className="mt-0.5 shrink-0 text-[#16a34a]" />
+                  <ShieldCheck size={28} strokeWidth={1.6} className="mt-0.5 shrink-0 text-[#df4618]" />
                   <div>
                     <p className="text-[0.88rem] font-extrabold text-[#111111]">ISO 9001:2015</p>
                     <p className="mt-0.5 text-[0.75rem] text-[#5c5e62]">Certified by qm-solutions GmbH, Germany</p>

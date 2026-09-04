@@ -342,13 +342,13 @@ export default function Hero({ slides: apiSlides }: HeroProps) {
                     ref={labelRef}
                     className={`mb-4 inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.22em] backdrop-blur-sm ${
                       isFetSlide
-                        ? "border-[#22c55e]/40 bg-[#22c55e]/15 text-[#22c55e]"
+                        ? "border-[#f4511e]/40 bg-[#f4511e]/15 text-[#f4511e]"
                         : "border-white/20 bg-white/10 text-white/90"
                     }`}
                   >
                     <span
                       className="h-1.5 w-1.5 rounded-full"
-                      style={{ backgroundColor: isFetSlide ? "#22c55e" : "var(--primary)" }}
+                      style={{ backgroundColor: isFetSlide ? "#f4511e" : "var(--primary)" }}
                       aria-hidden="true"
                     />
                     {slideText.label}
