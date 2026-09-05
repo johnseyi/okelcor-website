@@ -45,6 +45,8 @@ import {
   ShieldCheck,
   Download,
   Bell,
+  Phone,
+  Mail,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import NotificationBell from "@/components/account/notification-bell";
@@ -106,6 +108,7 @@ export default function Navbar() {
   const [openMenu, setOpenMenu]             = useState(false);
   const [openLang, setOpenLang]             = useState(false);
   const [openMobileLang, setOpenMobileLang] = useState(false);
+  const [openMobileShop, setOpenMobileShop] = useState(false);
   const [openProfile, setOpenProfile]       = useState(false);
   const [openShopMega,  setOpenShopMega]  = useState(false);
   const [openFetMega,   setOpenFetMega]   = useState(false);
@@ -165,6 +168,7 @@ export default function Navbar() {
     setOpenMenu(false);
     setOpenLang(false);
     setOpenMobileLang(false);
+    setOpenMobileShop(false);
     setOpenProfile(false);
     setOpenShopMega(false);
     setOpenFetMega(false);
@@ -602,6 +606,17 @@ export default function Navbar() {
                 )}
               </div>
 
+              {/* Search — mobile bar gets its own one-tap entry; on
+                  desktop the field above covers it */}
+              <button
+                type="button"
+                onClick={() => { closeAll(); openSearch(); }}
+                className="tesla-icon-btn lg:hidden!"
+                aria-label={t.search.ariaLabel}
+              >
+                <Search size={20} strokeWidth={1.9} />
+              </button>
+
               {/* Cart — always visible */}
               <button
                 type="button"
@@ -958,8 +973,21 @@ export default function Navbar() {
         aria-label="Navigation menu"
         aria-modal={openMenu}
       >
-        {/* Drawer close button */}
-        <div className="flex h-[76px] items-center justify-end px-5 sm:px-6">
+        {/* Drawer header: the wordmark keeps you oriented, the X gets out */}
+        <div className="flex h-[76px] items-center justify-between border-b border-black/[0.05] px-5 sm:px-6">
+          <Link href="/" onClick={closeAll} className="flex flex-col">
+            <Image
+              src="/logo/okelcor-logo.png"
+              alt="Okelcor"
+              width={104}
+              height={19}
+              style={{ height: "19px", width: "auto" }}
+              className="object-contain"
+            />
+            <span className="mt-0.5 text-[8px] font-bold uppercase tracking-[0.22em] text-[var(--primary)]">
+              Growing Together
+            </span>
+          </Link>
           <button
             type="button"
             onClick={closeAll}
@@ -974,10 +1002,59 @@ export default function Navbar() {
         <div className="hide-scrollbar flex-1 overflow-y-auto px-5 pb-8 pt-2 sm:px-6">
           {!openMobileLang ? (
             <>
-              {/* Nav links */}
+              {/* Nav links. Shop carries the same destinations as its
+                  desktop mega menu, folded behind a chevron — the link
+                  still navigates, the chevron expands. */}
               <div className="flex flex-col gap-1">
                 {navItems.map((item) => {
                   const isActive = pathname === item.href;
+
+                  if (item.href === "/shop") {
+                    return (
+                      <div key={item.label}>
+                        <div className={`tesla-mobile-link flex items-center justify-between ${isActive ? "tesla-mobile-link-active" : ""}`}>
+                          <Link href="/shop" onClick={closeAll} className="min-w-0 flex-1">
+                            {item.label}
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => setOpenMobileShop((v) => !v)}
+                            aria-expanded={openMobileShop}
+                            aria-label={openMobileShop ? "Collapse shop links" : "Expand shop links"}
+                            className="-mr-1 flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-black/[0.05]"
+                          >
+                            <ChevronDown
+                              size={18}
+                              strokeWidth={2}
+                              className={`transition-transform duration-200 ${openMobileShop ? "rotate-180" : ""}`}
+                            />
+                          </button>
+                        </div>
+                        {openMobileShop && (
+                          <div className="mb-1 ml-2 flex flex-col border-l-2 border-black/[0.06] pl-3">
+                            {([
+                              { Icon: Car,       label: "Passenger (PCR)",   href: "/shop?type=PCR" },
+                              { Icon: Truck,     label: "Truck & Bus (TBR)", href: "/shop?type=TBR" },
+                              { Icon: Tractor,   label: "OTR, on request",   href: "/tyre-supply-quotation" },
+                              { Icon: RotateCcw, label: "Used, on request",  href: "/tyre-supply-quotation" },
+                              { Icon: Search,    label: "Full catalogue",    href: "/shop" },
+                            ] as const).map(({ Icon, label, href }) => (
+                              <Link
+                                key={label}
+                                href={href}
+                                onClick={closeAll}
+                                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-[0.93rem] font-semibold text-black/70 transition hover:bg-black/[0.04] hover:text-black"
+                              >
+                                <Icon size={17} strokeWidth={1.9} className="shrink-0 text-black/45" />
+                                {label}
+                              </Link>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
                   return (
                     <Link
                       key={item.label}
@@ -1162,6 +1239,35 @@ export default function Navbar() {
             </div>
           )}
         </div>
+
+        {/* Drawer footer: what a phone visitor most often came to do. The
+            utility bar carrying these is desktop-only, so without this row
+            the number and the quote CTA existed nowhere on mobile. */}
+        {!openMobileLang && (
+          <div className="border-t border-black/[0.06] px-5 pb-6 pt-4 sm:px-6">
+            <Link
+              href="/tyre-supply-quotation"
+              onClick={closeAll}
+              className="flex h-12 w-full items-center justify-center rounded-md bg-[var(--primary)] text-[0.95rem] font-bold text-white transition-colors hover:bg-[var(--primary-hover)]"
+            >
+              {t.nav.quote}
+            </Link>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <a
+                href="tel:+498954558360"
+                className="flex h-11 items-center justify-center gap-2 rounded-md border border-black/15 text-[0.85rem] font-semibold text-black/80 transition hover:border-black/40"
+              >
+                <Phone size={15} strokeWidth={2} /> Call us
+              </a>
+              <a
+                href="mailto:info@okelcor.com"
+                className="flex h-11 items-center justify-center gap-2 rounded-md border border-black/15 text-[0.85rem] font-semibold text-black/80 transition hover:border-black/40"
+              >
+                <Mail size={15} strokeWidth={2} /> E-mail
+              </a>
+            </div>
+          </div>
+        )}
       </aside>
     </>
   );
